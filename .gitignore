@@ -14,9 +14,13 @@ server/node_modules/
 /prisma/seed.ts.bak
 
 # Build output
-/dist
-/build
-/out
+dist/
+build/
+out/
+client/dist/
+client/build/
+server/dist/
+server/build/
 
 # Logs
 logs/
@@ -24,10 +28,10 @@ logs/
 *.log.*
 
 # HTTPS certificates
-key.pem
-cert.pem
-localhost-key.pem
-localhost.pem
+server/key.pem
+server/cert.pem
+server/localhost-key.pem
+server/localhost.pem
 
 # Editor and OS files
 .DS_Store

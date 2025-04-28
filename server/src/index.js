@@ -7,13 +7,14 @@ const authRoutes = require("./routes/authRoutes");
 const planRoutes = require("./routes/planRoutes");
 const workoutRoutes = require("./routes/workoutRoutes");
 const liftRoutes = require("./routes/liftRoutes");
+const errorMiddleware = require("./middleware/errorMiddleware");
 
 dotenv.config();
 
 const app = express();
 
 // Middleware
-app.use(cors()); // Allow React frontend (localhost:5173) to connect
+app.use(cors({ origin: "https://localhost:5173" })); // Allow React frontend (localhost:5173) to connect
 app.use(express.json()); // Parse JSON bodies
 // Routes
 app.use("/api/auth", authRoutes);
@@ -22,15 +23,12 @@ app.use("/api/workouts", workoutRoutes);
 app.use("/api/lifts", liftRoutes);
 
 // Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: "Something went wrong!" });
-});
+app.use(errorMiddleware);
 
 // HTTPS options
 const options = {
-  key: fs.readFileSync("key.pem"),
-  cert: fs.readFileSync("cert.pem"),
+  key: fs.readFileSync(process.env.SSL_KEY_PATH),
+  cert: fs.readFileSync(process.env.SSL_CERT_PATH),
 };
 
 // Start HTTPS server

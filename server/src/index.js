@@ -8,6 +8,7 @@ const planRoutes = require("./routes/planRoutes");
 const workoutRoutes = require("./routes/workoutRoutes");
 const liftRoutes = require("./routes/liftRoutes");
 const errorMiddleware = require("./middleware/errorMiddleware");
+const authRateLimiter = require("./middleware/rateLimitMiddleware");
 
 dotenv.config();
 
@@ -17,7 +18,7 @@ const app = express();
 app.use(cors({ origin: "https://localhost:5173" })); // Allow React frontend (localhost:5173) to connect
 app.use(express.json()); // Parse JSON bodies
 // Routes
-app.use("/api/auth", authRoutes);
+app.use("/api/auth", authRateLimiter, authRoutes);
 app.use("/api/plans", planRoutes);
 app.use("/api/workouts", workoutRoutes);
 app.use("/api/lifts", liftRoutes);

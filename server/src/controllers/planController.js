@@ -5,13 +5,19 @@ const prisma = new PrismaClient();
 const planController = {
   async getPlans(req, res, next) {
     try {
-      const plans = await prisma.plans.findMany({
+      const userPlans = await prisma.plans.findMany({
         where: {
-          OR: [{ user_id: req.user.userId }, { user_id: null }],
+          user_id: req.user.userId,
         },
         include: { workouts: true },
       });
-      res.json(plans);
+      const genericPlans = await prisma.plans.findMany({
+        where: {
+          user_id: null,
+        },
+        include: { workouts: true },
+      });
+      res.json({ userPlans, genericPlans });
     } catch (error) {
       next(error);
     }

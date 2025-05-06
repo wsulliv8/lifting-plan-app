@@ -1,0 +1,16 @@
+import React from "react";
+import { Outlet } from "react-router-dom";
+import Navbar from "./Navbar";
+
+const Layout = () => {
+  return (
+    <div className="min-h-screen bg-background flex overflow-x-hidden">
+      <Navbar />
+      <main className="p-4 ml-16 flex-1 overflow-hidden">
+        <Outlet />
+      </main>
+    </div>
+  );
+};
+
+export default Layout;

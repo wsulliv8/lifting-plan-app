@@ -1,34 +1,83 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
+import React from "react";
+import {
+  createBrowserRouter,
+  RouterProvider,
+  redirect,
+} from "react-router-dom";
+import LoginForm from "./components/auth/LoginForm";
+import RegisterForm from "./components/auth/RegisterForm";
+import Welcome from "./pages/Welcome";
+import Plans from "./pages/Plans";
+import Workouts from "./pages/Workouts";
+import Lifts from "./pages/Lifts";
+import Layout from "./components/common/Layout";
+import ErrorPage from "./components/common/ErrorPage";
+import { getPlans } from "./services/plans";
+
+const checkAuthLoader = async () => {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    return redirect("/login");
+  }
+  return null;
+};
+
+const plansLoader = async () => {
+  try {
+    const plans = await getPlans();
+    return plans;
+  } catch (err) {
+    if (err.response?.status === 401) {
+      localStorage.removeItem("token");
+      return redirect("/login");
+    }
+    throw new Response("Failed to load plans", {
+      status: err.response?.status || 500,
+    });
+  }
+};
+
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <Layout />,
+    loader: checkAuthLoader,
+    errorElement: <ErrorPage />,
+    children: [
+      {
+        path: "plans",
+        element: <Plans />,
+        loader: plansLoader,
+        errorElement: <ErrorPage />,
+      },
+      {
+        path: "workouts",
+        element: <Workouts />,
+        errorElement: <ErrorPage />,
+      },
+      {
+        path: "lifts",
+        element: <Lifts />,
+        errorElement: <ErrorPage />,
+      },
+      {
+        index: true,
+        loader: () => redirect("/plans"),
+      },
+    ],
+  },
+  {
+    path: "/login",
+    element: <Welcome form={<LoginForm />} />,
+  },
+  {
+    path: "/register",
+    element: <Welcome form={<RegisterForm />} />,
+  },
+]);
 
 function App() {
-  const [count, setCount] = useState(0);
-
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  );
+  return <RouterProvider router={router} />;
 }
 
 export default App;

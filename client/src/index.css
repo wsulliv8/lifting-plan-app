@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+
+@layer components {
+  .btn-primary {
+    /* Mobile: Compact padding, full-width */
+    @apply w-auto py-2 px-4 bg-primary text-white rounded hover:bg-opacity-90 focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+    /* Desktop: Slightly larger */
+    @apply md:w-auto md:py-2 md:px-6;
+  }
+  .btn-secondary {
+    @apply w-auto py-2 px-4 bg-gray-200 text-gray-900 rounded hover:bg-gray-300 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply md:w-auto md:py-2 md:px-6;
+  }
+  .input-field {
+    /* Mobile: Full-width */
+    @apply w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none;
+  }
+  .border-error {
+    @apply border-red-500 ring-error ring-1;
+  }
+  .form-card {
+    /* Mobile: Full-width, less padding */
+    @apply w-full p-4 bg-white shadow-md rounded-lg mx-auto;
+    /* Tablet/Desktop: Constrained width, more padding */
+    @apply sm:max-w-md sm:p-6;
+  }
+  .card {
+    /* Mobile: Full-width */
+    @apply w-full p-4 bg-white rounded-lg shadow-md;
+    /* Tablet: Slightly constrained */
+    @apply sm:max-w-lg;
+  }
+  .error-text {
+    @apply text-error text-sm mt-2;
+  }
+  .heading {
+    /* Mobile: Smaller */
+    @apply text-xl font-bold text-gray-900;
+    /* Desktop: Larger */
+    @apply md:text-2xl;
+  }
+  .nav-item {
+    @apply flex items-center justify-center p-2 w-12 h-12 rounded-full transition-all duration-200;
+  }
+  .nav-label {
+    @apply absolute bg-gray-800 text-white text-sm px-2 py-1 rounded opacity-0 transition-opacity duration-200;
+  }
+}
+
+@layer base {
+  html {
+    @apply scroll-smooth overflow-y-scroll; /* Scrollbar always visible for consistency */
+  }
+  body {
+    @apply font-sans text-base text-gray-900 bg-background min-h-screen;
+  }
+
+  * {
+    @apply outline-4 outline-red-600;
+  }
+}
+
+@tailwind utilities;

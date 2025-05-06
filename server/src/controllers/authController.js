@@ -75,6 +75,15 @@ const authController = {
       next(error);
     }
   },
+
+  async logoutUser(req, res, next) {
+    try {
+      // Client should clear JWT from localStorage
+      res.json({ message: "Logged out successfully" });
+    } catch (error) {
+      next(error);
+    }
+  },
 };
 
 module.exports = authController;

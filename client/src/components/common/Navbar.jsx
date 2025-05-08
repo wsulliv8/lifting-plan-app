@@ -85,7 +85,7 @@ const Navbar = () => {
               <item.icon className="h-6 w-6" />
             </NavLink>
             {/* Hover Label (Desktop) */}
-            <span className="nav-label hidden md:block left-full ml-2 top-1/2 transform -translate-y-1/2 group-hover:opacity-100">
+            <span className="nav-label hidden md:block left-full ml-2 top-1/2 transform -translate-y-1/2 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-200">
               {item.label}
             </span>
             {/* Label Always Visible (Mobile) */}

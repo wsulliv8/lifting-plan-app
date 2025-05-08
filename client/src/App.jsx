@@ -8,6 +8,7 @@ import LoginForm from "./components/auth/LoginForm";
 import RegisterForm from "./components/auth/RegisterForm";
 import Welcome from "./pages/Welcome";
 import Plans from "./pages/Plans";
+import PlanEditor from "./components/plans/PlanEditor";
 import Workouts from "./pages/Workouts";
 import Lifts from "./pages/Lifts";
 import Layout from "./components/common/Layout";
@@ -48,6 +49,11 @@ const router = createBrowserRouter([
         path: "plans",
         element: <Plans />,
         loader: plansLoader,
+        errorElement: <ErrorPage />,
+      },
+      {
+        path: "plans/:planId/edit",
+        element: <PlanEditor />,
         errorElement: <ErrorPage />,
       },
       {

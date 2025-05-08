@@ -22,7 +22,22 @@ export default {
         md: "768px",
         lg: "1024px",
       },
+      writingMode: {
+        "vertical-lr": "vertical-lr",
+        "vertical-rl": "vertical-rl",
+      },
     },
   },
-  plugins: [],
+  plugins: [
+    function ({ addUtilities }) {
+      addUtilities({
+        ".writing-vertical-lr": {
+          writingMode: "vertical-lr",
+        },
+        ".writing-vertical-rl": {
+          writingMode: "vertical-rl",
+        },
+      });
+    },
+  ],
 };

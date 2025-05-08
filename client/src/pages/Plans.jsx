@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLoaderData, useNavigation } from "react-router-dom";
-import { Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import PlanList from "../components/plans/PlanList";
 import Modal from "../components/common/Modal";
 import Select from "../components/common/Select";
@@ -32,7 +32,7 @@ const Plans = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await createPlan({
+      const newPlan = await createPlan({
         ...formData,
         duration_weeks: parseInt(formData.duration_weeks, 10),
       });
@@ -43,7 +43,7 @@ const Plans = () => {
         duration_weeks: "",
         difficulty: "Beginner",
       });
-      window.location.reload(); // Temporary; replace with state update
+      navigation(`/plans/:${newPlan.id}/edit`);
     } catch (error) {
       console.error("Failed to create plan:", error);
     }

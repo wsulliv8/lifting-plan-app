@@ -7,7 +7,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import Modal from "../common/Modal";
-import WorkoutEditor from "./WorkoutEditor";
+import WorkoutEditor from "./WorkoutEditor-v1";
 import Button from "../common/Button";
 import { PlusCircleIcon, TrashIcon } from "@heroicons/react/24/solid";
 
@@ -31,27 +31,6 @@ const PlanEditor = ({ initialPlan }) => {
       ],
     }
   );
-  // dummy workout data for testing UI
-  const allLifts = [
-    {
-      id: "1",
-      name: "Bench Press",
-      sets: [
-        { reps: 10, weight: 135 },
-        { reps: 8, weight: 155 },
-        { reps: 6, weight: 175 },
-      ],
-    },
-    {
-      id: "2",
-      name: "Pull-Up",
-      sets: [
-        { reps: 12, weight: 0 },
-        { reps: 10, weight: 0 },
-        { reps: 8, weight: 0 },
-      ],
-    },
-  ];
   const [collapsedWeeks, setCollapsedWeeks] = useState(new Set());
   const [collapsedDays, setCollapsedDays] = useState(Array(7).fill(false));
   const [editingDay, setEditingDay] = useState(null);
@@ -297,7 +276,7 @@ const PlanEditor = ({ initialPlan }) => {
                         items={day.workouts.map((w) => w.id)}
                         strategy={verticalListSortingStrategy}
                       >
-                        <div className="w-full flex flex-col justify-center items-center self-center flex-grow">
+                        <div className="flex flex-col justify-center items-center self-center flex-grow">
                           {day.workouts.length > 0 ? (
                             day.workouts.map((workout) => (
                               <SortableItem
@@ -352,12 +331,11 @@ const PlanEditor = ({ initialPlan }) => {
         title={`Week ${editingDay ? editingDay.weekIndex + 1 : ""} Day ${
           editingDay ? editingDay.dayIndex + 1 : ""
         }`}
-        className="w-[95vw] h-[95vh] overflow-hidden"
+        className="w-[90vw]"
       >
         {editingDay && (
           <WorkoutEditor
             workouts={editingDay.workouts}
-            allLifts={allLifts}
             onSave={saveEditedWorkouts}
           />
         )}
@@ -382,31 +360,9 @@ const SortableItem = ({ id, workout }) => {
       style={style}
       {...attributes}
       {...listeners}
-      className="w-full p-1 mb-2 bg-gray-100 rounded hover:bg-gray-200"
+      className="p-2 mb-2 bg-gray-100 rounded hover:bg-gray-200"
     >
-      <div className="w-full text-sm">
-        <div className="font-medium text-center">
-          {workout.name || "Workout"}
-        </div>
-        {workout.lifts && workout.lifts.length > 0 ? (
-          <ul className="list-disc pl-4 mt-1">
-            {workout.lifts.map((lift, index) => (
-              <li key={`${lift.id}-${index}`}>
-                <span className="flex flex-col">
-                  <span>{lift.name}</span>
-                  <span>
-                    {lift.sets.every((val) => val.reps === lift.sets[0].reps)
-                      ? `${lift.sets.length}x${lift.sets[0].reps}`
-                      : `${lift.sets.map((set) => set.reps).join(", ")}`}
-                  </span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="text-gray-500">No lifts</div>
-        )}
-      </div>
+      {workout.name || "Unnamed Workout"}
     </div>
   );
 };

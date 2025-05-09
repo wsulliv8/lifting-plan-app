@@ -102,6 +102,7 @@ const Plans = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title="Create New Plan"
+        className="w-1/2"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input

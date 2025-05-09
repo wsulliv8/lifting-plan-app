@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-const Modal = ({ isOpen, onClose, title, children }) => {
+const Modal = ({ isOpen, onClose, title, children, className }) => {
   const modalRef = useRef(null);
 
   // Handle Escape key and focus trapping
@@ -39,6 +39,19 @@ const Modal = ({ isOpen, onClose, title, children }) => {
     };
   }, [isOpen, onClose]);
 
+  // prevent background scrolling
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
   // Handle click outside modal to close
   const handleOverlayClick = (e) => {
     if (e.target === e.currentTarget) onClose();
@@ -56,10 +69,10 @@ const Modal = ({ isOpen, onClose, title, children }) => {
     >
       <div
         ref={modalRef}
-        className="bg-white rounded-lg shadow-md p-6 w-full max-w-md sm:max-w-lg"
+        className={`flex flex-col bg-white rounded-lg shadow-md p-6  max-w-[95vw] max-h-[95vh] overflow-hidden ${className} `}
         tabIndex={-1}
       >
-        <div className="flex justify-between items-center mb-4">
+        <div className="h-8 flex justify-between items-center mb-4">
           <h2 id="modal-title" className="text-lg font-semibold text-gray-900">
             {title}
           </h2>
@@ -83,7 +96,7 @@ const Modal = ({ isOpen, onClose, title, children }) => {
             </svg>
           </button>
         </div>
-        <div>{children}</div>
+        <div className="flex-1 min-h-0 overflow-hidden">{children}</div>
       </div>
     </div>
   );

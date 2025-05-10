@@ -93,6 +93,20 @@ const liftController = {
       res.status(500).json({ error: "Failed to create lift" });
     }
   },
+
+  async getLifts(req, res, next) {
+    try {
+      const baseLifts = await prisma.baseLifts.findMany({
+        orderBy: {
+          name: "asc",
+        },
+      });
+      res.json(baseLifts);
+    } catch (error) {
+      console.error("Error fetching BaseLifts:", error);
+      res.status(500).json({ error: "Failed to fetch BaseLifts" });
+    }
+  },
 };
 
 module.exports = liftController;

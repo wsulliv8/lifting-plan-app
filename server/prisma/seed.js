@@ -3,9 +3,23 @@ const bcrypt = require("bcrypt");
 
 const prisma = new PrismaClient();
 
+// Map day_of_week strings to integers (0-6 for Sunday-Saturday)
+const dayOfWeekMap = {
+  Sunday: 0,
+  Monday: 1,
+  Tuesday: 2,
+  Wednesday: 3,
+  Thursday: 4,
+  Friday: 5,
+  Saturday: 6,
+};
+
 async function seed() {
   try {
     // Clear existing data (safe for development)
+    await prisma.workoutDay.deleteMany();
+    await prisma.day.deleteMany();
+    await prisma.week.deleteMany();
     await prisma.supersetLinks.deleteMany();
     await prisma.lifts.deleteMany();
     await prisma.workouts.deleteMany();
@@ -133,6 +147,72 @@ async function seed() {
       where: { name: "Pull Day" },
     });
 
+    // Create Weeks and Days for each Plan
+    for (const plan of [strengthPlan, userPlan]) {
+      // Create weeks based on duration_weeks
+      for (
+        let weekNumber = 1;
+        weekNumber <= plan.duration_weeks;
+        weekNumber++
+      ) {
+        const week = await prisma.week.create({
+          data: {
+            plan_id: plan.id,
+            week_number: weekNumber,
+          },
+        });
+
+        // Create days for each week (0-6 for Sunday-Saturday)
+        for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+          await prisma.day.create({
+            data: {
+              week_id: week.id,
+              day_of_week: dayOfWeek,
+            },
+          });
+        }
+      }
+    }
+
+    // Create WorkoutDay entries to link Workouts to Days
+    const workoutsToLink = [
+      { workout: pushDay, week_number: 1, day_of_week: "Monday", plan_day: 1 },
+      {
+        workout: pullDay,
+        week_number: 1,
+        day_of_week: "Wednesday",
+        plan_day: 2,
+      },
+    ];
+
+    for (const {
+      workout,
+      week_number,
+      day_of_week,
+      plan_day,
+    } of workoutsToLink) {
+      const dayOfWeekInt = dayOfWeekMap[day_of_week] || parseInt(day_of_week);
+      const week = await prisma.week.findFirst({
+        where: {
+          plan_id: workout.plan_id,
+          week_number: week_number,
+        },
+      });
+      const day = await prisma.day.findFirst({
+        where: {
+          week_id: week.id,
+          day_of_week: dayOfWeekInt,
+        },
+      });
+      await prisma.workoutDay.create({
+        data: {
+          day_id: day.id,
+          workout_id: workout.id,
+          order: plan_day, // Use plan_day as the order
+        },
+      });
+    }
+
     // Create Lifts
     const lifts = await prisma.lifts.createMany({
       data: [
@@ -180,6 +260,7 @@ async function seed() {
           weight: [225, 225, 225, 225],
           weight_achieved: [225, 225, 225, 225],
           rpe: ["8-10", "8-10", "8-10", "8-10"],
+          rpe_achieved: ["8-10"],
           rpe_achieved: [8, 9, 9, 10],
           rest_time: [120, 120, 120, 120],
           volume: 4 * 6 * 225,

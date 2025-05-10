@@ -13,9 +13,46 @@ api.interceptors.request.use((config) => {
 });
 
 const getPlans = async () => {
-  console.log(api.headers);
   const response = await api.get("/plans");
   return response.data;
+};
+
+const getPlanById = async (planId) => {
+  try {
+    const response = await api.get(`/plans/${planId}`, {
+      params: {
+        include: "weeks.days.workoutDays.workout.lifts",
+      },
+    });
+
+    const data = response.data;
+
+    return {
+      id: data.id,
+      name: data.name,
+      weeks: data.weeks.map((week) => ({
+        week_number: week.week_number,
+        days: week.days.map((day) => ({
+          day_of_week: day.day_of_week,
+          workouts: day.workoutDays
+            .sort((a, b) => (a.order || 0) - (b.order || 0))
+            .map((wd) => ({
+              id: wd.workout.id,
+              name: wd.workout.name,
+              lifts: wd.workout.lifts.map((lift) => ({
+                id: lift.id,
+                name: lift.name,
+                reps: lift.reps,
+                weight: lift.weight,
+              })),
+            })),
+        })),
+      })),
+    };
+  } catch (error) {
+    console.error("Failed to fetch plan:", error);
+    throw error;
+  }
 };
 
 const createPlan = async (planData) => {
@@ -31,4 +68,4 @@ const downloadPlan = async (plan) => {
   return;
 };
 
-export { getPlans, createPlan, deletePlan, downloadPlan };
+export { getPlans, getPlanById, createPlan, deletePlan, downloadPlan };

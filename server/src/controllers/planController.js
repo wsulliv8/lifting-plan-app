@@ -55,6 +55,48 @@ const planController = {
       next(error);
     }
   },
+
+  async getPlanById(req, res, next) {
+    console.log("in controller");
+
+    const planId = parseInt(req.params.id);
+    const { include } = req.query;
+
+    try {
+      const plan = await prisma.plans.findUnique({
+        where: { id: parseInt(planId) },
+        include: include
+          ? {
+              weeks: {
+                include: {
+                  days: {
+                    include: {
+                      workoutDays: {
+                        include: {
+                          workout: {
+                            include: {
+                              lifts: true,
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            }
+          : {},
+      });
+
+      if (!plan) {
+        return res.status(404).json({ error: "Plan not found" });
+      }
+      res.json(plan);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Failed to fetch plan" });
+    }
+  },
 };
 
 module.exports = planController;

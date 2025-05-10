@@ -7,6 +7,9 @@ const router = express.Router();
 // GET /api/plans
 router.get("/", authMiddleware, planController.getPlans);
 
+// GET /api/plans/:id
+router.get("/:id", authMiddleware, planController.getPlanById);
+
 // POST /api/plans
 router.post("/", authMiddleware, planController.createPlan);
 

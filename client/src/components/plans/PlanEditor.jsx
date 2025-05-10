@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLoaderData } from "react-router-dom";
 import { DndContext, closestCenter } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -9,7 +10,12 @@ import { CSS } from "@dnd-kit/utilities";
 import Modal from "../common/Modal";
 import WorkoutEditor from "./WorkoutEditor";
 import Button from "../common/Button";
-import { PlusCircleIcon, TrashIcon } from "@heroicons/react/24/solid";
+import Input from "../common/Input";
+import {
+  PlusCircleIcon,
+  TrashIcon,
+  ArrowLeftIcon,
+} from "@heroicons/react/24/solid";
 
 // Simple arrayMove function for reordering
 const arrayMove = (array, from, to) => {
@@ -19,39 +25,24 @@ const arrayMove = (array, from, to) => {
   return newArray;
 };
 
-const PlanEditor = ({ initialPlan }) => {
+const PlanEditor = () => {
+  const { plan: initialPlan, baseLifts } = useLoaderData();
   const [plan, setPlan] = useState(
-    initialPlan || {
-      weeks: [
-        {
-          days: Array(7)
-            .fill()
-            .map(() => ({ workouts: [] })),
-        },
-      ],
-    }
+    initialPlan && initialPlan.id
+      ? initialPlan
+      : {
+          name: "",
+          weeks: [
+            {
+              week_number: 1,
+              days: Array(7)
+                .fill()
+                .map((_, index) => ({ day_of_week: index, workouts: [] })),
+            },
+          ],
+        }
   );
-  // dummy workout data for testing UI
-  const allLifts = [
-    {
-      id: "1",
-      name: "Bench Press",
-      sets: [
-        { reps: 10, weight: 135 },
-        { reps: 8, weight: 155 },
-        { reps: 6, weight: 175 },
-      ],
-    },
-    {
-      id: "2",
-      name: "Pull-Up",
-      sets: [
-        { reps: 12, weight: 0 },
-        { reps: 10, weight: 0 },
-        { reps: 8, weight: 0 },
-      ],
-    },
-  ];
+
   const [collapsedWeeks, setCollapsedWeeks] = useState(new Set());
   const [collapsedDays, setCollapsedDays] = useState(Array(7).fill(false));
   const [editingDay, setEditingDay] = useState(null);
@@ -231,6 +222,14 @@ const PlanEditor = ({ initialPlan }) => {
   return (
     <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <div className="w-full overflow-x-auto lg:overflow-x-hidden">
+        <div className="flex justify-between">
+          <span>
+            <ArrowLeftIcon className="w-6 h-6" />
+            {initialPlan ? "Edit Plan" : "Create Plan"}
+          </span>
+          <Input value={plan.name ? plan.name : "New Plan"} />
+          <Button>Save</Button>
+        </div>
         {/* Grid Container */}
         <div
           className="grid gap-2 w-full"
@@ -357,7 +356,7 @@ const PlanEditor = ({ initialPlan }) => {
         {editingDay && (
           <WorkoutEditor
             workouts={editingDay.workouts}
-            allLifts={allLifts}
+            baseLifts={baseLifts}
             onSave={saveEditedWorkouts}
           />
         )}
@@ -395,9 +394,9 @@ const SortableItem = ({ id, workout }) => {
                 <span className="flex flex-col">
                   <span>{lift.name}</span>
                   <span>
-                    {lift.sets.every((val) => val.reps === lift.sets[0].reps)
-                      ? `${lift.sets.length}x${lift.sets[0].reps}`
-                      : `${lift.sets.map((set) => set.reps).join(", ")}`}
+                    {lift.reps.every((val) => val === lift.reps[0])
+                      ? `${lift.reps.length}x${lift.reps[0]}`
+                      : `${lift.weight.map((weight) => weight).join(", ")}`}
                   </span>
                 </span>
               </li>

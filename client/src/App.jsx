@@ -13,7 +13,8 @@ import Workouts from "./pages/Workouts";
 import Lifts from "./pages/Lifts";
 import Layout from "./components/common/Layout";
 import ErrorPage from "./components/common/ErrorPage";
-import { getPlans } from "./services/plans";
+import { getPlans, getPlanById } from "./services/plans";
+import { getAllBaseLifts } from "./services/lifts";
 
 const checkAuthLoader = async () => {
   const token = localStorage.getItem("token");
@@ -38,6 +39,24 @@ const plansLoader = async () => {
   }
 };
 
+const editPlanLoader = async ({ params }) => {
+  try {
+    const [plan, baseLifts] = await Promise.all([
+      getPlanById(params.planId),
+      getAllBaseLifts(),
+    ]);
+    return { plan, baseLifts };
+  } catch (err) {
+    if (err.response?.status === 401) {
+      localStorage.removeItem("token");
+      return redirect("/login");
+    }
+    throw new Response("Failed to load plan", {
+      status: err.response?.status || 500,
+    });
+  }
+};
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -54,6 +73,7 @@ const router = createBrowserRouter([
       {
         path: "plans/:planId/edit",
         element: <PlanEditor />,
+        loader: editPlanLoader,
         errorElement: <ErrorPage />,
       },
       {

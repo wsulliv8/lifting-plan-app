@@ -24,11 +24,11 @@ const arrayMove = (array, from, to) => {
   return newArray;
 };
 
-const WorkoutEditor = ({ workouts: initialWorkouts, allLifts, onSave }) => {
+const WorkoutEditor = ({ workouts: initialWorkouts, baseLifts, onSave }) => {
   const [editedWorkouts, setEditedWorkouts] = useState(initialWorkouts);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeWorkoutIndex, setActiveWorkoutIndex] = useState(0);
-  const filteredLifts = allLifts.filter((w) =>
+  const filteredLifts = baseLifts.filter((w) =>
     w.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -39,16 +39,14 @@ const WorkoutEditor = ({ workouts: initialWorkouts, allLifts, onSave }) => {
     setEditedWorkouts(updated);
   };
 
-  const addLift = (workoutIndex, liftName) => {
+  const addLift = (workoutIndex, baseLift) => {
     const updated = [...editedWorkouts];
     const newLift = {
       id: `${Date.now()}`,
-      name: liftName,
-      sets: [
-        { reps: 0, weight: 0 },
-        { reps: 0, weight: 0 },
-        { reps: 0, weight: 0 },
-      ],
+      name: baseLift.name,
+      base_lift_id: baseLift.id, // Link to the BaseLift
+      reps: [0, 0, 0],
+      weight: [0, 0, 0],
     };
     updated[workoutIndex].lifts.push(newLift);
     setEditedWorkouts(updated);
@@ -56,31 +54,30 @@ const WorkoutEditor = ({ workouts: initialWorkouts, allLifts, onSave }) => {
 
   const updateSet = (workoutIndex, liftIndex, setIndex, field, value) => {
     const updated = [...editedWorkouts];
-    updated[workoutIndex].lifts[liftIndex].sets[setIndex][field] = value;
+    updated[workoutIndex].lifts[liftIndex][field][setIndex] = value;
     setEditedWorkouts(updated);
   };
 
   const addSet = (workoutIndex, liftIndex) => {
     const updated = [...editedWorkouts];
-    console.log(updated[workoutIndex].lifts[liftIndex].sets);
 
-    const { prevSetReps, prevSetWeight } =
-      updated[workoutIndex].lifts[liftIndex].sets.at(-1);
-    console.log(prevSetReps);
-    updated[workoutIndex].lifts[liftIndex].sets.push({
-      reps: prevSetReps,
-      weight: prevSetWeight,
-    });
-    console.log(updated[workoutIndex].lifts[liftIndex].sets);
+    const prevSetReps = updated[workoutIndex].lifts[liftIndex].reps.at(-1);
+    const prevSetWeight = updated[workoutIndex].lifts[liftIndex].weight.at(-1);
+
+    updated[workoutIndex].lifts[liftIndex].reps.push(prevSetReps);
+    updated[workoutIndex].lifts[liftIndex].weight.push(prevSetWeight);
 
     setEditedWorkouts(updated);
   };
 
-  const removeSet = (workoutIndex, liftIndex, setIndex) => {
+  const removeSet = (workoutIndex, liftIndex) => {
     const updated = [...editedWorkouts];
-    updated[workoutIndex].lifts[liftIndex].sets = updated[workoutIndex].lifts[
-      liftIndex
-    ].sets.filter((_, i) => i !== setIndex);
+    updated[workoutIndex].lifts[liftIndex] = {
+      ...updated[workoutIndex].lifts[liftIndex],
+      reps: updated[workoutIndex].lifts[liftIndex].reps.slice(0, -1),
+      weight: updated[workoutIndex].lifts[liftIndex].weight.slice(0, -1),
+    };
+
     setEditedWorkouts(updated);
   };
 
@@ -224,7 +221,7 @@ const WorkoutEditor = ({ workouts: initialWorkouts, allLifts, onSave }) => {
             >
               <span>{lift.name}</span>
               <button
-                onClick={() => addLift(activeWorkoutIndex, lift.name)}
+                onClick={() => addLift(activeWorkoutIndex, lift)}
                 className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
               >
                 Add
@@ -281,13 +278,13 @@ const SortableLift = ({
         <h3>Sets</h3>
         <h3>Reps</h3>
         <h3>Weight</h3>
-        {lift.sets.map((set, setIndex) => (
+        {lift.reps.map((repsValue, setIndex) => (
           <React.Fragment key={`${lift.id}-set-${setIndex}`}>
             <span className="h-8 w-8 flex items-center justify-center input-field">
               {setIndex + 1}
             </span>
             <input
-              value={set.reps === 0 ? "" : set.reps}
+              value={repsValue === 0 ? "" : repsValue}
               onChange={(e) =>
                 updateSet(
                   workoutIndex,
@@ -300,7 +297,7 @@ const SortableLift = ({
               className="h-8 w-1/2 text-center input-field"
             />
             <input
-              value={set.weight === 0 ? "" : set.weight}
+              value={lift.weight[setIndex] === 0 ? "" : lift.weight[setIndex]}
               onChange={(e) =>
                 updateSet(
                   workoutIndex,
@@ -316,9 +313,7 @@ const SortableLift = ({
         ))}
         <div className="flex items-center gap-1 col-span-full">
           <MinusCircleIcon
-            onClick={() =>
-              removeSet(workoutIndex, liftIndex, lift.sets.length - 1)
-            }
+            onClick={() => removeSet(workoutIndex, liftIndex)}
             className="w-6 h-6 text-red-400 hover:text-red-600 cursor-pointer"
           />
           <p className="text-xs">Sets</p>

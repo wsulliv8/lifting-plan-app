@@ -100,13 +100,21 @@ const WorkoutEditor = ({ workouts: initialWorkouts, baseLifts, onSave }) => {
   };
 
   const addWorkoutCopy = (workout) => {
-    const newId = `${Date.now()}`;
+    const newWorkoutId = `${Date.now()}`;
     const newLifts = workout.lifts.map((lift, index) => ({
-      id: `${newId}-lift-${index}-${Date.now()}`,
+      id: `${newWorkoutId}-lift-${index}-${Date.now()}`,
       name: lift.name,
-      sets: lift.sets.map((set) => ({ reps: set.reps, weight: set.weight })),
+      base_lift_id: lift.base_lift_id, // retain link to base lift
+      reps: [...lift.reps],
+      weight: [...lift.weight],
     }));
-    const newWorkout = { id: newId, name: workout.name, lifts: newLifts };
+
+    const newWorkout = {
+      id: newWorkoutId,
+      name: workout.name + " (Copy)",
+      lifts: newLifts,
+    };
+
     setEditedWorkouts([...editedWorkouts, newWorkout]);
   };
 

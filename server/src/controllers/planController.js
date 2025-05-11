@@ -425,9 +425,11 @@ const planController = {
                         liftRecord = await prismaTransaction.lifts.create({
                           data: {
                             //id: lift.id,
-                            workout_id: workoutRecord.id,
+                            workout: { connect: { id: workoutRecord.id } },
                             name: lift.name,
-                            base_lift_id: lift.base_lift_id,
+                            base_lift: {
+                              connect: { id: lift.base_lift_id },
+                            },
                             sets: lift.sets,
                             reps: lift.reps,
                             weight: lift.weight,

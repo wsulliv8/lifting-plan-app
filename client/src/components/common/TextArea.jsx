@@ -1,8 +1,7 @@
 import { useState, memo } from "react";
 
-const Input = ({
+const TextArea = ({
   label,
-  type = "text",
   value,
   onChange,
   className = "",
@@ -25,12 +24,11 @@ const Input = ({
           {isInvalid && <span className="text-error ml-4">required</span>}
         </label>
       )}
-      <input
-        type={type}
+      <textarea
         value={value ?? ""}
         onChange={onChange}
         onBlur={handleBlur}
-        className={`input-field ${
+        className={`input-field resize-none ${
           isInvalid ? "border-error" : ""
         } ${className}`}
         required={required}
@@ -40,4 +38,4 @@ const Input = ({
   );
 };
 
-export default memo(Input);
+export default memo(TextArea);

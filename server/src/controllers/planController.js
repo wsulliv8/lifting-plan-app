@@ -24,28 +24,40 @@ const planController = {
 
   async createPlan(req, res, next) {
     try {
-      const {
-        name,
-        categories,
-        description,
-        duration_weeks,
-        difficulty,
-        goal,
-      } = req.body;
-      if (!name || !categories || !duration_weeks || !difficulty || !goal) {
-        throw new Error("Missing required fields");
-      }
+      const { name, duration_weeks } = req.body;
+
+      const duration = duration_weeks ? duration_weeks : 3;
 
       const plan = await prisma.plans.create({
         data: {
-          name,
+          name: name ? name : "New Plan",
           user_id: req.user.userId,
-          categories,
-          description,
-          duration_weeks,
-          difficulty,
-          goal,
+          categories: [],
+          description: null,
+          duration_weeks: duration,
+          difficulty: "Beginner",
+          goal: "Strength",
           created_at: new Date(),
+          weeks: {
+            create: Array.from({ length: duration }, (_, index) => ({
+              week_number: index + 1,
+              days: {
+                create: Array(7)
+                  .fill()
+                  .map((_, dayIndex) => ({
+                    day_of_week: dayIndex,
+                    // We cannot directly create workoutDays here because we don't have workout IDs yet
+                  })),
+              },
+            })),
+          },
+        },
+        include: {
+          weeks: {
+            include: {
+              days: true,
+            },
+          },
         },
       });
 

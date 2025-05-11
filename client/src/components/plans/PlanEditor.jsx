@@ -30,23 +30,7 @@ const PlanEditor = () => {
   const { plan: initialPlan, baseLifts } = useLoaderData();
   const [plan, setPlan] = useState(
     initialPlan && initialPlan.id
-      ? initialPlan /* {
-          ...initialPlan,
-          id: Number(initialPlan.id), // Ensure id is a number
-          weeks: initialPlan.weeks.map((week) => ({
-            ...week,
-            id: week.id ? Number(week.id) : undefined,
-            days: week.days.map((day) => ({
-              ...day,
-              id: day.id ? Number(day.id) : undefined,
-              day_of_week: day.day_of_week ? day.day_of_week : 0,
-              workouts: day.workouts.map((workout) => ({
-                ...workout,
-                id: workout.id ? Number(workout.id) : undefined,
-              })),
-            })),
-          })),
-        } */
+      ? initialPlan
       : {
           name: "",
           weeks: [

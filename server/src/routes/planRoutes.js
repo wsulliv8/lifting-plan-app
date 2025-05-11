@@ -15,4 +15,6 @@ router.post("/", authMiddleware, planController.createPlan);
 
 router.put("/:id", authMiddleware, planController.updatePlan);
 
+router.delete("/:id", authMiddleware, planController.deletePlan);
+
 module.exports = router;

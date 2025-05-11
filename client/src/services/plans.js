@@ -63,7 +63,7 @@ const createPlan = async (planData) => {
 const savePlan = async (plan) => {
   try {
     // Helper function to safely convert IDs
-    const safeInt = (id) => {
+    /*     const safeInt = (id) => {
       if (!id) return undefined;
       const num = Number(id);
       // Check if within PostgreSQL INT4 range (-2147483648 to 2147483647)
@@ -74,30 +74,44 @@ const savePlan = async (plan) => {
         return undefined; // Return undefined to force a new record creation
       }
       return num;
-    };
+    }; */
 
     // Sanitize plan data to ensure consistent types and safe IDs
     const sanitizedPlan = {
       ...plan,
-      id: safeInt(plan.id),
+      //id: safeInt(plan.id),
+      id: Number(plan.id),
+
       weeks: plan.weeks.map((week, weekIndex) => ({
-        id: safeInt(week.id),
+        //id: safeInt(week.id),
+        id: Number(week.id),
+
         week_number: weekIndex + 1, // Ensure week numbers are sequential
         days: week.days.map((day) => ({
-          id: safeInt(day.id),
+          //id: safeInt(day.id),
+          id: Number(day.id),
+
           day_of_week: day.day_of_week ? Number(day.day_of_week) : 0,
           workouts: (day.workouts || []).map((workout, workoutIndex) => {
             // Create a proper workout object with correct types
             return {
-              id: safeInt(workout.id),
-              workoutDayId: safeInt(workout.workoutDayId),
+              //id: safeInt(workout.id),
+              id: Number(workout.id),
+
+              //workoutDayId: safeInt(workout.workoutDayId),
+              workoutDayId: Number(workout.workoutDayId),
+
               name: workout.name || `Workout ${workoutIndex + 1}`,
               // Include lifts if present
               ...(workout.lifts && {
                 lifts: workout.lifts.map((lift) => ({
-                  id: safeInt(lift.id),
+                  //id: safeInt(lift.id),
+                  id: Number(lift.id),
+
                   name: lift.name,
-                  base_lift_id: safeInt(lift.base_lift_id),
+                  //base_lift_id: safeInt(lift.base_lift_id),
+                  base_lift_id: lift.base_lift_id ? lift.base_lift_id : 1,
+
                   sets: Number(lift.sets || 0),
                   reps: lift.reps.map((num) => num.toString()) || [],
                   weight: lift.weight || [],

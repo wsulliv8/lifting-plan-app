@@ -28,21 +28,7 @@ const arrayMove = (array, from, to) => {
 
 const PlanEditor = () => {
   const { plan: initialPlan, baseLifts } = useLoaderData();
-  const [plan, setPlan] = useState(
-    initialPlan && initialPlan.id
-      ? initialPlan
-      : {
-          name: "",
-          weeks: [
-            {
-              week_number: 1,
-              days: Array(7)
-                .fill()
-                .map((_, index) => ({ day_of_week: index, workouts: [] })),
-            },
-          ],
-        }
-  );
+  const [plan, setPlan] = useState(initialPlan);
   const [collapsedWeeks, setCollapsedWeeks] = useState(new Set());
   const [collapsedDays, setCollapsedDays] = useState(Array(7).fill(false));
   const [editingDay, setEditingDay] = useState(null);
@@ -207,6 +193,29 @@ const PlanEditor = () => {
     });
   };
 
+  // strip Date.now() ids in preparation for db autoincrement (prevent overflow)
+  const stripIds = (plan) => {
+    return {
+      ...plan,
+      weeks: plan.weeks.map((week) => ({
+        ...week,
+        days: week.days.map((day) => ({
+          ...day,
+          workouts: day.workouts.map((workout) => {
+            const { id: _workoutId, ...workoutWithoutId } = workout;
+            return {
+              ...workoutWithoutId,
+              lifts: workout.lifts.map((lift) => {
+                const { id: _liftId, ...liftWithoutId } = lift;
+                return liftWithoutId;
+              }),
+            };
+          }),
+        })),
+      })),
+    };
+  };
+
   // Generate grid template columns based on collapsed days
   const gridTemplateColumns = `2rem ${Array(7)
     .fill()
@@ -228,7 +237,7 @@ const PlanEditor = () => {
             {initialPlan ? "Edit Plan" : "Create Plan"}
           </span>
           <Input value={plan.name ? plan.name : "New Plan"} />
-          <Button onClick={() => savePlan(plan)}>Save</Button>
+          <Button onClick={() => savePlan(stripIds(plan))}>Save</Button>
         </div>
         {/* Grid Container */}
         <div

@@ -3,20 +3,8 @@ import Button from "../common/Button"; // Assuming your Button component
 import { deletePlan, downloadPlan } from "../../services/plans"; // Your API client for DELETE /api/plans/:id
 import { TrashIcon } from "@heroicons/react/24/outline";
 
-const PlanCard = ({ plan, planType }) => {
+const PlanCard = ({ plan, planType, onDelete }) => {
   const navigate = useNavigate();
-
-  const handleDelete = async () => {
-    if (window.confirm("Are you sure you want to delete this plan?")) {
-      try {
-        await deletePlan(plan.id);
-        // Trigger parent refresh (e.g., refetch plans in PlanList.jsx)
-        window.location.reload(); // Temporary; replace with state update
-      } catch (error) {
-        console.error("Failed to delete plan:", error);
-      }
-    }
-  };
 
   const handleDownload = async () => {
     try {
@@ -99,7 +87,7 @@ const PlanCard = ({ plan, planType }) => {
             </Button>
             <Button
               variant="secondary"
-              onClick={handleDelete}
+              onClick={() => onDelete(plan.id)}
               className="text-sm   bg-red-500 hover:bg-red-600 text-white flex-none"
             >
               <TrashIcon className="h-6 w-6 text-gray-800" />

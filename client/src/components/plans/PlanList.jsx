@@ -1,6 +1,6 @@
 import PlanCard from "./PlanCard";
 
-const PlanList = ({ plans, isLoading, planType }) => {
+const PlanList = ({ plans, isLoading, planType, onDelete }) => {
   if (isLoading) {
     return <div className="p-4 text-gray-600">Loading plans...</div>;
   }
@@ -20,6 +20,7 @@ const PlanList = ({ plans, isLoading, planType }) => {
               totalWorkouts: plan.workouts?.length || 0,
             }}
             planType={planType}
+            onDelete={onDelete}
           />
         ))
       )}

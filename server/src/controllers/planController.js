@@ -105,6 +105,47 @@ const planController = {
       next(error);
     }
   },
+
+  async deletePlan(req, res, next) {
+    try {
+      const planId = parseInt(req.params.id, 10);
+
+      const plan = await prisma.plans.findUnique({
+        where: { id: planId },
+      });
+
+      if (!plan) {
+        return res.status(404).json({ error: "Plan not found" });
+      }
+
+      // Check permissions
+      if (plan.user_id && plan.user_id !== req.user?.userId) {
+        return res
+          .status(403)
+          .json({ error: "You are not authorized to delete this plan" });
+      }
+      // Allow deletion of generic plans (user_id: null) only by admins (if applicable)
+      if (!plan.user_id && !req.user?.isAdmin) {
+        return res
+          .status(403)
+          .json({ error: "Only admins can delete generic plans" });
+      }
+
+      // Delete the plan (cascading deletes handle weeks and workouts)
+      await prisma.plans.delete({
+        where: { id: planId },
+      });
+
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting plan:", error);
+      if (error.code === "P2025") {
+        return res.status(404).json({ error: "Plan not found" });
+      }
+      next(error);
+    }
+  },
+
   async updatePlan(req, res, next) {
     const { id } = req.params;
     const planData = req.body;

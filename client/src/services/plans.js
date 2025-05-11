@@ -126,46 +126,22 @@ const savePlan = async (plan) => {
     throw error; // Rethrow for caller to handle
   }
 };
-/* const savePlan = async (plan) => {
-  try {
-    // Sanitize plan data
-    const sanitizedPlan = {
-      ...plan,
-      id: plan.id ? Number(plan.id) : undefined,
-      weeks: plan.weeks.map((week) => ({
-        ...week,
-        id: week.id ? Number(week.id) : undefined,
-        days: week.days.map((day) => ({
-          ...day,
-          id: day.id ? Number(day.id) : undefined,
-          week_id: undefined, // Remove week_id to avoid foreign key issues
-          workouts: (day.workouts || []).map((workout) => ({
-            ...workout,
-            id: workout.id ? Number(workout.id) : undefined,
-          })),
-        })),
-      })),
-    };
 
-    let response;
-    if (sanitizedPlan.id) {
-      // Update existing plan
-      response = await api.put(`/plans/${sanitizedPlan.id}`, sanitizedPlan);
-    } else {
-      // Create new plan
-      response = await api.post("/plans", sanitizedPlan);
+const deletePlan = async (planId) => {
+  try {
+    // Validate planId
+    if (!Number.isInteger(Number(planId)) || Number(planId) <= 0) {
+      throw new Error("Invalid plan ID");
     }
 
-    console.log("Plan saved successfully", response.data);
-    return response.data; // Return the saved plan for state updates
+    await api.delete(`/plans/${planId}`);
+    return { success: true, planId };
   } catch (error) {
-    console.error("Error saving plan:", error);
-    throw error; // Rethrow for caller to handle
+    console.error("Failed to delete plan:", error);
+    throw (
+      error.response?.data?.error || error.message || "Failed to delete plan"
+    );
   }
-}; */
-
-const deletePlan = async (id) => {
-  return;
 };
 
 const downloadPlan = async (plan) => {

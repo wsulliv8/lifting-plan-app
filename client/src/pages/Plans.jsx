@@ -1,16 +1,21 @@
 import { useState, useCallback, memo } from "react";
-import { useLoaderData, useNavigate } from "react-router-dom";
+import { useLoaderData, useNavigate, useNavigation } from "react-router-dom";
 import PlanList from "../components/plans/PlanList";
 import Modal from "../components/common/Modal";
 import Input from "../components/common/Input";
-import { createPlan } from "../services/plans";
+import { createPlan, deletePlan } from "../services/plans";
 
 const Plans = () => {
   const [view, setView] = useState("your");
-  const plans = useLoaderData();
+  const plansData = useLoaderData();
+  const [plans, setPlans] = useState({
+    userPlans: plansData.userPlans,
+    genericPlans: plansData.genericPlans,
+  });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const displayedPlans = view === "your" ? plans.userPlans : plans.genericPlans;
   const navigate = useNavigate();
+  const navigation = useNavigation();
 
   // State only for controlled inputs
   const [formInputs, setFormInputs] = useState({
@@ -70,6 +75,19 @@ const Plans = () => {
     setView("pre-made");
   };
 
+  const handleDelete = useCallback(async (planId) => {
+    if (!window.confirm("Are you sure you want to delete this plan?")) return;
+    try {
+      await deletePlan(planId);
+      setPlans((prev) => ({
+        userPlans: prev.userPlans.filter((plan) => plan.id !== planId),
+        genericPlans: prev.genericPlans.filter((plan) => plan.id !== planId),
+      }));
+    } catch (error) {
+      console.error(error || "Failed to delete plan");
+    }
+  }, []);
+
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
@@ -117,6 +135,7 @@ const Plans = () => {
         plans={displayedPlans}
         isLoading={navigation.state === "loading"}
         planType={view}
+        onDelete={handleDelete}
       />
 
       {isModalOpen && (

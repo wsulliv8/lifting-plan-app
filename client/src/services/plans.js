@@ -61,7 +61,6 @@ const createPlan = async (planData) => {
 };
 
 const savePlan = async (plan) => {
-  console.log(plan);
   try {
     // Helper function to safely convert IDs
     const safeInt = (id) => {

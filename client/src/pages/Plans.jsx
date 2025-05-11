@@ -1,52 +1,73 @@
-import { useState } from "react";
-import { useLoaderData, useNavigation } from "react-router-dom";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useCallback, memo } from "react";
+import { useLoaderData, useNavigate } from "react-router-dom";
 import PlanList from "../components/plans/PlanList";
 import Modal from "../components/common/Modal";
-import Select from "../components/common/Select";
 import Input from "../components/common/Input";
 import { createPlan } from "../services/plans";
 
 const Plans = () => {
   const [view, setView] = useState("your");
   const plans = useLoaderData();
-  const navigation = useNavigation();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const displayedPlans = view === "your" ? plans.userPlans : plans.genericPlans;
+  const navigate = useNavigate();
 
-  // Form state for plan creation
-  const [formData, setFormData] = useState({
+  // State only for controlled inputs
+  const [formInputs, setFormInputs] = useState({
     name: "",
-    goal: "",
     duration_weeks: "",
-    difficulty: "Beginner",
   });
 
-  // Handle form input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormInputs((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
-  // Handle form submission
+  const handleCloseModal = useCallback(() => {
+    setIsModalOpen(false);
+    // Reset form data
+    const resetData = {
+      name: "",
+      duration_weeks: "",
+    };
+    setFormInputs(resetData);
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const newPlan = await createPlan({
-        ...formData,
-        duration_weeks: parseInt(formData.duration_weeks, 10),
+        ...formInputs,
+        duration_weeks: parseInt(formInputs.duration_weeks, 10),
       });
+
+      // Close modal and reset form
       setIsModalOpen(false);
-      setFormData({
+      const resetData = {
         name: "",
-        goal: "",
         duration_weeks: "",
-        difficulty: "Beginner",
-      });
-      navigation(`/plans/:${newPlan.id}/edit`);
+      };
+      setFormInputs(resetData);
+
+      navigate(`/plans/${newPlan.id}/edit`);
     } catch (error) {
       console.error("Failed to create plan:", error);
     }
+  };
+
+  const handleOpenModal = useCallback(() => {
+    setIsModalOpen(true);
+  }, []);
+
+  const handleViewYour = () => {
+    setView("your");
+  };
+
+  const handleViewPreMade = () => {
+    setView("pre-made");
   };
 
   return (
@@ -66,7 +87,7 @@ const Plans = () => {
             ></div>
             {/* Your Plans Option */}
             <button
-              onClick={() => setView("your")}
+              onClick={handleViewYour}
               className={`relative z-10 w-1/2 py-2 text-sm font-medium transition-colors duration-300 ${
                 view === "your" ? "text-white" : "text-gray-700"
               }`}
@@ -77,7 +98,7 @@ const Plans = () => {
             </button>
             {/* Pre-Made Plans Option */}
             <button
-              onClick={() => setView("pre-made")}
+              onClick={handleViewPreMade}
               className={`relative z-10 w-1/2 py-2 text-sm font-medium transition-colors duration-300 ${
                 view === "pre-made" ? "text-white" : "text-gray-700"
               }`}
@@ -88,7 +109,7 @@ const Plans = () => {
             </button>
           </div>
         </div>
-        <button onClick={() => setIsModalOpen(true)} className="btn-primary">
+        <button onClick={handleOpenModal} className="btn-primary">
           Create Plan
         </button>
       </div>
@@ -97,65 +118,87 @@ const Plans = () => {
         isLoading={navigation.state === "loading"}
         planType={view}
       />
-      {/* Create Plan Modal */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Create New Plan"
-        className="w-1/2"
-      >
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            label="Plan Name"
-            name="name"
-            value={formData.name}
-            onChange={handleInputChange}
+
+      {isModalOpen && (
+        <Modal
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          title="Create New Plan"
+          className="w-1/2"
+        >
+          <FormContent
+            formData={formInputs}
+            handleInputChange={handleInputChange}
+            handleSubmit={handleSubmit}
+            handleCloseModal={handleCloseModal}
           />
-          <Input
-            label="Goal"
-            name="goal"
-            value={formData.goal}
-            onChange={handleInputChange}
-            placeholder="e.g., Strength, Hypertrophy"
-          />
-          <Input
-            label="Duration (Weeks)"
-            type="number"
-            name="duration_weeks"
-            value={formData.duration_weeks}
-            onChange={handleInputChange}
-            min="1"
-          />
-          <Select
-            label="Difficulty"
-            name="difficulty"
-            value={formData.difficulty}
-            onChange={handleInputChange}
-            options={[
-              { value: "Beginner", label: "Beginner" },
-              { value: "Intermediate", label: "Intermediate" },
-              { value: "Advanced", label: "Advanced" },
-            ]}
-          />
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setIsModalOpen(false)}
-              className="px-4 py-2 text-gray-700 bg-gray-200 rounded hover:bg-gray-300"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600"
-            >
-              Create
-            </button>
-          </div>
-        </form>
-      </Modal>
+        </Modal>
+      )}
     </div>
   );
 };
+
+const FormContent = memo(
+  ({ formData, handleInputChange, handleSubmit, handleCloseModal }) => {
+    return (
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Input
+          label="Plan Name"
+          name="name"
+          value={formData.name}
+          onChange={handleInputChange}
+        />
+        {/*         <Input
+          label="Goal"
+          name="goal"
+          value={formData.goal}
+          onChange={handleInputChange}
+          placeholder="e.g., Strength, Hypertrophy"
+        />
+        <Input
+          label="Categories"
+          name="categories"
+          value={formData.categories}
+          onChange={handleInputChange}
+          placeholder="e.g., Barbell, Compound, etc."
+        /> */}
+        <Input
+          label="Duration (Weeks)"
+          type="number"
+          name="duration_weeks"
+          value={formData.duration_weeks}
+          onChange={handleInputChange}
+          min="1"
+        />
+        {/*         <Select
+          label="Difficulty"
+          name="difficulty"
+          value={formData.difficulty}
+          onChange={handleInputChange}
+          options={[
+            { value: "Beginner", label: "Beginner" },
+            { value: "Intermediate", label: "Intermediate" },
+            { value: "Advanced", label: "Advanced" },
+          ]}
+        /> */}
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={handleCloseModal}
+            className="px-4 py-2 text-gray-700 bg-gray-200 rounded hover:bg-gray-300"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600"
+          >
+            Create
+          </button>
+        </div>
+      </form>
+    );
+  }
+);
 
 export default Plans;

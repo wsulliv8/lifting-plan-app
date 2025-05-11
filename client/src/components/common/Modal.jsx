@@ -1,15 +1,16 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, memo } from "react";
 
 const Modal = ({ isOpen, onClose, title, children, className }) => {
   const modalRef = useRef(null);
+  const firstRenderRef = useRef(true);
 
-  // Handle Escape key and focus trapping
   useEffect(() => {
     const handleEscape = (e) => {
       if (e.key === "Escape") onClose();
     };
 
     const handleFocusTrap = (e) => {
+      if (!modalRef.current) return;
       const focusableElements = modalRef.current.querySelectorAll(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
       );
@@ -30,29 +31,37 @@ const Modal = ({ isOpen, onClose, title, children, className }) => {
     if (isOpen) {
       document.addEventListener("keydown", handleEscape);
       document.addEventListener("keydown", handleFocusTrap);
-      modalRef.current.focus();
+      if (firstRenderRef.current) {
+        const firstInput = modalRef.current.querySelector(
+          "input, select, textarea"
+        );
+        if (firstInput) {
+          firstInput.focus();
+        } else {
+          modalRef.current.querySelector("#modal-title")?.focus();
+        }
+        firstRenderRef.current = false;
+      }
     }
 
     return () => {
       document.removeEventListener("keydown", handleEscape);
       document.removeEventListener("keydown", handleFocusTrap);
+      firstRenderRef.current = true;
     };
   }, [isOpen, onClose]);
 
-  // prevent background scrolling
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
     }
-
     return () => {
       document.body.style.overflow = "";
     };
   }, [isOpen]);
 
-  // Handle click outside modal to close
   const handleOverlayClick = (e) => {
     if (e.target === e.currentTarget) onClose();
   };
@@ -69,11 +78,15 @@ const Modal = ({ isOpen, onClose, title, children, className }) => {
     >
       <div
         ref={modalRef}
-        className={`flex flex-col bg-white rounded-lg shadow-md p-6  max-w-[95vw] max-h-[95vh] overflow-hidden ${className} `}
+        className={`flex flex-col bg-white rounded-lg shadow-md p-6 max-w-[95vw] max-h-[95vh] overflow-hidden ${className}`}
         tabIndex={-1}
       >
         <div className="h-8 flex justify-between items-center mb-4">
-          <h2 id="modal-title" className="text-lg font-semibold text-gray-900">
+          <h2
+            id="modal-title"
+            className="text-lg font-semibold text-gray-900"
+            tabIndex={-1}
+          >
             {title}
           </h2>
           <button
@@ -102,4 +115,4 @@ const Modal = ({ isOpen, onClose, title, children, className }) => {
   );
 };
 
-export default Modal;
+export default memo(Modal);

@@ -33,6 +33,7 @@ model Plans {
   weeks          Week[] // Relation to Week model
 }
 
+
 model Week {
   id          Int   @id @default(autoincrement())
   plan_id     Int

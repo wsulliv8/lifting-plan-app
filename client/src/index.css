@@ -55,10 +55,6 @@
   body {
     @apply font-sans text-base text-gray-900 bg-background min-h-screen;
   }
-
-  * {
-    @apply outline-4 outline-red-600;
-  }
 }
 
 @tailwind utilities;

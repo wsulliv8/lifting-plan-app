@@ -30,7 +30,7 @@ const PlanEditor = () => {
   const { plan: initialPlan, baseLifts } = useLoaderData();
   const [plan, setPlan] = useState(
     initialPlan && initialPlan.id
-      ? {
+      ? initialPlan /* {
           ...initialPlan,
           id: Number(initialPlan.id), // Ensure id is a number
           weeks: initialPlan.weeks.map((week) => ({
@@ -46,7 +46,7 @@ const PlanEditor = () => {
               })),
             })),
           })),
-        }
+        } */
       : {
           name: "",
           weeks: [

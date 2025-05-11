@@ -13,4 +13,6 @@ router.get("/:id", authMiddleware, planController.getPlanById);
 // POST /api/plans
 router.post("/", authMiddleware, planController.createPlan);
 
+router.put("/:id", authMiddleware, planController.updatePlan);
+
 module.exports = router;

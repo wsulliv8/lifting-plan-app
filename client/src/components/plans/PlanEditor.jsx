@@ -11,6 +11,7 @@ import Modal from "../common/Modal";
 import WorkoutEditor from "./WorkoutEditor";
 import Button from "../common/Button";
 import Input from "../common/Input";
+import { savePlan } from "../../services/plans";
 import {
   PlusCircleIcon,
   TrashIcon,
@@ -29,7 +30,23 @@ const PlanEditor = () => {
   const { plan: initialPlan, baseLifts } = useLoaderData();
   const [plan, setPlan] = useState(
     initialPlan && initialPlan.id
-      ? initialPlan
+      ? {
+          ...initialPlan,
+          id: Number(initialPlan.id), // Ensure id is a number
+          weeks: initialPlan.weeks.map((week) => ({
+            ...week,
+            id: week.id ? Number(week.id) : undefined,
+            days: week.days.map((day) => ({
+              ...day,
+              id: day.id ? Number(day.id) : undefined,
+              day_of_week: day.day_of_week ? day.day_of_week : 0,
+              workouts: day.workouts.map((workout) => ({
+                ...workout,
+                id: workout.id ? Number(workout.id) : undefined,
+              })),
+            })),
+          })),
+        }
       : {
           name: "",
           weeks: [
@@ -42,7 +59,6 @@ const PlanEditor = () => {
           ],
         }
   );
-
   const [collapsedWeeks, setCollapsedWeeks] = useState(new Set());
   const [collapsedDays, setCollapsedDays] = useState(Array(7).fill(false));
   const [editingDay, setEditingDay] = useState(null);
@@ -228,7 +244,7 @@ const PlanEditor = () => {
             {initialPlan ? "Edit Plan" : "Create Plan"}
           </span>
           <Input value={plan.name ? plan.name : "New Plan"} />
-          <Button>Save</Button>
+          <Button onClick={() => savePlan(plan)}>Save</Button>
         </div>
         {/* Grid Container */}
         <div

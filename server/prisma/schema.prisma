@@ -8,96 +8,96 @@ datasource db {
 }
 
 model Users {
-  id              Int             @id @default(autoincrement())
-  email           String          @unique
-  username        String          @unique
-  password        String
-  created_at      DateTime        @default(now())
-  plans           Plans[]         // Relation to Plans (one-to-many)
-  workouts        Workouts[]      // Relation to Workouts (one-to-many)
-  lifts_data      UserLiftsData[] // One-to-many with user-specific data 
+  id         Int             @id @default(autoincrement())
+  email      String          @unique
+  username   String          @unique
+  password   String
+  created_at DateTime        @default(now())
+  plans      Plans[] // Relation to Plans (one-to-many)
+  workouts   Workouts[] // Relation to Workouts (one-to-many)
+  lifts_data UserLiftsData[] // One-to-many with user-specific data 
 }
 
 model Plans {
-  id              Int             @id @default(autoincrement())
-  user_id         Int?            // Nullable for generic plans
-  name            String
-  categories      String[]
-  description     String?
-  duration_weeks  Int
-  difficulty      String          // Default plan may have baseline difficulty, but user can change it
-  goal            String          // i.e. strength, hypertrophy, etc.
-  created_at      DateTime        @default(now())
-  user            Users?          @relation(fields: [user_id], references: [id])
-  workouts        Workouts[]      // Relation to Workouts (one-to-many)
-  weeks           Week[]          // Relation to Week model
+  id             Int        @id @default(autoincrement())
+  user_id        Int? // Nullable for generic plans
+  name           String
+  categories     String[]
+  description    String?
+  duration_weeks Int
+  difficulty     String // Default plan may have baseline difficulty, but user can change it
+  goal           String // i.e. strength, hypertrophy, etc.
+  created_at     DateTime   @default(now())
+  user           Users?     @relation(fields: [user_id], references: [id])
+  workouts       Workouts[] // Relation to Workouts (one-to-many)
+  weeks          Week[] // Relation to Week model
 }
 
 model Week {
-  id              Int             @id @default(autoincrement())
-  plan_id         Int
-  week_number     Int             // e.g., 1, 2, 3, etc.
-  plan            Plans           @relation(fields: [plan_id], references: [id])
-  days            Day[]           // Relation to Day model
+  id          Int   @id @default(autoincrement())
+  plan_id     Int
+  week_number Int // e.g., 1, 2, 3, etc.
+  plan        Plans @relation(fields: [plan_id], references: [id])
+  days        Day[] // Relation to Day model
 }
 
 model Day {
-  id              Int             @id @default(autoincrement())
-  week_id         Int
-  day_of_week     Int             // e.g., 0 (Sunday), 1 (Monday), ..., 6 (Saturday)
-  week            Week            @relation(fields: [week_id], references: [id])
-  workoutDays     WorkoutDay[]    // Junction table to link Day and Workouts
+  id          Int          @id @default(autoincrement())
+  week_id     Int
+  day_of_week Int // e.g., 0 (Sunday), 1 (Monday), ..., 6 (Saturday)
+  week        Week         @relation(fields: [week_id], references: [id])
+  workoutDays WorkoutDay[] // Junction table to link Day and Workouts
 }
 
 model WorkoutDay {
-  id              Int             @id @default(autoincrement())
-  day_id          Int
-  workout_id      Int
-  order           Int?            // Optional field to maintain workout order within a day
-  day             Day             @relation(fields: [day_id], references: [id])
-  workout         Workouts        @relation(fields: [workout_id], references: [id])
+  id         Int      @id @default(autoincrement())
+  day_id     Int
+  workout_id Int
+  order      Int? // Optional field to maintain workout order within a day
+  day        Day      @relation(fields: [day_id], references: [id])
+  workout    Workouts @relation(fields: [workout_id], references: [id])
 }
 
 model Workouts {
-  id              Int             @id @default(autoincrement())
-  user_id         Int?            // Nullable for generic workouts
-  plan_id         Int?
-  name            String
-  week_number     Int
-  plan_day        Int
-  day_of_week     String
-  iteration       Int?            // If plan duplicates workouts
-  total_volume    Int?
-  created_at      DateTime        @default(now())
-  user            Users?          @relation(fields: [user_id], references: [id])
-  plan            Plans?          @relation(fields: [plan_id], references: [id])
-  lifts           Lifts[]         // Relation to Lifts (one-to-many)
-  workoutDays     WorkoutDay[]    // Relation to WorkoutDay for day assignments
+  id           Int          @id @default(autoincrement())
+  user_id      Int? // Nullable for generic workouts
+  plan_id      Int?
+  name         String
+  week_number  Int
+  plan_day     Int
+  day_of_week  String
+  iteration    Int? // If plan duplicates workouts
+  total_volume Int?
+  created_at   DateTime     @default(now())
+  user         Users?       @relation(fields: [user_id], references: [id])
+  plan         Plans?       @relation(fields: [plan_id], references: [id])
+  lifts        Lifts[] // Relation to Lifts (one-to-many)
+  workoutDays  WorkoutDay[] // Relation to WorkoutDay for day assignments
 }
 
 model BaseLifts {
-  id                Int             @id @default(autoincrement())
-  name              String          @unique // e.g., "Bench Press"
-  description       String?         // e.g., "Compound chest exercise"
-  video_url         String?         // Placeholder for video/GIF
-  muscle_group      String          // e.g., "Chest"
-  lift_type         String          // e.g., "Main", "Supplementary"
-  equipment         String          // e.g., "Barbell"
-  created_at        DateTime        @default(now())
-  lifts             Lifts[]         // One-to-many with Lifts
-  user_data         UserLiftsData[] // One-to-many with user-specific data
+  id           Int             @id @default(autoincrement())
+  name         String          @unique // e.g., "Bench Press"
+  description  String? // e.g., "Compound chest exercise"
+  video_url    String? // Placeholder for video/GIF
+  muscle_group String // e.g., "Chest"
+  lift_type    String // e.g., "Main", "Supplementary"
+  equipment    String // e.g., "Barbell"
+  created_at   DateTime        @default(now())
+  lifts        Lifts[] // One-to-many with Lifts
+  user_data    UserLiftsData[] // One-to-many with user-specific data
 }
 
 model UserLiftsData {
-  id              Int             @id @default(autoincrement())
-  user_id         Int
-  base_lift_id    Int
-  max_weights     Int[]           // User’s max weight for rep range (e.g., 315 lbs for 1-5 reps)
-  rep_ranges      Int[]           // e.g., "1-5"
-  max_estimated   Int[]
-  created_at      DateTime        @default(now())
-  user            Users           @relation(fields: [user_id], references: [id])
-  base_lift       BaseLifts       @relation(fields: [base_lift_id], references: [id])
+  id            Int       @id @default(autoincrement())
+  user_id       Int
+  base_lift_id  Int
+  max_weights   Int[] // User’s max weight for rep range (e.g., 315 lbs for 1-5 reps)
+  rep_ranges    Int[] // e.g., "1-5"
+  max_estimated Int[]
+  created_at    DateTime  @default(now())
+  user          Users     @relation(fields: [user_id], references: [id])
+  base_lift     BaseLifts @relation(fields: [base_lift_id], references: [id])
 }
 
 model Lifts {
@@ -125,10 +125,10 @@ model Lifts {
 }
 
 model SupersetLinks {
-  id              Int             @id @default(autoincrement())
-  lift_id         Int             // First lift in superset
-  superset_lift_id Int            // Second lift in superset
-  created_at      DateTime        @default(now())
-  lift            Lifts           @relation("LiftToSuperset", fields: [lift_id], references: [id])
-  superset_lift   Lifts           @relation("SupersetToLift", fields: [superset_lift_id], references: [id])
+  id               Int      @id @default(autoincrement())
+  lift_id          Int // First lift in superset
+  superset_lift_id Int // Second lift in superset
+  created_at       DateTime @default(now())
+  lift             Lifts    @relation("LiftToSuperset", fields: [lift_id], references: [id])
+  superset_lift    Lifts    @relation("SupersetToLift", fields: [superset_lift_id], references: [id])
 }

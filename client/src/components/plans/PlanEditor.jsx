@@ -167,7 +167,8 @@ const PlanEditor = () => {
         {
           days: Array(7)
             .fill()
-            .map(() => ({ workouts: [] })),
+            .map((_, i) => ({ workouts: [], day_of_week: i + 1 })),
+          week_number: prevPlan.weeks.length + 1,
         },
       ],
     }));
@@ -193,7 +194,7 @@ const PlanEditor = () => {
     });
   };
 
-  // strip Date.now() ids in preparation for db autoincrement (prevent overflow)
+  // strip Date.now() ids in preparation for db autoincrement (prevent overflow) and convert reps to STRING
   const stripIds = (plan) => {
     return {
       ...plan,
@@ -207,7 +208,10 @@ const PlanEditor = () => {
               ...workoutWithoutId,
               lifts: workout.lifts.map((lift) => {
                 const { id: _liftId, ...liftWithoutId } = lift;
-                return liftWithoutId;
+                return {
+                  ...liftWithoutId,
+                  reps: liftWithoutId.reps.map((num) => num.toString()),
+                };
               }),
             };
           }),

@@ -47,6 +47,7 @@ const WorkoutEditor = ({ workouts: initialWorkouts, baseLifts, onSave }) => {
       base_lift_id: baseLift.id, // Link to the BaseLift
       reps: [0, 0, 0],
       weight: [0, 0, 0],
+      sets: 3,
     };
     updated[workoutIndex].lifts.push(newLift);
     setEditedWorkouts(updated);
@@ -66,6 +67,7 @@ const WorkoutEditor = ({ workouts: initialWorkouts, baseLifts, onSave }) => {
 
     updated[workoutIndex].lifts[liftIndex].reps.push(prevSetReps);
     updated[workoutIndex].lifts[liftIndex].weight.push(prevSetWeight);
+    updated[workoutIndex].lifts[liftIndex].sets++;
 
     setEditedWorkouts(updated);
   };
@@ -77,6 +79,7 @@ const WorkoutEditor = ({ workouts: initialWorkouts, baseLifts, onSave }) => {
       reps: updated[workoutIndex].lifts[liftIndex].reps.slice(0, -1),
       weight: updated[workoutIndex].lifts[liftIndex].weight.slice(0, -1),
     };
+    updated[workoutIndex].lifts[liftIndex].sets--;
 
     setEditedWorkouts(updated);
   };

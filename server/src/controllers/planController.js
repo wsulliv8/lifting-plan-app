@@ -147,14 +147,8 @@ const planController = {
   },
 
   async updatePlan(req, res, next) {
-    const { id } = req.params;
+    const planId = parseInt(req.params.id);
     const planData = req.body;
-
-    // Validate and parse id from req.params
-    const planId = parseInt(id);
-    if (isNaN(planId)) {
-      return res.status(400).json({ error: "Invalid plan ID" });
-    }
 
     try {
       // Use a transaction to ensure all updates succeed or fail together
@@ -177,7 +171,6 @@ const planController = {
               ...(planData.goal && { goal: planData.goal }),
             },
           });
-
           // Keep track of all week IDs to prevent deletion
           const weekIdsToKeep = [];
 
@@ -189,34 +182,15 @@ const planController = {
             // Create or update week
             let weekRecord;
             if (week.id) {
-              const weekId = parseInt(week.id);
-              // Check if ID is within safe integer range for INT4
-              if (
-                isNaN(weekId) ||
-                weekId > 2147483647 ||
-                weekId < -2147483648
-              ) {
-                // If out of range, create new week
-                console.warn(
-                  `Week ID ${week.id} out of range for INT4, creating new week instead`
-                );
-                weekRecord = await prismaTransaction.week.create({
-                  data: {
-                    week_number: weekNumber,
-                    plan_id: planId,
-                  },
-                });
-              } else {
-                weekRecord = await prismaTransaction.week.update({
-                  where: { id: weekId },
-                  data: { week_number: weekNumber },
-                });
-              }
+              weekRecord = await prismaTransaction.week.update({
+                where: { id: weekId },
+                data: { week_number: weekNumber },
+              });
             } else {
               weekRecord = await prismaTransaction.week.create({
                 data: {
                   week_number: weekNumber,
-                  plan_id: planId,
+                  plan: { connect: { id: planId } },
                 },
               });
             }
@@ -235,28 +209,10 @@ const planController = {
               // Create or update day
               let dayRecord;
               if (day.id) {
-                const dayId = parseInt(day.id);
-                // Check if ID is within safe integer range for INT4
-                if (isNaN(dayId) || dayId > 2147483647 || dayId < -2147483648) {
-                  // If out of range, create new day
-                  console.warn(
-                    `Day ID ${day.id} out of range for INT4, creating new day instead`
-                  );
-                  dayRecord = await prismaTransaction.day.create({
-                    data: {
-                      day_of_week: dayOfWeek,
-                      week_id: weekRecord.id,
-                      week: {
-                        connect: { id: weekRecord.id }, // Use connect to establish the relationship
-                      },
-                    },
-                  });
-                } else {
-                  dayRecord = await prismaTransaction.day.update({
-                    where: { id: dayId },
-                    data: { day_of_week: dayOfWeek },
-                  });
-                }
+                dayRecord = await prismaTransaction.day.update({
+                  where: { id: dayId },
+                  data: { day_of_week: dayOfWeek },
+                });
               } else {
                 dayRecord = await prismaTransaction.day.create({
                   data: {
@@ -282,39 +238,15 @@ const planController = {
                   // Create or update workout
                   let workoutRecord;
                   if (workout.id) {
-                    // Check if the ID is within safe integer range for INT4
-                    const workoutId = parseInt(workout.id);
-                    if (
-                      isNaN(workoutId) ||
-                      workoutId > 2147483647 ||
-                      workoutId < -2147483648
-                    ) {
-                      // If out of range, treat as a new workout instead of trying to update
-                      console.warn(
-                        `Workout ID ${workout.id} out of range for INT4, creating new workout instead`
-                      );
-                      workoutRecord = await prismaTransaction.workouts.create({
-                        data: {
-                          name: workout.name || `Workout ${index + 1}`,
-                          plan_id: planId,
-                          user_id: req.user.userId,
-                          week_number: weekNumber,
-                          day_of_week: String(dayOfWeek),
-                          plan_day: dayOfWeek,
-                        },
-                      });
-                    } else {
-                      // If ID is in valid range, proceed with update
-                      workoutRecord = await prismaTransaction.workouts.update({
-                        where: { id: workoutId },
-                        data: {
-                          name: workout.name || `Workout ${index + 1}`,
-                          week_number: weekNumber,
-                          day_of_week: String(dayOfWeek),
-                          plan_day: dayOfWeek,
-                        },
-                      });
-                    }
+                    workoutRecord = await prismaTransaction.workouts.update({
+                      where: { id: workout.id },
+                      data: {
+                        name: workout.name || `Workout ${index + 1}`,
+                        week_number: weekNumber,
+                        day_of_week: String(dayOfWeek),
+                        plan_day: dayOfWeek,
+                      },
+                    });
                   } else {
                     workoutRecord = await prismaTransaction.workouts.create({
                       data: {
@@ -332,34 +264,14 @@ const planController = {
                   let workoutDayRecord;
                   if (workout.workoutDayId) {
                     const workoutDayId = parseInt(workout.workoutDayId);
-                    // Check if ID is within safe integer range for INT4
-                    if (
-                      isNaN(workoutDayId) ||
-                      workoutDayId > 2147483647 ||
-                      workoutDayId < -2147483648
-                    ) {
-                      // If out of range, create new workout day
-                      console.warn(
-                        `WorkoutDay ID ${workout.workoutDayId} out of range for INT4, creating new one instead`
-                      );
-                      workoutDayRecord =
-                        await prismaTransaction.workoutDay.create({
-                          data: {
-                            order: index,
-                            day_id: dayRecord.id,
-                            workout_id: workoutRecord.id,
-                          },
-                        });
-                    } else {
-                      workoutDayRecord =
-                        await prismaTransaction.workoutDay.update({
-                          where: { id: workoutDayId },
-                          data: {
-                            order: index,
-                            workout_id: workoutRecord.id,
-                          },
-                        });
-                    }
+                    workoutDayRecord =
+                      await prismaTransaction.workoutDay.update({
+                        where: { id: workoutDayId },
+                        data: {
+                          order: index,
+                          workout_id: workoutRecord.id,
+                        },
+                      });
                   } else {
                     workoutDayRecord =
                       await prismaTransaction.workoutDay.create({
@@ -372,11 +284,9 @@ const planController = {
                   }
 
                   processedWorkoutDayIds.push(workoutDayRecord.id);
-
                   // 5. Process lifts if they exist in the request
                   if (workout.lifts && workout.lifts.length > 0) {
                     const processedLiftIds = [];
-
                     for (
                       let liftIndex = 0;
                       liftIndex < workout.lifts.length;
@@ -386,45 +296,23 @@ const planController = {
 
                       let liftRecord;
                       if (lift.id) {
-                        const liftId = parseInt(lift.id);
-                        if (
-                          isNaN(liftId) ||
-                          liftId > 2147483647 ||
-                          liftId < -2147483648
-                        ) {
-                          console.warn(
-                            `Lift ID ${lift.id} out of range for INT4, creating new lift instead`
-                          );
-                          liftRecord = await prismaTransaction.lifts.create({
-                            data: {
-                              id: lift.id,
-                              workout_id: workoutRecord.id,
-                              name: lift.name,
-                              base_lift_id: lift.base_lift_id,
-                              sets: lift.sets,
-                              reps: lift.reps,
-                              weight: lift.weight,
-                              rpe: lift.rpe,
+                        liftRecord = await prismaTransaction.lifts.update({
+                          where: { id: liftId },
+                          data: {
+                            workout: { connect: { id: workoutRecord.id } },
+                            name: lift.name,
+                            base_lift: {
+                              connect: { id: lift.base_lift_id },
                             },
-                          });
-                        } else {
-                          liftRecord = await prismaTransaction.lifts.update({
-                            where: { id: liftId },
-                            data: {
-                              workout_id: workoutRecord.id,
-                              name: lift.name,
-                              base_lift_id: lift.base_lift_id,
-                              sets: lift.sets,
-                              reps: lift.reps,
-                              weight: lift.weight,
-                              rpe: lift.rpe,
-                            },
-                          });
-                        }
+                            sets: lift.sets,
+                            reps: lift.reps,
+                            weight: lift.weight,
+                            rpe: lift.rpe,
+                          },
+                        });
                       } else {
                         liftRecord = await prismaTransaction.lifts.create({
                           data: {
-                            //id: lift.id,
                             workout: { connect: { id: workoutRecord.id } },
                             name: lift.name,
                             base_lift: {
@@ -573,7 +461,6 @@ const planController = {
           },
         },
       });
-
       res.json(completePlan);
     } catch (error) {
       console.error("Error updating plan:", error);

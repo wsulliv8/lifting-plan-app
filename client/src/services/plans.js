@@ -42,8 +42,10 @@ const getPlanById = async (planId) => {
               lifts: wd.workout.lifts.map((lift) => ({
                 id: lift.id,
                 name: lift.name,
+                sets: lift.sets,
                 reps: lift.reps,
                 weight: lift.weight,
+                base_lift_id: lift.base_lift_id,
               })),
             })),
         })),
@@ -62,76 +64,7 @@ const createPlan = async (planData) => {
 
 const savePlan = async (plan) => {
   try {
-    // Helper function to safely convert IDs
-    /*     const safeInt = (id) => {
-      if (!id) return undefined;
-      const num = Number(id);
-      // Check if within PostgreSQL INT4 range (-2147483648 to 2147483647)
-      if (isNaN(num) || num > 2147483647 || num < -2147483648) {
-        console.warn(
-          `ID ${id} out of PostgreSQL INT4 range, removing ID to create new record`
-        );
-        return undefined; // Return undefined to force a new record creation
-      }
-      return num;
-    }; */
-
-    // Sanitize plan data to ensure consistent types and safe IDs
-    const sanitizedPlan = {
-      ...plan,
-      //id: safeInt(plan.id),
-      id: Number(plan.id),
-
-      weeks: plan.weeks.map((week, weekIndex) => ({
-        //id: safeInt(week.id),
-        id: Number(week.id),
-
-        week_number: weekIndex + 1, // Ensure week numbers are sequential
-        days: week.days.map((day) => ({
-          //id: safeInt(day.id),
-          id: Number(day.id),
-
-          day_of_week: day.day_of_week ? Number(day.day_of_week) : 0,
-          workouts: (day.workouts || []).map((workout, workoutIndex) => {
-            // Create a proper workout object with correct types
-            return {
-              //id: safeInt(workout.id),
-              id: Number(workout.id),
-
-              //workoutDayId: safeInt(workout.workoutDayId),
-              workoutDayId: Number(workout.workoutDayId),
-
-              name: workout.name || `Workout ${workoutIndex + 1}`,
-              // Include lifts if present
-              ...(workout.lifts && {
-                lifts: workout.lifts.map((lift) => ({
-                  //id: safeInt(lift.id),
-                  id: Number(lift.id),
-
-                  name: lift.name,
-                  //base_lift_id: safeInt(lift.base_lift_id),
-                  base_lift_id: lift.base_lift_id ? lift.base_lift_id : 1,
-
-                  sets: Number(lift.sets || 0),
-                  reps: lift.reps.map((num) => num.toString()) || [],
-                  weight: lift.weight || [],
-                  rpe: lift.rpe || [],
-                })),
-              }),
-            };
-          }),
-        })),
-      })),
-    };
-
-    let response;
-    if (sanitizedPlan.id) {
-      // Update existing plan
-      response = await api.put(`/plans/${sanitizedPlan.id}`, sanitizedPlan);
-    } else {
-      // Create new plan
-      response = await api.post("/plans", sanitizedPlan);
-    }
+    const response = await api.put(`/plans/${plan.id}`, plan);
 
     console.log("Plan saved successfully", response.data);
     return response.data; // Return the saved plan for state updates

@@ -167,20 +167,6 @@ const FormContent = memo(
           value={formData.name}
           onChange={handleInputChange}
         />
-        {/*         <Input
-          label="Goal"
-          name="goal"
-          value={formData.goal}
-          onChange={handleInputChange}
-          placeholder="e.g., Strength, Hypertrophy"
-        />
-        <Input
-          label="Categories"
-          name="categories"
-          value={formData.categories}
-          onChange={handleInputChange}
-          placeholder="e.g., Barbell, Compound, etc."
-        /> */}
         <Input
           label="Duration (Weeks)"
           type="number"
@@ -189,17 +175,7 @@ const FormContent = memo(
           onChange={handleInputChange}
           min="1"
         />
-        {/*         <Select
-          label="Difficulty"
-          name="difficulty"
-          value={formData.difficulty}
-          onChange={handleInputChange}
-          options={[
-            { value: "Beginner", label: "Beginner" },
-            { value: "Intermediate", label: "Intermediate" },
-            { value: "Advanced", label: "Advanced" },
-          ]}
-        /> */}
+
         <div className="flex justify-end gap-2">
           <button
             type="button"

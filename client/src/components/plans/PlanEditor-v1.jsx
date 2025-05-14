@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { useLoaderData, useNavigate } from "react-router-dom";
-import { DndContext, closestCenter, useDroppable } from "@dnd-kit/core";
+import { DndContext, closestCenter } from "@dnd-kit/core";
 import {
   SortableContext,
   useSortable,
@@ -22,24 +22,9 @@ import {
   AdjustmentsHorizontalIcon,
 } from "@heroicons/react/24/solid";
 
-// Simple arrayMove function for reordering
 const arrayMove = (array, from, to) => {
-  if (
-    !Array.isArray(array) ||
-    from < 0 ||
-    to < 0 ||
-    from >= array.length ||
-    to > array.length
-  ) {
-    console.warn("Invalid arrayMove inputs:", { array, from, to });
-    return array;
-  }
   const newArray = [...array];
   const [item] = newArray.splice(from, 1);
-  if (item === undefined) {
-    console.warn("No item found at index:", from);
-    return newArray;
-  }
   newArray.splice(to, 0, item);
   return newArray;
 };
@@ -93,6 +78,7 @@ const PlanEditor = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Update local plan state with new settings
     const updatedPlan = {
       ...plan,
       name: formInputs.name,
@@ -102,7 +88,11 @@ const PlanEditor = () => {
       description: formInputs.description,
     };
     setPlan(updatedPlan);
+
+    // Save the full updated plan, ensuring all properties (e.g., weeks) are preserved
     await savePlan(stripIds(updatedPlan));
+
+    // Close modal
     setIsModalOpen(false);
   };
 
@@ -128,83 +118,94 @@ const PlanEditor = () => {
     const { active, over } = event;
     if (!over) return;
 
-    const activeId = active.id.toString();
-    const overId = over.id.toString();
+    const activeId = active.id;
+    const overId = over.id;
 
-    console.log("Drag event:", { activeId, overId });
+    console.log("Drag event:", { activeId, overId }); // Debug log
 
-    let source = null;
-    let destination = null;
+    let sourceWeekIndex, sourceDayIndex, sourceWorkoutIndex;
+    let destWeekIndex, destDayIndex, destWorkoutIndex;
 
-    plan.weeks.forEach((week, wi) => {
-      week.days.forEach((day, di) => {
-        const ids = day.workouts.map((w) => w?.id?.toString());
-        if (ids.includes(activeId)) {
-          source = {
-            weekIndex: wi,
-            dayIndex: di,
-            workoutIndex: ids.indexOf(activeId),
-          };
+    for (let wi = 0; wi < plan.weeks.length; wi++) {
+      for (let di = 0; di < 7; di++) {
+        const workouts = plan.weeks[wi].days[di].workouts.filter(
+          (w) => w && w.id
+        ); // Filter valid workouts
+        const workoutIds = workouts.map((w) => w.id);
+        if (workoutIds.includes(activeId)) {
+          sourceWeekIndex = wi;
+          sourceDayIndex = di;
+          sourceWorkoutIndex = workoutIds.indexOf(activeId);
         }
-
-        if (ids.includes(overId)) {
-          destination = {
-            weekIndex: wi,
-            dayIndex: di,
-            workoutIndex: ids.indexOf(overId),
-          };
+        if (workoutIds.includes(overId)) {
+          destWeekIndex = wi;
+          destDayIndex = di;
+          destWorkoutIndex = workoutIds.indexOf(overId);
+        } else if (`day-${wi}-${di}` === overId) {
+          destWeekIndex = wi;
+          destDayIndex = di;
+          destWorkoutIndex = workouts.length; // Append to end
         }
+      }
+    }
 
-        if (`day-${wi}-${di}` === overId) {
-          destination = {
-            weekIndex: wi,
-            dayIndex: di,
-            workoutIndex: day.workouts.length, // append to end
-          };
-        }
-      });
-    });
-
-    if (!source || !destination) {
-      console.warn("Invalid drag source or destination", {
-        source,
-        destination,
+    if (sourceWeekIndex === undefined || destWeekIndex === undefined) {
+      console.warn("Drag failed: Invalid source or destination", {
+        activeId,
+        overId,
       });
       return;
     }
 
-    console.log("Drag indices:", { source, destination });
+    console.log("Indices:", {
+      sourceWeekIndex,
+      sourceDayIndex,
+      sourceWorkoutIndex,
+      destWeekIndex,
+      destDayIndex,
+      destWorkoutIndex,
+    }); // Debug log
 
     setPlan((prevPlan) => {
       const newWeeks = [...prevPlan.weeks];
-      const sourceDay = newWeeks[source.weekIndex].days[source.dayIndex];
-      const destDay =
-        newWeeks[destination.weekIndex].days[destination.dayIndex];
 
-      const sourceWorkouts = [...sourceDay.workouts];
-      const destWorkouts = [...destDay.workouts];
+      const sourceWorkouts = [
+        ...newWeeks[sourceWeekIndex].days[sourceDayIndex].workouts,
+      ];
+      const destWorkouts =
+        sourceWeekIndex === destWeekIndex && sourceDayIndex === destDayIndex
+          ? sourceWorkouts
+          : [...newWeeks[destWeekIndex].days[destDayIndex].workouts];
 
-      const [movedWorkout] = sourceWorkouts.splice(source.workoutIndex, 1);
-      if (!movedWorkout) return prevPlan;
-
-      // Same day: reorder using arrayMove
       if (
-        source.weekIndex === destination.weekIndex &&
-        source.dayIndex === destination.dayIndex
+        sourceWeekIndex === destWeekIndex &&
+        sourceDayIndex === destDayIndex
       ) {
+        if (sourceWorkoutIndex === destWorkoutIndex) return prevPlan; // No change needed
         const newWorkouts = arrayMove(
-          sourceWorkouts.concat(movedWorkout), // Need to reinsert before moving
-          source.workoutIndex,
-          destination.workoutIndex
+          sourceWorkouts,
+          sourceWorkoutIndex,
+          destWorkoutIndex
         );
-        newWeeks[source.weekIndex].days[source.dayIndex].workouts = newWorkouts;
+        newWeeks[sourceWeekIndex].days[sourceDayIndex] = {
+          ...newWeeks[sourceWeekIndex].days[sourceDayIndex],
+          workouts: newWorkouts.filter((w) => w && w.id), // Ensure no undefined
+        };
       } else {
-        // Cross-day move
-        destWorkouts.splice(destination.workoutIndex, 0, movedWorkout);
-        newWeeks[source.weekIndex].days[source.dayIndex].workouts =
-          sourceWorkouts;
-        newWeeks[destination.weekIndex].days[destination.dayIndex].workouts =
-          destWorkouts;
+        const [workoutToMove] = sourceWorkouts.splice(sourceWorkoutIndex, 1);
+        if (!workoutToMove) {
+          console.warn("No workout to move at index", sourceWorkoutIndex);
+          return prevPlan;
+        }
+        destWorkouts.splice(destWorkoutIndex, 0, workoutToMove);
+        newWeeks[sourceWeekIndex].days[sourceDayIndex] = {
+          ...newWeeks[sourceWeekIndex].days[sourceDayIndex],
+          workouts: sourceWorkouts.filter((w) => w && w.id),
+        };
+        newWeeks[destWeekIndex].days[destDayIndex] = {
+          ...newWeeks[destWeekIndex].days[destDayIndex],
+          workouts: destWorkouts.filter((w) => w && w.id),
+        };
       }
 
       return { ...prevPlan, weeks: newWeeks };
@@ -221,13 +222,6 @@ const PlanEditor = () => {
 
   const saveEditedWorkouts = (newWorkouts) => {
     const { weekIndex, dayIndex } = editingDay;
-    const validWorkouts = newWorkouts.filter((w) => w && w.id);
-    if (validWorkouts.length !== newWorkouts.length) {
-      console.warn(
-        "Invalid workouts detected in saveEditedWorkouts",
-        newWorkouts
-      );
-    }
     setPlan((prevPlan) => ({
       ...prevPlan,
       weeks: prevPlan.weeks.map((w, wi) =>
@@ -235,7 +229,7 @@ const PlanEditor = () => {
           ? {
               ...w,
               days: w.days.map((d, di) =>
-                di === dayIndex ? { ...d, workouts: validWorkouts } : d
+                di === dayIndex ? { ...d, workouts: newWorkouts } : d
               ),
             }
           : w
@@ -262,22 +256,24 @@ const PlanEditor = () => {
   const deleteWeek = (weekIndex) => {
     setPlan((prevPlan) => ({
       ...prevPlan,
-      weeks: prevPlan.weeks.filter((_, i) => i !== weekIndex),
+      weeks: prevPlan.weeks.filter((_, i) => i != weekIndex),
     }));
 
     setCollapsedWeeks((prev) => {
       const newSet = new Set();
       for (let index of prev) {
         if (index < weekIndex) {
-          newSet.add(index);
+          newSet.add(index); // unaffected
         } else if (index > weekIndex) {
-          newSet.add(index - 1);
+          newSet.add(index - 1); // shift down
         }
+        // If index === weekIndexToDelete, we skip it (effectively removing it)
       }
       return newSet;
     });
   };
 
+  // strip Date.now() ids in preparation for db autoincrement (prevent overflow) and convert reps to STRING
   const stripIds = (plan) => {
     return {
       ...plan,
@@ -303,6 +299,7 @@ const PlanEditor = () => {
     };
   };
 
+  // Generate grid template columns based on collapsed days
   const gridTemplateColumns = `2rem ${Array(7)
     .fill()
     .map((_, i) => (collapsedDays[i] ? "2rem" : "minmax(6rem, 1fr)"))
@@ -334,6 +331,8 @@ const PlanEditor = () => {
           </span>
           <Button onClick={() => savePlan(stripIds(plan))}>Save</Button>
         </div>
+        {/* Settings Modal */}
+
         {isModalOpen && (
           <Modal
             isOpen={isModalOpen}
@@ -349,17 +348,19 @@ const PlanEditor = () => {
             />
           </Modal>
         )}
+        {/* Grid Container */}
         <div
           className="grid gap-2 w-full"
           style={{ gridTemplateColumns, gridTemplateRows }}
         >
+          {/* Header Row */}
           <div></div>
           {Array(7)
             .fill()
             .map((_, dayIndex) => (
               <div
                 key={`header-day-${dayIndex}`}
-                className={`bg-gray-50 p-1 font-medium cursor-pointer hover:bg-gray-200 place-self-center w-full rounded text-center sticky -top-2 z-10 ${
+                className={`bg-gray-50 p-1 font-medium cursor-pointer hover:bg-gray-200  place-self-center w-full rounded text-center sticky -top-2 z-10${
                   collapsedDays[dayIndex] ? "text-gray-400" : "text-gray-800"
                 }`}
                 onClick={() => toggleDayCollapse(dayIndex)}
@@ -367,6 +368,8 @@ const PlanEditor = () => {
                 {!collapsedDays[dayIndex] ? "Day" : ""} {dayIndex + 1}
               </div>
             ))}
+
+          {/* Week Rows */}
           {plan.weeks.map((week, weekIndex) => (
             <div key={`week-${weekIndex}`} className={`contents`}>
               <div
@@ -380,11 +383,12 @@ const PlanEditor = () => {
                 {!collapsedWeeks.has(weekIndex) ? "Week" : ""} {weekIndex + 1}
                 <span>
                   <TrashIcon
-                    className={`absolute bottom-4 left-1/2 transform -translate-x-1/2 h-4 w-4 text-red-400 hover:text-red-600 rotate-90 opacity-0 ${
-                      collapsedWeeks.has(weekIndex)
-                        ? "opacity-0"
-                        : "group-hover:opacity-100"
-                    }`}
+                    className={`absolute bottom-4 left-1/2 transform -translate-x-1/2 h-4 w-4 text-red-400 hover:text-red-600 rotate-90 opacity-0
+                                ${
+                                  collapsedWeeks.has(weekIndex)
+                                    ? "opacity-0"
+                                    : "group-hover:opacity-100"
+                                }`}
                     onClick={(e) => {
                       if (!collapsedWeeks.has(weekIndex)) {
                         e.stopPropagation();
@@ -395,20 +399,62 @@ const PlanEditor = () => {
                 </span>
               </div>
               {week.days.map((day, dayIndex) => (
-                <DroppableDay
+                <div
                   key={`day-${weekIndex}-${dayIndex}`}
-                  id={`day-${weekIndex}-${dayIndex}`}
-                  weekIndex={weekIndex}
-                  dayIndex={dayIndex}
-                  day={day}
-                  collapsedDays={collapsedDays}
-                  collapsedWeeks={collapsedWeeks}
-                  handleEditWorkout={handleEditWorkout}
-                />
+                  className={`group flex flex-col justify-between p-2 bg-white shadow-sm rounded-lg text-xs border border-transparent ${
+                    !collapsedDays[dayIndex] && !collapsedWeeks.has(weekIndex)
+                      ? "hover:border-primary hover:shadow-xl"
+                      : ""
+                  }`}
+                >
+                  {!collapsedDays[dayIndex] &&
+                  !collapsedWeeks.has(weekIndex) ? (
+                    <>
+                      <SortableContext
+                        id={`day-${weekIndex}-${dayIndex}`}
+                        items={day.workouts.map((w) => w.id)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        <div className="w-full flex flex-col justify-center items-center self-center flex-grow">
+                          {day.workouts.length > 0 ? (
+                            day.workouts.map((workout) => (
+                              <SortableItem
+                                key={workout.id}
+                                id={workout.id}
+                                workout={workout}
+                              />
+                            ))
+                          ) : (
+                            <span className="">Rest Day</span>
+                          )}
+                        </div>
+                      </SortableContext>
+                      <div className="mt-2 space-y-2 opacity-0 max-h-0 overflow-hidden transition-all duration-300 group-hover:opacity-100 group-hover:max-h-40">
+                        <Button
+                          variant={"primary"}
+                          className={"text-sm p-1 w-full "}
+                          onClick={() => handleEditWorkout(weekIndex, dayIndex)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant={"secondary"}
+                          className={"text-sm p-1 w-full "}
+                        >
+                          Import
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    ""
+                  )}
+                </div>
               ))}
             </div>
           ))}
         </div>
+
+        {/* Add Week Button */}
         <div className="mt-4 flex justify-center">
           <PlusCircleIcon
             className="h-8 w-8 text-green-500 hover:text-green-600 cursor-pointer"
@@ -416,13 +462,15 @@ const PlanEditor = () => {
           />
         </div>
       </div>
+
+      {/* Edit Workout Modal */}
       <Modal
         isOpen={editingDay !== null}
         onClose={() => setEditingDay(null)}
         title={`Week ${editingDay ? editingDay.weekIndex + 1 : ""} Day ${
           editingDay ? editingDay.dayIndex + 1 : ""
         }`}
-        className="w-[95vw] h-[95vh]"
+        className="w-[95vw] h-[95vh] "
       >
         {editingDay && (
           <WorkoutEditor
@@ -433,74 +481,6 @@ const PlanEditor = () => {
         )}
       </Modal>
     </DndContext>
-  );
-};
-
-// DroppableDay Component
-const DroppableDay = ({
-  id,
-  weekIndex,
-  dayIndex,
-  day,
-  collapsedDays,
-  collapsedWeeks,
-  handleEditWorkout,
-}) => {
-  const { setNodeRef, isOver } = useDroppable({
-    id,
-  });
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={`group flex flex-col justify-between p-2 bg-white shadow-sm rounded-lg text-xs border border-transparent ${
-        !collapsedDays[dayIndex] && !collapsedWeeks.has(weekIndex)
-          ? `hover:border-primary hover:shadow-xl ${isOver ? "bg-blue-50" : ""}`
-          : ""
-      }`}
-    >
-      {!collapsedDays[dayIndex] && !collapsedWeeks.has(weekIndex) ? (
-        <>
-          <SortableContext
-            id={`day-${weekIndex}-${dayIndex}`}
-            items={day.workouts
-              .filter((w) => w && w.id)
-              .map((w) => w.id.toString())}
-            strategy={verticalListSortingStrategy}
-          >
-            <div className="w-full flex flex-col justify-center items-center self-center flex-grow">
-              {day.workouts.length > 0 ? (
-                day.workouts
-                  .filter((w) => w && w.id)
-                  .map((workout) => (
-                    <SortableItem
-                      key={workout.id}
-                      id={workout.id.toString()}
-                      workout={workout}
-                    />
-                  ))
-              ) : (
-                <span className="text-gray-500">Rest Day</span>
-              )}
-            </div>
-          </SortableContext>
-          <div className="mt-2 space-y-2 opacity-0 max-h-0 overflow-hidden transition-all duration-300 group-hover:opacity-100 group-hover:max-h-40">
-            <Button
-              variant={"primary"}
-              className={"text-sm p-1 w-full"}
-              onClick={() => handleEditWorkout(weekIndex, dayIndex)}
-            >
-              Edit
-            </Button>
-            <Button variant={"secondary"} className={"text-sm p-1 w-full"}>
-              Import
-            </Button>
-          </div>
-        </>
-      ) : (
-        ""
-      )}
-    </div>
   );
 };
 
@@ -573,7 +553,7 @@ const FormContent = ({
         placeholder="e.g., Strength, Hypertrophy"
       />
       <div className="w-3/4">
-        <label className="block text-sm font-normal text-gray-700 mb-1">
+        <label className="block text-sm font-normal text-gray-700 mb-1 ">
           Categories
         </label>
         <MultiSelect

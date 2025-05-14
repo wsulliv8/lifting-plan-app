@@ -50,7 +50,7 @@
 
 @layer base {
   html {
-    @apply scroll-smooth overflow-y-scroll; /* Scrollbar always visible for consistency */
+    @apply scroll-smooth; /* Scrollbar always visible for consistency */
   }
   body {
     @apply font-sans text-base text-gray-900 bg-background min-h-screen;

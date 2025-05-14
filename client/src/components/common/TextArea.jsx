@@ -1,4 +1,4 @@
-import { useState, memo } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const TextArea = ({
   label,
@@ -6,9 +6,11 @@ const TextArea = ({
   onChange,
   className = "",
   required,
+  containerClass = "",
   ...props
 }) => {
   const [touched, setTouched] = useState(false);
+  const textareaRef = useRef(null);
 
   const handleBlur = () => {
     setTouched(true);
@@ -16,8 +18,17 @@ const TextArea = ({
 
   const isInvalid = required && touched && !value?.toString().trim();
 
+  // Resize on content change
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (el) {
+      el.style.height = "auto"; // reset first
+      el.style.height = `${el.scrollHeight}px`;
+    }
+  }, [value]);
+
   return (
-    <div className="mb-4">
+    <div className={`mb-4 ${containerClass}`}>
       {label && (
         <label className="block text-gray-700 text-sm mb-1">
           {label}
@@ -25,12 +36,14 @@ const TextArea = ({
         </label>
       )}
       <textarea
+        ref={textareaRef}
         value={value ?? ""}
         onChange={onChange}
         onBlur={handleBlur}
-        className={`input-field resize-none ${
+        className={`input-field resize-none overflow-hidden ${
           isInvalid ? "border-error" : ""
         } ${className}`}
+        rows={3}
         required={required}
         {...props}
       />
@@ -38,4 +51,4 @@ const TextArea = ({
   );
 };
 
-export default memo(TextArea);
+export default TextArea;

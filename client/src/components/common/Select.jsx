@@ -1,8 +1,16 @@
 // common/Select.jsx
 import React from "react";
 
-const Select = ({ label, value, onChange, options, name, className = "" }) => (
-  <div className="mb-4">
+const Select = ({
+  label,
+  value,
+  onChange,
+  options,
+  name,
+  className = "",
+  containerClass = "",
+}) => (
+  <div className={`mb-4 ${containerClass}`}>
     {label && (
       <label className="block text-gray-700 text-sm mb-1">{label}</label>
     )}

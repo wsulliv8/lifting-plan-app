@@ -80,6 +80,7 @@ const Modal = ({ isOpen, onClose, title, children, className }) => {
         ref={modalRef}
         className={`flex flex-col bg-white rounded-lg shadow-md p-6 max-w-[95vw] max-h-[95vh] overflow-hidden ${className}`}
         tabIndex={-1}
+        style={{ maxHeight: "95vh" }}
       >
         <div className="h-8 flex justify-between items-center mb-4">
           <h2
@@ -109,7 +110,12 @@ const Modal = ({ isOpen, onClose, title, children, className }) => {
             </svg>
           </button>
         </div>
-        <div className="flex-1 min-h-0 overflow-hidden">{children}</div>
+        <div
+          className="flex-1 min-h-0 overflow-y-auto"
+          style={{ maxHeight: "calc(95vh - 3rem)" }}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );

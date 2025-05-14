@@ -6,6 +6,7 @@ const Input = ({
   value,
   onChange,
   className = "",
+  containerClass = "",
   required,
   ...props
 }) => {
@@ -18,7 +19,7 @@ const Input = ({
   const isInvalid = required && touched && !value?.toString().trim();
 
   return (
-    <div className="mb-4">
+    <div className={`mb-4 ${containerClass}`}>
       {label && (
         <label className="block text-gray-700 text-sm mb-1">
           {label}

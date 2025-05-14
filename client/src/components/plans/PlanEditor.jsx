@@ -1,12 +1,19 @@
 import { useState, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useLoaderData, useNavigate } from "react-router-dom";
-import { DndContext, closestCenter, useDroppable } from "@dnd-kit/core";
 import {
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+  DndContext,
+  closestCenter,
+  useDroppable,
+  DragOverlay,
+  DragStartEvent,
+  DragOverEvent,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import { arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import Day from "./Day";
+import Workout from "./Workout";
 import Modal from "../common/Modal";
 import WorkoutEditor from "./WorkoutEditor";
 import Button from "../common/Button";
@@ -21,28 +28,6 @@ import {
   ArrowLeftIcon,
   AdjustmentsHorizontalIcon,
 } from "@heroicons/react/24/solid";
-
-// Simple arrayMove function for reordering
-const arrayMove = (array, from, to) => {
-  if (
-    !Array.isArray(array) ||
-    from < 0 ||
-    to < 0 ||
-    from >= array.length ||
-    to > array.length
-  ) {
-    console.warn("Invalid arrayMove inputs:", { array, from, to });
-    return array;
-  }
-  const newArray = [...array];
-  const [item] = newArray.splice(from, 1);
-  if (item === undefined) {
-    console.warn("No item found at index:", from);
-    return newArray;
-  }
-  newArray.splice(to, 0, item);
-  return newArray;
-};
 
 const PlanEditor = () => {
   const { plan: initialPlan, baseLifts } = useLoaderData();
@@ -122,6 +107,22 @@ const PlanEditor = () => {
       newCollapsedDays[dayIndex] = !newCollapsedDays[dayIndex];
       return newCollapsedDays;
     });
+  };
+
+  const handleDragOver = (event) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeId = active.id.toString();
+    const overId = over.id.toString();
+
+    const isActiveAWorkout = active.data.current?.type === "Workout";
+    const isOverAWorkout = over.data.current?.type === "Workout";
+
+    // Hover task over task
+    if (isActiveAWorkout && isOverAWorkout) {
+      return;
+    }
   };
 
   const handleDragEnd = (event) => {
@@ -315,7 +316,11 @@ const PlanEditor = () => {
     .join(" ")}`;
 
   return (
-    <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+    <DndContext
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+      onDragOver={handleDragOver}
+    >
       <div className="w-full h-full">
         <div className="flex justify-between mb-4">
           <span
@@ -395,7 +400,7 @@ const PlanEditor = () => {
                 </span>
               </div>
               {week.days.map((day, dayIndex) => (
-                <DroppableDay
+                <Day
                   key={`day-${weekIndex}-${dayIndex}`}
                   id={`day-${weekIndex}-${dayIndex}`}
                   weekIndex={weekIndex}
@@ -433,119 +438,6 @@ const PlanEditor = () => {
         )}
       </Modal>
     </DndContext>
-  );
-};
-
-// DroppableDay Component
-const DroppableDay = ({
-  id,
-  weekIndex,
-  dayIndex,
-  day,
-  collapsedDays,
-  collapsedWeeks,
-  handleEditWorkout,
-}) => {
-  const { setNodeRef, isOver } = useDroppable({
-    id,
-  });
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={`group flex flex-col justify-between p-2 bg-white shadow-sm rounded-lg text-xs border border-transparent ${
-        !collapsedDays[dayIndex] && !collapsedWeeks.has(weekIndex)
-          ? `hover:border-primary hover:shadow-xl ${isOver ? "bg-blue-50" : ""}`
-          : ""
-      }`}
-    >
-      {!collapsedDays[dayIndex] && !collapsedWeeks.has(weekIndex) ? (
-        <>
-          <SortableContext
-            id={`day-${weekIndex}-${dayIndex}`}
-            items={day.workouts
-              .filter((w) => w && w.id)
-              .map((w) => w.id.toString())}
-            strategy={verticalListSortingStrategy}
-          >
-            <div className="w-full flex flex-col justify-center items-center self-center flex-grow">
-              {day.workouts.length > 0 ? (
-                day.workouts
-                  .filter((w) => w && w.id)
-                  .map((workout) => (
-                    <SortableItem
-                      key={workout.id}
-                      id={workout.id.toString()}
-                      workout={workout}
-                    />
-                  ))
-              ) : (
-                <span className="text-gray-500">Rest Day</span>
-              )}
-            </div>
-          </SortableContext>
-          <div className="mt-2 space-y-2 opacity-0 max-h-0 overflow-hidden transition-all duration-300 group-hover:opacity-100 group-hover:max-h-40">
-            <Button
-              variant={"primary"}
-              className={"text-sm p-1 w-full"}
-              onClick={() => handleEditWorkout(weekIndex, dayIndex)}
-            >
-              Edit
-            </Button>
-            <Button variant={"secondary"} className={"text-sm p-1 w-full"}>
-              Import
-            </Button>
-          </div>
-        </>
-      ) : (
-        ""
-      )}
-    </div>
-  );
-};
-
-// SortableItem Component
-const SortableItem = ({ id, workout }) => {
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className="w-full p-1 mb-2 bg-gray-100 rounded hover:bg-gray-200"
-    >
-      <div className="w-full text-sm">
-        <div className="font-medium text-center">
-          {workout.name || "Workout"}
-        </div>
-        {workout.lifts && workout.lifts.length > 0 ? (
-          <ul className="list-disc pl-4 mt-1">
-            {workout.lifts.map((lift, index) => (
-              <li key={`${lift.id}-${index}`}>
-                <span className="flex flex-col">
-                  <span>{lift.name}</span>
-                  <span>
-                    {lift.reps.every((val) => val === lift.reps[0])
-                      ? `${lift.reps.length}x${lift.reps[0]}`
-                      : `${lift.weight.map((weight) => weight).join(", ")}`}
-                  </span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="text-gray-500">No lifts</div>
-        )}
-      </div>
-    </div>
   );
 };
 

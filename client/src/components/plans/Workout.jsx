@@ -1,15 +1,31 @@
-import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
 const Workout = ({ id, workout }) => {
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id, data: { type: "Workout" } });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id, data: { type: "Workout", workout } });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    //zIndex: isDragging ? 50 : "auto",
   };
+
+  if (isDragging) {
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        className="w-full p-1 mb-2 bg-gray-100 rounded opacity-30 border border-dashed border-rose-500"
+      />
+    );
+  }
 
   return (
     <div

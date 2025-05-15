@@ -1,10 +1,13 @@
 import {
   SortableContext,
-  useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import { useDroppable, DragOverlay } from "@dnd-kit/core";
+import { createPortal } from "react-dom";
 import { CSS } from "@dnd-kit/utilities";
 import { useMemo, useState } from "react";
+import Button from "../common/Button";
+import Workout from "./Workout";
 
 const Day = ({
   id,
@@ -14,6 +17,7 @@ const Day = ({
   collapsedDays,
   collapsedWeeks,
   handleEditWorkout,
+  workouts,
 }) => {
   const { setNodeRef, isOver } = useDroppable({
     id,
@@ -21,7 +25,6 @@ const Day = ({
       type: "Day",
     },
   });
-
   return (
     <div
       ref={setNodeRef}
@@ -41,8 +44,8 @@ const Day = ({
             strategy={verticalListSortingStrategy}
           >
             <div className="w-full flex flex-col justify-center items-center self-center flex-grow">
-              {day.workouts.length > 0 ? (
-                day.workouts
+              {workouts.length > 0 ? (
+                workouts
                   .filter((w) => w && w.id)
                   .map((workout) => (
                     <Workout
@@ -56,11 +59,11 @@ const Day = ({
               )}
             </div>
           </SortableContext>
-          <div className="mt-2 space-y-2 opacity-0 max-h-0 overflow-hidden transition-all duration-300 group-hover:opacity-100 group-hover:max-h-40">
+          <div className="mt-2 space-y-2 max-h-0 opacity-0 overflow-hidden transition-all duration-300 group-hover:opacity-100 group-hover:max-h-40">
             <Button
               variant={"primary"}
               className={"text-sm p-1 w-full"}
-              onClick={() => handleEditWorkout(weekIndex, dayIndex)}
+              onClick={() => handleEditWorkout(weekIndex, dayIndex, id)}
             >
               Edit
             </Button>

@@ -24,7 +24,12 @@ const arrayMove = (array, from, to) => {
   return newArray;
 };
 
-const WorkoutEditor = ({ workouts: initialWorkouts, baseLifts, onSave }) => {
+const WorkoutEditor = ({
+  workouts: initialWorkouts,
+  baseLifts,
+  dayId,
+  onSave,
+}) => {
   const [editedWorkouts, setEditedWorkouts] = useState(initialWorkouts);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeWorkoutIndex, setActiveWorkoutIndex] = useState(0);
@@ -98,7 +103,7 @@ const WorkoutEditor = ({ workouts: initialWorkouts, baseLifts, onSave }) => {
   };
 
   const addWorkout = () => {
-    const newWorkout = { id: `${Date.now()}`, name: "", lifts: [] };
+    const newWorkout = { id: `${Date.now()}`, dayId, name: "", lifts: [] };
     setEditedWorkouts([...editedWorkouts, newWorkout]);
   };
 

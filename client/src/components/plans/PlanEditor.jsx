@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useLoaderData, useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { DndContext, closestCenter, DragOverlay } from "@dnd-kit/core";
@@ -20,15 +20,69 @@ import {
   ArrowLeftIcon,
   AdjustmentsHorizontalIcon,
 } from "@heroicons/react/24/solid";
+import chunk from "lodash/chunk";
+
+// Custom debounce hook to avoid excessive re-rendering with drag and drop
+const useDebounce = (callback, delay) => {
+  const timeoutRef = useRef(null);
+
+  const debouncedCallback = useCallback(
+    (...args) => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      timeoutRef.current = setTimeout(() => {
+        callback(...args);
+      }, delay);
+    },
+    [callback, delay]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  return debouncedCallback;
+};
 
 const PlanEditor = () => {
   const { plan: initialPlan, baseLifts } = useLoaderData();
   const [plan, setPlan] = useState(initialPlan);
 
-  // split plan into weeks, days, and workouts to simplify dnd
-  const [weeks, setWeeks] = useState(plan.weeks);
-  const [days, setDays] = useState(weeks.flatMap((week) => week.days));
-  const [workouts, setWorkouts] = useState(days.flatMap((day) => day.workouts));
+  // only track workouts and total days (derive everything else)
+  const [workouts, setWorkouts] = useState(() =>
+    plan.weeks.flatMap((week, weekIndex) =>
+      week.days.flatMap((day, dayIndex) =>
+        day.workouts.map((workout) => ({
+          ...workout,
+          dayId: weekIndex * 7 + dayIndex,
+        }))
+      )
+    )
+  );
+
+  // memoize to only render days that change
+  const workoutsByDay = useMemo(() => {
+    const map = {};
+    workouts.forEach((w) => {
+      map[w.dayId] ||= [];
+      map[w.dayId].push(w);
+    });
+    return map;
+  }, [workouts]);
+
+  // Debounced setWorkouts
+  const debouncedSetWorkouts = useDebounce(setWorkouts, 50); // 100ms delay
+
+  const [totalDays, setTotalDays] = useState(() => plan.weeks.length * 7);
+  const weeks = useMemo(() => {
+    const days = Array.from({ length: totalDays }, (_, i) => i);
+    return chunk(days, 7);
+  }, [totalDays]);
 
   // set when user grabs a workout
   const [activeWorkout, setActiveWorkout] = useState(null);
@@ -45,6 +99,25 @@ const PlanEditor = () => {
     difficulty: plan.difficulty,
     description: plan.description,
   });
+  // Grid styling
+  const gridTemplateColumns = useMemo(
+    () =>
+      `2rem ${Array(7)
+        .fill()
+        .map((_, i) => (collapsedDays[i] ? "2rem" : "minmax(6rem, 1fr)"))
+        .join(" ")}`,
+    [collapsedDays]
+  );
+
+  const gridTemplateRows = useMemo(
+    () =>
+      `2rem ${weeks
+        .map((_, weekIndex) =>
+          collapsedWeeks.has(weekIndex) ? "2rem" : "minmax(7rem, auto)"
+        )
+        .join(" ")}`,
+    [weeks, collapsedWeeks]
+  );
 
   useEffect(() => {
     if (isModalOpen) {
@@ -110,114 +183,116 @@ const PlanEditor = () => {
     });
   };
 
-  const handleDragOver = (event) => {
-    const { active, over } = event;
-    if (!over) return;
+  const handleDragOver = useCallback(
+    (event) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
 
-    const activeId = active.id.toString();
-    const overId = over.id.toString();
+      const activeId = active.id;
+      const overId = over.id;
+      const isActiveAWorkout = active.data.current?.type === "Workout";
 
-    if (activeId === overId) return;
+      if (!isActiveAWorkout) return;
 
-    const isActiveAWorkout = active.data.current?.type === "Workout";
-    const isOverAWorkout = over.data.current?.type === "Workout";
-
-    // Dropping workout over workout
-    if (isActiveAWorkout && isOverAWorkout) {
-      setWorkouts((workouts) => {
+      debouncedSetWorkouts((workouts) => {
         const activeIndex = workouts.findIndex((w) => w.id === activeId);
-        const overIndex = workouts.findIndex((w) => w.id === over.id);
+        if (activeIndex === -1) {
+          console.log("Active workout not found:", activeId);
+          return workouts;
+        }
 
         const newWorkouts = [...workouts];
 
-        newWorkouts[activeIndex] = {
-          ...newWorkouts[activeIndex],
-          dayId: newWorkouts[overIndex].dayId,
-        };
+        if (over.data.current?.type === "Workout") {
+          const overIndex = workouts.findIndex((w) => w.id === overId);
+          if (overIndex === -1) {
+            console.log("Over workout not found:", overId);
+            return workouts;
+          }
 
-        // swap workouts (handles swap within same day and different day)
-        //workouts[activeIndex].dayId = workouts[overIndex].dayId;
+          newWorkouts[activeIndex] = {
+            ...newWorkouts[activeIndex],
+            dayId: newWorkouts[overIndex].dayId,
+          };
+          const updatedWorkouts = arrayMove(
+            newWorkouts,
+            activeIndex,
+            overIndex
+          );
+          return updatedWorkouts;
+        }
 
-        return arrayMove(workouts, activeIndex, overIndex);
+        if (over.data.current?.type === "Day") {
+          newWorkouts[activeIndex] = {
+            ...newWorkouts[activeIndex],
+            dayId: overId,
+          };
+          return [...newWorkouts];
+        }
+
+        return workouts;
       });
-    }
+    },
+    [debouncedSetWorkouts]
+  );
 
-    const isOverADay = over.data.current?.type === "Day";
-
-    // Dropping workout over day
-    if (isActiveAWorkout && isOverADay) {
-      setWorkouts((workouts) => {
-        const activeIndex = workouts.findIndex((w) => w.id === activeId);
-
-        //workouts[activeIndex].dayId = overId;
-
-        const newWorkouts = [...workouts];
-
-        newWorkouts[activeIndex] = {
-          ...newWorkouts[activeIndex],
-          dayId: overId,
-        };
-
-        return [...newWorkouts];
-        //return arrayMove(workouts, activeIndex, activeIndex);
+  const handleEditWorkout = useCallback(
+    (dayId) => {
+      setEditingDay({
+        dayId,
+        workouts: workouts.filter((workout) => workout.dayId === dayId),
       });
-    }
-  };
-
-  const handleDragEnd = (event) => {
-    setActiveWorkout(null);
-  };
-
-  const handleEditWorkout = (weekIndex, dayIndex, dayId) => {
-    setEditingDay({
-      weekIndex,
-      dayIndex,
-      dayId,
-      workouts: workouts.filter((workout) => workout.dayId === dayId),
-    });
-  };
+    },
+    [workouts]
+  );
 
   const saveEditedWorkouts = (newWorkouts) => {
-    setWorkouts((prevWorkouts) => {
-      const existingIds = new Set(prevWorkouts.map((w) => w.id));
-      const filteredNew = newWorkouts.filter((w) => !existingIds.has(w.id));
-      return [...prevWorkouts, ...filteredNew];
-    });
+    setWorkouts((prevWorkouts) => [
+      ...prevWorkouts.filter((w) => w.dayId !== editingDay.dayId),
+      ...newWorkouts,
+    ]);
     setEditingDay(null);
   };
 
-  const addWeek = () => {
-    setPlan((prevPlan) => ({
-      ...prevPlan,
-      weeks: [
-        ...prevPlan.weeks,
-        {
-          days: Array(7)
-            .fill()
-            .map((_, i) => ({ workouts: [], day_of_week: i + 1 })),
-          week_number: prevPlan.weeks.length + 1,
-        },
-      ],
-    }));
-  };
+  const handleSave = async () => {
+    // Recreate an array of days indexed by dayId
+    const dayMap = Array.from({ length: totalDays }, () => []);
 
-  const deleteWeek = (weekIndex) => {
-    setPlan((prevPlan) => ({
-      ...prevPlan,
-      weeks: prevPlan.weeks.filter((_, i) => i !== weekIndex),
-    }));
-
-    setCollapsedWeeks((prev) => {
-      const newSet = new Set();
-      for (let index of prev) {
-        if (index < weekIndex) {
-          newSet.add(index);
-        } else if (index > weekIndex) {
-          newSet.add(index - 1);
-        }
+    // Fill dayMap with workouts
+    workouts.forEach((workout) => {
+      if (dayMap[workout.dayId]) {
+        dayMap[workout.dayId].push(workout);
       }
-      return newSet;
     });
+
+    // Split days back into weeks of 7
+    const weeks = chunk(dayMap, 7);
+
+    const rebuiltPlan = {
+      ...plan,
+      weeks: weeks.map((weekDays, weekIndex) => ({
+        week_number: weekIndex + 1,
+        days: weekDays.map((dayWorkouts, dayIndex) => ({
+          day_of_week: dayIndex,
+          workouts: dayWorkouts
+            .sort((a, b) => (a.order || 0) - (b.order || 0))
+            .map((w) => ({
+              id: w.id,
+              name: w.name,
+              lifts: w.lifts.map((lift) => ({
+                id: lift.id,
+                name: lift.name,
+                sets: lift.sets,
+                reps: lift.reps,
+                weight: lift.weight,
+                base_lift_id: lift.base_lift_id,
+              })),
+            })),
+        })),
+      })),
+    };
+    setPlan(rebuiltPlan);
+    await savePlan(stripIds(rebuiltPlan));
   };
 
   const stripIds = (plan) => {
@@ -245,21 +320,10 @@ const PlanEditor = () => {
     };
   };
 
-  const gridTemplateColumns = `2rem ${Array(7)
-    .fill()
-    .map((_, i) => (collapsedDays[i] ? "2rem" : "minmax(6rem, 1fr)"))
-    .join(" ")}`;
-
-  const gridTemplateRows = `2rem ${plan.weeks
-    .map((_, weekIndex) =>
-      collapsedWeeks.has(weekIndex) ? "2rem" : "minmax(12rem, auto)"
-    )
-    .join(" ")}`;
-
   return (
     <DndContext
       collisionDetection={closestCenter}
-      onDragEnd={handleDragEnd}
+      onDragEnd={() => setActiveWorkout(null)}
       onDragOver={handleDragOver}
       onDragStart={(event) =>
         setActiveWorkout(event.active.data.current.workout)
@@ -281,7 +345,9 @@ const PlanEditor = () => {
               onClick={() => setIsModalOpen(!isModalOpen)}
             />
           </span>
-          <Button onClick={() => savePlan(stripIds(plan))}>Save</Button>
+          <Button onClick={() => handleSave()} className="bg-green-600">
+            Save
+          </Button>
         </div>
         {isModalOpen && (
           <Modal
@@ -329,7 +395,7 @@ const PlanEditor = () => {
                 {!collapsedWeeks.has(weekIndex) ? "Week" : ""} {weekIndex + 1}
                 <span>
                   <TrashIcon
-                    className={`absolute bottom-4 left-1/2 transform -translate-x-1/2 h-4 w-4 text-red-400 hover:text-red-600 rotate-90 opacity-0 ${
+                    className={`absolute bottom-1 left-1/2 transform -translate-x-1/2 h-4 w-4 text-red-400 hover:text-red-600 rotate-90 opacity-0 ${
                       collapsedWeeks.has(weekIndex)
                         ? "opacity-0"
                         : "group-hover:opacity-100"
@@ -337,47 +403,55 @@ const PlanEditor = () => {
                     onClick={(e) => {
                       if (!collapsedWeeks.has(weekIndex)) {
                         e.stopPropagation();
-                        deleteWeek(weekIndex);
+
+                        const deletedStart = weekIndex * 7;
+                        const deletedEnd = deletedStart + 6;
+
+                        setWorkouts((prevWorkouts) =>
+                          prevWorkouts
+                            .filter(
+                              (w) =>
+                                w.dayId < deletedStart || w.dayId > deletedEnd
+                            )
+                            .map((w) =>
+                              w.dayId > deletedEnd
+                                ? { ...w, dayId: w.dayId - 7 }
+                                : w
+                            )
+                        );
+
+                        setTotalDays((prev) => Math.max(0, prev - 7));
                       }
                     }}
                   />
                 </span>
               </div>
-              {days
-                .slice(weekIndex * 7, weekIndex * 7 + 7)
-                .map((day, dayIndex) => (
-                  <Day
-                    key={`day-${weekIndex}-${dayIndex}`}
-                    id={`day-${weekIndex}-${dayIndex}`}
-                    weekIndex={weekIndex}
-                    dayIndex={dayIndex}
-                    day={day}
-                    activeWorkout={activeWorkout}
-                    collapsedDays={collapsedDays}
-                    collapsedWeeks={collapsedWeeks}
-                    handleEditWorkout={handleEditWorkout}
-                    workouts={workouts.filter(
-                      (workout) =>
-                        workout.dayId === `day-${weekIndex}-${dayIndex}`
-                    )}
-                  />
-                ))}
+              {week.map((_, dayIndex) => (
+                <Day
+                  key={weekIndex * 7 + dayIndex}
+                  id={weekIndex * 7 + dayIndex}
+                  isDayCollapsed={collapsedDays[dayIndex]}
+                  isWeekCollapsed={collapsedWeeks.has(weekIndex)}
+                  handleEditWorkout={handleEditWorkout}
+                  workouts={workoutsByDay[weekIndex * 7 + dayIndex] || []}
+                />
+              ))}
             </div>
           ))}
         </div>
         <div className="mt-4 flex justify-center">
           <PlusCircleIcon
             className="h-8 w-8 text-green-500 hover:text-green-600 cursor-pointer"
-            onClick={addWeek}
+            onClick={() => setTotalDays((prev) => prev + 7)}
           />
         </div>
       </div>
       <Modal
         isOpen={editingDay !== null}
         onClose={() => setEditingDay(null)}
-        title={`Week ${editingDay ? editingDay.weekIndex + 1 : ""} Day ${
-          editingDay ? editingDay.dayIndex + 1 : ""
-        }`}
+        title={`Week ${
+          editingDay ? Math.floor(editingDay.dayId / 7) + 1 : ""
+        } Day ${editingDay ? (editingDay.dayId % 7) + 1 : ""}`}
         className="w-[95vw] h-[95vh]"
       >
         {editingDay && (

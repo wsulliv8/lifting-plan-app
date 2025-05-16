@@ -98,8 +98,8 @@ const WorkoutEditor = ({
   };
 
   const removeWorkout = (workoutIndex) => {
-    const updated = editedWorkouts.filter((_, i) => i !== workoutIndex);
-    setEditedWorkouts(updated);
+    const updated = [...editedWorkouts];
+    setEditedWorkouts(updated.filter((_, i) => i !== workoutIndex));
   };
 
   const addWorkout = () => {
@@ -248,7 +248,7 @@ const WorkoutEditor = ({
       </div>
       <button
         onClick={() => onSave(editedWorkouts)}
-        className="absolute top-9 right-20 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+        className="absolute top-9 right-[10%] px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
       >
         Save
       </button>

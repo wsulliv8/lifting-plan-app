@@ -1,7 +1,8 @@
+import { memo, useCallback } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-const Workout = ({ id, workout }) => {
+const Workout = memo(({ id, workout }) => {
   const {
     attributes,
     listeners,
@@ -14,18 +15,14 @@ const Workout = ({ id, workout }) => {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    //zIndex: isDragging ? 50 : "auto",
   };
 
-  if (isDragging) {
-    return (
-      <div
-        ref={setNodeRef}
-        style={style}
-        className="w-full p-1 mb-2 bg-gray-100 rounded opacity-30 border border-dashed border-rose-500"
-      />
-    );
-  }
+  const getRepsString = useCallback((lift) => {
+    if (lift.reps.every((val) => val === lift.reps[0])) {
+      return `${lift.reps.length}x${lift.reps[0]}`;
+    }
+    return `${lift.weight.map((weight) => weight).join(", ")}`;
+  }, []);
 
   return (
     <div
@@ -33,9 +30,13 @@ const Workout = ({ id, workout }) => {
       style={style}
       {...attributes}
       {...listeners}
-      className="w-full p-1 mb-2 bg-gray-100 rounded hover:bg-gray-200"
+      className={`w-full p-1 mb-2 bg-gray-100 rounded hover:bg-gray-200 ${
+        isDragging
+          ? "opacity-30 border border-blue-500 bg-blue-200 text-blue-200  cursor-grab"
+          : ""
+      }`}
     >
-      <div className="w-full text-sm">
+      <div className="w-full text-xs">
         <div className="font-medium text-center">
           {workout.name || "Workout"}
         </div>
@@ -43,13 +44,9 @@ const Workout = ({ id, workout }) => {
           <ul className="list-disc pl-4 mt-1">
             {workout.lifts.map((lift, index) => (
               <li key={`${lift.id}-${index}`}>
-                <span className="flex flex-col">
-                  <span>{lift.name}</span>
-                  <span>
-                    {lift.reps.every((val) => val === lift.reps[0])
-                      ? `${lift.reps.length}x${lift.reps[0]}`
-                      : `${lift.weight.map((weight) => weight).join(", ")}`}
-                  </span>
+                <span className="flex flex-wrap">
+                  <span className="mr-2">{lift.name}</span>
+                  <span>{getRepsString(lift)}</span>
                 </span>
               </li>
             ))}
@@ -60,6 +57,6 @@ const Workout = ({ id, workout }) => {
       </div>
     </div>
   );
-};
+});
 
 export default Workout;

@@ -57,6 +57,21 @@ const editPlanLoader = async ({ params }) => {
   }
 };
 
+const liftsLoader = async () => {
+  try {
+    const lifts = await getAllBaseLifts();
+    return lifts;
+  } catch (err) {
+    if (err.response?.status === 401) {
+      localStorage.removeItem("token");
+      return redirect("/login");
+    }
+    throw new Response("Failed to load lifts", {
+      status: err.response?.status || 500,
+    });
+  }
+};
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -84,6 +99,7 @@ const router = createBrowserRouter([
       {
         path: "lifts",
         element: <Lifts />,
+        loader: liftsLoader,
         errorElement: <ErrorPage />,
       },
       {

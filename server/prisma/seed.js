@@ -1,5 +1,6 @@
 const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcrypt");
+const liftData = require("./data/liftData");
 
 const prisma = new PrismaClient();
 
@@ -40,32 +41,8 @@ async function seed() {
 
     // Create BaseLifts
     const baseLifts = await prisma.baseLifts.createMany({
-      data: [
-        {
-          name: "Bench Press",
-          description: "Compound chest exercise",
-          muscle_group: "Chest",
-          lift_type: "Main",
-          equipment: "Barbell",
-          created_at: new Date(),
-        },
-        {
-          name: "Squat",
-          description: "Compound leg exercise",
-          muscle_group: "Quads",
-          lift_type: "Main",
-          equipment: "Barbell",
-          created_at: new Date(),
-        },
-        {
-          name: "Tricep Dips",
-          description: "Triceps isolation exercise",
-          muscle_group: "Triceps",
-          lift_type: "Supplementary",
-          equipment: "Bodyweight",
-          created_at: new Date(),
-        },
-      ],
+      data: [liftData],
+      skipDuplicates: true,
     });
 
     // Fetch BaseLifts IDs

@@ -110,6 +110,8 @@ const FormContent = memo(
   }
 );
 
+const EMPTY_WORKOUTS = [];
+
 const PlanEditor = () => {
   const { plan: initialPlan, baseLifts } = useLoaderData();
   const [plan, setPlan] = useState(initialPlan);
@@ -192,7 +194,7 @@ const PlanEditor = () => {
         )
         .join(" ")}`,
     };
-  }, [weeks.length, collapsedWeeks, collapsedDays]);
+  }, [weeks, collapsedWeeks, collapsedDays]);
 
   useEffect(() => {
     if (isModalOpen) {
@@ -264,7 +266,7 @@ const PlanEditor = () => {
   }, []);
 
   // Optimized drag and drop handler
-  const handleDragOver = useCallback((event) => {
+  const handleDragEnd = useCallback((event) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
@@ -308,7 +310,7 @@ const PlanEditor = () => {
   const handleEditWorkout = useCallback((dayId) => {
     setEditingDay({
       dayId,
-      workouts: workoutsRef.current.filter(
+      workouts: Array.from(workoutsRef.current.values()).filter(
         (workout) => workout.dayId === dayId
       ),
     });
@@ -484,7 +486,7 @@ const PlanEditor = () => {
               isDayCollapsed={collapsedDays[dayIndex]}
               isWeekCollapsed={collapsedWeeks.has(weekIndex)}
               handleEditWorkout={handleEditWorkout}
-              workouts={workoutsByDay.get(actualDayId) || []} // Pass only the relevant workouts
+              workouts={workoutsByDay.get(actualDayId) || EMPTY_WORKOUTS} // Pass only the relevant workouts
             />
           );
         })}
@@ -498,14 +500,14 @@ const PlanEditor = () => {
     handleEditWorkout,
     workoutsByDay,
     handleDeleteWeek,
+    EMPTY_WORKOUTS,
   ]);
 
   return (
     <DndContext
       collisionDetection={closestCenter}
-      onDragEnd={() => setActiveWorkout(null)}
-      onDragOver={handleDragOver}
       onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
     >
       <div className="w-full h-full">
         <div className="flex justify-between mb-4">

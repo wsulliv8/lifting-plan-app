@@ -114,50 +114,29 @@ const PlanEditor = () => {
   const { plan: initialPlan, baseLifts } = useLoaderData();
   const [plan, setPlan] = useState(initialPlan);
 
-  // only track workouts and total days (derive everything else)
-  const [workouts, setWorkouts] = useState(() =>
-    plan.weeks.flatMap((week, weekIndex) =>
-      week.days.flatMap((day, dayIndex) =>
-        day.workouts.map((workout) => ({
-          ...workout,
-          dayId: weekIndex * 7 + dayIndex,
-        }))
-      )
-    )
-  );
+  // Use a Map for efficient workout lookup and updates
+  const [workouts, setWorkouts] = useState(() => {
+    const initialWorkouts = new Map();
+    initialPlan.weeks.forEach((week, weekIndex) => {
+      week.days.forEach((day, dayIndex) => {
+        day.workouts.forEach((workout) => {
+          initialWorkouts.set(workout.id, {
+            ...workout,
+            dayId: weekIndex * 7 + dayIndex,
+          });
+        });
+      });
+    });
+    return initialWorkouts;
+  });
 
-  // Use a ref for the workouts to avoid stale closures in drag handlers
   const workoutsRef = useRef(workouts);
   useEffect(() => {
     workoutsRef.current = workouts;
   }, [workouts]);
 
-  // Create a more efficient lookup for workouts by day - memoized
-  const workoutsByDay = useMemo(() => {
-    const map = {};
-    workouts.forEach((w) => {
-      if (!map[w.dayId]) map[w.dayId] = [];
-      map[w.dayId].push(w);
-    });
-    return map;
-  }, [workouts]);
-
-  // Debounced setWorkouts with increased delay for better performance
-  const debouncedSetWorkouts = useDebounce((newWorkouts) => {
-    setWorkouts(newWorkouts);
-  }, 100);
-
   const [totalDays, setTotalDays] = useState(() => plan.weeks.length * 7);
-
-  // Memoize weeks calculation
-  const weeks = useMemo(() => {
-    const days = Array.from({ length: totalDays }, (_, i) => i);
-    return chunk(days, 7);
-  }, [totalDays]);
-
-  // set when user grabs a workout
   const [activeWorkout, setActiveWorkout] = useState(null);
-
   const [collapsedWeeks, setCollapsedWeeks] = useState(new Set());
   const [collapsedDays, setCollapsedDays] = useState(Array(7).fill(false));
   const [editingDay, setEditingDay] = useState(null);
@@ -170,6 +149,35 @@ const PlanEditor = () => {
     difficulty: plan.difficulty,
     description: plan.description,
   });
+
+  // Memoize the weeks calculation
+  const weeks = useMemo(() => {
+    const days = Array.from({ length: totalDays }, (_, i) => i);
+    return chunk(days, 7);
+  }, [totalDays]);
+
+  // Memoize the workouts by day calculation
+  const workoutsByDay = useMemo(() => {
+    const map = new Map();
+    workouts.forEach((workout) => {
+      const dayId = workout.dayId;
+      if (!map.has(dayId)) {
+        map.set(dayId, []);
+      }
+      map.get(dayId).push(workout);
+    });
+
+    // Convert workout maps to plain objects for each day
+    const result = new Map();
+    map.forEach((workoutsArray, dayId) => {
+      result.set(
+        dayId,
+        workoutsArray.map((workout) => ({ ...workout }))
+      );
+    });
+
+    return result;
+  }, [workouts]);
 
   // Grid styling - memoized
   const gridStyle = useMemo(() => {
@@ -266,46 +274,33 @@ const PlanEditor = () => {
 
     if (!isActiveAWorkout) return;
 
-    // Get current workouts from ref to avoid stale closures
-    const currentWorkouts = [...workoutsRef.current];
-    let shouldUpdate = false;
+    const currentWorkouts = new Map(workoutsRef.current); // Get latest workouts
 
-    const activeIndex = currentWorkouts.findIndex((w) => w.id === activeId);
-    if (activeIndex === -1) return;
+    const activeWorkout = currentWorkouts.get(activeId);
+    if (!activeWorkout) return;
 
     if (over.data.current?.type === "Workout") {
-      const overIndex = currentWorkouts.findIndex((w) => w.id === overId);
-      if (overIndex === -1) return;
+      const overWorkout = currentWorkouts.get(overId);
+      if (!overWorkout) return;
 
-      if (
-        currentWorkouts[activeIndex].dayId !== currentWorkouts[overIndex].dayId
-      ) {
-        currentWorkouts[activeIndex] = {
-          ...currentWorkouts[activeIndex],
-          dayId: currentWorkouts[overIndex].dayId,
-        };
-        shouldUpdate = true;
+      if (activeWorkout.dayId !== overWorkout.dayId) {
+        currentWorkouts.set(activeId, {
+          ...activeWorkout,
+          dayId: overWorkout.dayId,
+        });
+        setWorkouts(new Map(currentWorkouts)); // Create a new Map to trigger re-render
       }
 
-      const updatedWorkouts = arrayMove(
-        currentWorkouts,
-        activeIndex,
-        overIndex
-      );
-
-      if (shouldUpdate || activeIndex !== overIndex) {
-        debouncedSetWorkouts(updatedWorkouts);
-      }
+      // arrayMove is not needed with a Map, but if you need to reorder within the day:
+      //  (You'd need to track order within the day separately in the workout object)
     } else if (over.data.current?.type === "Day") {
       const targetDayId = overId;
-
-      if (currentWorkouts[activeIndex].dayId !== targetDayId) {
-        currentWorkouts[activeIndex] = {
-          ...currentWorkouts[activeIndex],
+      if (activeWorkout.dayId !== targetDayId) {
+        currentWorkouts.set(activeId, {
+          ...activeWorkout,
           dayId: targetDayId,
-        };
-
-        debouncedSetWorkouts(currentWorkouts);
+        });
+        setWorkouts(new Map(currentWorkouts)); // Create a new Map to trigger re-render
       }
     }
   }, []);
@@ -321,10 +316,20 @@ const PlanEditor = () => {
 
   const saveEditedWorkouts = useCallback(
     (newWorkouts) => {
-      setWorkouts((prevWorkouts) => [
-        ...prevWorkouts.filter((w) => w.dayId !== editingDay.dayId),
-        ...newWorkouts,
-      ]);
+      setWorkouts((prevWorkouts) => {
+        const updatedWorkouts = new Map(prevWorkouts);
+        // Delete old workouts for the day
+        prevWorkouts.forEach((workout) => {
+          if (workout.dayId === editingDay.dayId) {
+            updatedWorkouts.delete(workout.id);
+          }
+        });
+        // Add the new workouts
+        newWorkouts.forEach((workout) => {
+          updatedWorkouts.set(workout.id, workout);
+        });
+        return new Map(updatedWorkouts); // Create a new Map to trigger re-render
+      });
       setEditingDay(null);
     },
     [editingDay]
@@ -357,19 +362,14 @@ const PlanEditor = () => {
   }, []);
 
   const handleSave = useCallback(async () => {
-    // Use a more efficient approach to rebuild the plan
-    const dayMap = Array(totalDays)
-      .fill()
-      .map(() => []);
+    const dayMap = Array.from({ length: totalDays }, () => []);
 
-    // Fill dayMap with workouts
     workoutsRef.current.forEach((workout) => {
       if (workout.dayId < totalDays) {
         dayMap[workout.dayId].push(workout);
       }
     });
 
-    // Split days back into weeks of 7
     const weeks = chunk(dayMap, 7);
 
     const rebuiltPlan = {
@@ -407,11 +407,24 @@ const PlanEditor = () => {
     const deletedStart = weekIndex * 7;
     const deletedEnd = deletedStart + 6;
 
-    setWorkouts((prevWorkouts) =>
-      prevWorkouts
-        .filter((w) => w.dayId < deletedStart || w.dayId > deletedEnd)
-        .map((w) => (w.dayId > deletedEnd ? { ...w, dayId: w.dayId - 7 } : w))
-    );
+    setWorkouts((prevWorkouts) => {
+      const updatedWorkouts = new Map(prevWorkouts);
+      prevWorkouts.forEach((workout) => {
+        if (workout.dayId < deletedStart || workout.dayId > deletedEnd) {
+          if (workout.dayId > deletedEnd) {
+            updatedWorkouts.set(workout.id, {
+              ...workout,
+              dayId: workout.dayId - 7,
+            });
+          } else {
+            updatedWorkouts.set(workout.id, workout);
+          }
+        } else {
+          updatedWorkouts.delete(workout.id);
+        }
+      });
+      return new Map(updatedWorkouts); // Create a new Map to trigger re-render
+    });
 
     setTotalDays((prev) => Math.max(0, prev - 7));
   }, []);
@@ -471,7 +484,7 @@ const PlanEditor = () => {
               isDayCollapsed={collapsedDays[dayIndex]}
               isWeekCollapsed={collapsedWeeks.has(weekIndex)}
               handleEditWorkout={handleEditWorkout}
-              workouts={workoutsByDay[actualDayId] || []}
+              workouts={workoutsByDay.get(actualDayId) || []} // Pass only the relevant workouts
             />
           );
         })}

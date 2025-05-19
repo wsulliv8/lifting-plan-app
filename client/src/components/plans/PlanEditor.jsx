@@ -1,17 +1,20 @@
 import { useState, useCallback, useEffect, useRef, useMemo, memo } from "react";
 import { useLoaderData, useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
-import { DndContext, closestCenter, DragOverlay } from "@dnd-kit/core";
-import { arrayMove } from "@dnd-kit/sortable";
+import {
+  DndContext,
+  closestCenter,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
 import Day from "./Day";
 import Modal from "../common/Modal";
 import WorkoutEditor from "./WorkoutEditor";
 import Workout from "./Workout";
 import Button from "../common/Button";
-import Input from "../common/Input";
-import Select from "../common/Select";
-import MultiSelect from "../common/MultiSelect";
-import TextArea from "../common/TextArea";
+import PlanSettingsForm from "../forms/PlanSettingsForm";
 import { savePlan } from "../../services/plans";
 import {
   PlusCircleIcon,
@@ -21,100 +24,11 @@ import {
 } from "@heroicons/react/24/solid";
 import chunk from "lodash/chunk";
 
-// Better debounce implementation
-const useDebounce = (callback, delay) => {
-  const timeoutRef = useRef(null);
-  const callbackRef = useRef(callback);
-
-  // Update the callback ref when it changes
-  useEffect(() => {
-    callbackRef.current = callback;
-  }, [callback]);
-
-  return useCallback(
-    (...args) => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      timeoutRef.current = setTimeout(() => {
-        callbackRef.current(...args);
-      }, delay);
-    },
-    [delay]
-  );
-};
-
-// Memoized form component
-const FormContent = memo(
-  ({ formData, handleInputChange, handleSubmit, handleCategoriesChange }) => {
-    return (
-      <form onSubmit={handleSubmit} className="flex flex-col items-center">
-        <Input
-          label="Name"
-          name="name"
-          value={formData.name}
-          onChange={handleInputChange}
-          containerClass="w-3/4"
-        />
-        <Input
-          label="Goal"
-          name="goal"
-          value={formData.goal}
-          onChange={handleInputChange}
-          containerClass="w-3/4"
-          placeholder="e.g., Strength, Hypertrophy"
-        />
-        <div className="w-3/4">
-          <label className="block text-sm font-normal text-gray-700 mb-1">
-            Categories
-          </label>
-          <MultiSelect
-            value={formData.categories || []}
-            onChange={handleCategoriesChange}
-            options={[
-              { value: "Upper Body", label: "Upper Body" },
-              { value: "Lower Body", label: "Lower Body" },
-              { value: "Full Body", label: "Full Body" },
-              { value: "Barbell", label: "Barbell" },
-              { value: "Compound", label: "Compound" },
-            ]}
-          />
-        </div>
-        <Select
-          label="Difficulty"
-          name="difficulty"
-          value={formData.difficulty}
-          onChange={handleInputChange}
-          containerClass="w-3/4"
-          options={[
-            { value: "Beginner", label: "Beginner" },
-            { value: "Intermediate", label: "Intermediate" },
-            { value: "Advanced", label: "Advanced" },
-          ]}
-        />
-        <TextArea
-          label="Description"
-          name="description"
-          value={formData.description}
-          onChange={handleInputChange}
-          containerClass="w-3/4"
-        />
-        <button
-          type="submit"
-          className="px-4 py-2 w-1/2 text-white bg-green-500 rounded hover:bg-green-600 m-auto"
-        >
-          Save
-        </button>
-      </form>
-    );
-  }
-);
-
 const EMPTY_WORKOUTS = [];
 
 const PlanEditor = () => {
   const { plan: initialPlan, baseLifts } = useLoaderData();
-  const [plan, setPlan] = useState(initialPlan);
+  const [plan, setPlan] = useState({ ...initialPlan, dayGroups: [] });
 
   // Use a Map for efficient workout lookup and updates
   const [workouts, setWorkouts] = useState(() => {
@@ -142,6 +56,13 @@ const PlanEditor = () => {
   const [collapsedWeeks, setCollapsedWeeks] = useState(new Set());
   const [collapsedDays, setCollapsedDays] = useState(Array(7).fill(false));
   const [editingDay, setEditingDay] = useState(null);
+  const [selectedDays, setSelectedDays] = useState([]);
+
+  // state for grouping selected days
+  const [showGroupForm, setShowGroupForm] = useState(false);
+  const [groupName, setGroupName] = useState("");
+  const [groupColor, setGroupColor] = useState("#4f46e5");
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const navigate = useNavigate();
   const [formInputs, setFormInputs] = useState({
@@ -151,6 +72,14 @@ const PlanEditor = () => {
     difficulty: plan.difficulty,
     description: plan.description,
   });
+
+  // prevent sensing drag for click
+  const pointerSensor = useSensor(PointerSensor, {
+    activationConstraint: {
+      distance: 4, // Only start drag if user moves 8px
+    },
+  });
+  const sensors = useSensors(pointerSensor);
 
   // Memoize the weeks calculation
   const weeks = useMemo(() => {
@@ -207,6 +136,24 @@ const PlanEditor = () => {
       });
     }
   }, [isModalOpen, plan]);
+
+  const handleGroupConfirm = () => {
+    const newGroup = {
+      id: Date.now(),
+      name: groupName.trim(),
+      dayIds: selectedDays,
+      color: groupColor,
+    };
+    const updatedPlan = {
+      ...plan,
+      dayGroups: [...(plan.dayGroups || []), newGroup],
+    };
+    setPlan(updatedPlan);
+    setShowGroupForm(false);
+    setGroupName("");
+    setGroupColor("#4f46e5");
+    setSelectedDays([]);
+  };
 
   const handleCloseModal = useCallback(() => {
     setIsModalOpen(false);
@@ -455,59 +402,78 @@ const PlanEditor = () => {
     }
   }, []);
 
+  const selectDay = useCallback((dayIds) => {
+    setSelectedDays((prev) => {
+      const current = new Set(prev);
+      const idsToToggle = Array.isArray(dayIds) ? dayIds : [dayIds];
+
+      idsToToggle.forEach((id) => {
+        if (current.has(id)) {
+          current.delete(id);
+        } else {
+          current.add(id);
+        }
+      });
+
+      return Array.from(current);
+    });
+  }, []);
+
+  useEffect(() => {
+    console.log("Selected Days changed:", selectedDays);
+  }, [selectedDays]);
+
   // Render weeks once and memoize
-  const renderedWeeks = useMemo(() => {
-    return weeks.map((week, weekIndex) => (
-      <div key={`week-${weekIndex}`} className="contents">
-        <div
-          className={`bg-gray-50 p-2 font-medium cursor-pointer hover:bg-gray-200 flex items-center justify-center writing-vertical-rl rotate-180 h-full whitespace-nowrap rounded relative group ${
-            collapsedWeeks.has(weekIndex) ? "text-gray-400" : "text-gray-800"
-          }`}
-          onClick={() => toggleWeekCollapse(weekIndex)}
-        >
-          {!collapsedWeeks.has(weekIndex) ? "Week" : ""} {weekIndex + 1}
-          <span>
-            <TrashIcon
-              className={`absolute bottom-1 left-1/2 transform -translate-x-1/2 h-4 w-4 text-red-400 hover:text-red-600 rotate-90 opacity-0 ${
-                collapsedWeeks.has(weekIndex)
-                  ? "opacity-0"
-                  : "group-hover:opacity-100"
-              }`}
-              onClick={(e) => handleDeleteWeek(weekIndex, e)}
-            />
-          </span>
-        </div>
-        {week.map((_, dayIndex) => {
-          const actualDayId = weekIndex * 7 + dayIndex;
-          return (
-            <Day
-              key={actualDayId}
-              id={actualDayId}
-              isDayCollapsed={collapsedDays[dayIndex]}
-              isWeekCollapsed={collapsedWeeks.has(weekIndex)}
-              handleEditWorkout={handleEditWorkout}
-              workouts={workoutsByDay.get(actualDayId) || EMPTY_WORKOUTS} // Pass only the relevant workouts
-            />
-          );
-        })}
+  const renderedWeeks = weeks.map((week, weekIndex) => (
+    <div key={`week-${weekIndex}`} className="contents">
+      <div
+        className={`bg-gray-50 p-2 font-medium cursor-pointer hover:bg-gray-200 flex items-center justify-center writing-vertical-rl rotate-180 h-full whitespace-nowrap rounded relative group ${
+          collapsedWeeks.has(weekIndex) ? "text-gray-400" : "text-gray-800"
+        }`}
+        onClick={() => toggleWeekCollapse(weekIndex)}
+      >
+        {!collapsedWeeks.has(weekIndex) ? "Week" : ""} {weekIndex + 1}
+        <span>
+          <TrashIcon
+            className={`absolute bottom-1 left-1/2 transform -translate-x-1/2 h-4 w-4 text-red-400 hover:text-red-600 rotate-90 opacity-0 ${
+              collapsedWeeks.has(weekIndex)
+                ? "opacity-0"
+                : "group-hover:opacity-100"
+            }`}
+            onClick={(e) => handleDeleteWeek(weekIndex, e)}
+          />
+        </span>
       </div>
-    ));
-  }, [
-    weeks,
-    collapsedWeeks,
-    collapsedDays,
-    toggleWeekCollapse,
-    handleEditWorkout,
-    workoutsByDay,
-    handleDeleteWeek,
-    EMPTY_WORKOUTS,
-  ]);
+      {week.map((_, dayIndex) => {
+        const actualDayId = weekIndex * 7 + dayIndex;
+        const isSelected = selectedDays.includes(actualDayId);
+        return (
+          <Day
+            key={actualDayId}
+            id={actualDayId}
+            isDayCollapsed={collapsedDays[dayIndex]}
+            isWeekCollapsed={collapsedWeeks.has(weekIndex)}
+            isDaySelected={isSelected}
+            handleEditWorkout={handleEditWorkout}
+            workouts={workoutsByDay.get(actualDayId) || EMPTY_WORKOUTS} // Pass only the relevant workouts
+            handleClick={selectDay}
+            group={
+              plan.dayGroups?.find((group) =>
+                group.dayIds.includes(actualDayId)
+              ) || null
+            }
+          />
+        );
+      })}
+    </div>
+  ));
 
   return (
     <DndContext
       collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      sensors={sensors}
     >
       <div className="w-full h-full">
         <div className="flex justify-between mb-4">
@@ -537,7 +503,7 @@ const PlanEditor = () => {
             title="Plan Settings"
             className="w-3/4"
           >
-            <FormContent
+            <PlanSettingsForm
               formData={formInputs}
               handleInputChange={handleInputChange}
               handleSubmit={handleSubmit}
@@ -559,6 +525,66 @@ const PlanEditor = () => {
           />
         </div>
       </div>
+
+      {selectedDays.length > 0 && (
+        <div className="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-white shadow-md p-3 rounded flex gap-2 z-50">
+          <Button
+            className="btn btn-primary"
+            onClick={() => setShowGroupForm((prev) => !prev)}
+          >
+            Group
+          </Button>
+          {showGroupForm && (
+            <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-white p-4 rounded shadow-lg border w-64 z-50">
+              <h3 className="text-sm font-semibold mb-2">Create Group</h3>
+              <div className="mb-2">
+                <label className="block text-xs text-gray-500 mb-1">
+                  Group Name
+                </label>
+                <input
+                  type="text"
+                  className="w-full border px-2 py-1 rounded text-sm"
+                  value={groupName}
+                  onChange={(e) => setGroupName(e.target.value)}
+                />
+              </div>
+              <div className="mb-3">
+                <label className="block text-xs text-gray-500 mb-1">
+                  Group Color
+                </label>
+                <input
+                  type="color"
+                  value={groupColor}
+                  onChange={(e) => setGroupColor(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+              <div className="flex justify-between text-sm">
+                <button
+                  className="bg-indigo-500 text-white px-3 py-1 rounded hover:bg-indigo-600"
+                  onClick={() => handleGroupConfirm()}
+                >
+                  Confirm
+                </button>
+                <button
+                  className="text-gray-500 hover:text-gray-700"
+                  onClick={() => setShowGroupForm(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+          <Button className="btn btn-primary">Copy</Button>
+          <Button className="btn btn-primary">Duplicate</Button>
+          <Button
+            className="btn btn-secondary"
+            onClick={() => setSelectedDays([])}
+          >
+            Cancel
+          </Button>
+        </div>
+      )}
 
       <Modal
         isOpen={editingDay !== null}

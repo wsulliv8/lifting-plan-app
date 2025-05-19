@@ -26,12 +26,23 @@ function areDayPropsEqual(prev, next) {
     prev.isDayCollapsed === next.isDayCollapsed &&
     prev.isWeekCollapsed === next.isWeekCollapsed &&
     prev.handleEditWorkout === next.handleEditWorkout &&
+    prev.isDaySelected === next.isDaySelected &&
     shallowEqualWorkouts(prev.workouts, next.workouts)
   );
 }
 
 const Day = memo(
-  ({ id, isDayCollapsed, isWeekCollapsed, handleEditWorkout, workouts }) => {
+  ({
+    id,
+    isDayCollapsed,
+    isWeekCollapsed,
+    isDaySelected,
+    handleEditWorkout,
+    workouts,
+    handleClick,
+    group,
+    isDragging,
+  }) => {
     const workoutItems = useMemo(
       () => workouts.map((w) => w.id.toString()),
       [workouts]
@@ -44,12 +55,21 @@ const Day = memo(
     }
 
     return (
-      <DroppableContainer id={id} disabled={isDayCollapsed || isWeekCollapsed}>
+      <DroppableContainer
+        id={id}
+        disabled={isDayCollapsed || isWeekCollapsed}
+        isDaySelected={isDaySelected}
+        isDragging={isDragging}
+        handleClick={handleClick}
+      >
         <DaySortableWrapper id={id} workoutItems={workoutItems}>
           <DayData
             id={id}
             workouts={workouts}
             handleEditWorkout={handleEditWorkout}
+            handleClick={handleClick}
+            group={group}
+            isDragging={isDragging}
           />
         </DaySortableWrapper>
       </DroppableContainer>
@@ -60,7 +80,7 @@ const Day = memo(
 
 Day.displayName = "Day";
 
-const DroppableContainer = memo(({ id, disabled, children }) => {
+const DroppableContainer = memo(({ id, disabled, isDaySelected, children }) => {
   const { setNodeRef, isOver } = useDroppable({
     id,
     data: { type: "Day" },
@@ -70,9 +90,9 @@ const DroppableContainer = memo(({ id, disabled, children }) => {
   return (
     <div
       ref={setNodeRef}
-      className={`group flex flex-col justify-between p-2 bg-white shadow-sm rounded-lg text-xs border border-transparent hover:border-primary hover:shadow-xl ${
+      className={`group flex flex-col justify-between relative p-2 bg-white shadow-sm rounded-lg text-xs border border-transparent hover:border-primary hover:shadow-xl ${
         isOver ? "bg-blue-50" : ""
-      }`}
+      } ${isDaySelected ? "border-primary" : ""}`}
     >
       {children}
     </div>
@@ -91,39 +111,67 @@ const DaySortableWrapper = memo(({ id, workoutItems, children }) => {
   );
 });
 
-const DayData = memo(({ id, workouts, handleEditWorkout }) => {
-  const workoutComponents = useMemo(() => {
-    if (!workouts.length) {
-      return <span className="text-gray-500 p-1">Rest Day</span>;
-    }
+const DayData = memo(
+  ({ id, workouts, handleEditWorkout, handleClick, isDragging, group }) => {
+    const workoutComponents = useMemo(() => {
+      if (!workouts.length) {
+        return <span className="text-gray-500 p-1 pt-5">Rest Day</span>;
+      }
 
-    return workouts
-      .filter((w) => w && w.id)
-      .map((workout) => (
-        <Workout key={workout.id} id={workout.id} workout={workout} />
-      ));
-  }, [workouts]);
+      return workouts
+        .filter((w) => w && w.id)
+        .map((workout) => (
+          <Workout
+            key={workout.id}
+            id={workout.id}
+            workout={workout}
+            isDragging={isDragging}
+            handleClick={handleClick}
+          />
+        ));
+    }, [workouts, handleClick, isDragging]);
 
-  return (
-    <>
-      <div className="w-full flex flex-col justify-start items-center self-center flex-grow">
-        {workoutComponents}
-      </div>
-      <div className="flex flex-col gap-1 transition-opacity duration-300 opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto pointer-events-none">
-        <Button
-          variant="primary"
-          className="text-xs p-1 w-full"
-          onClick={() => handleEditWorkout(id)}
+    return (
+      <>
+        {group && (
+          <div
+            className="w-full h-2 absolute top-0 left-0 rounded-t-lg hover:h-6 transition-all duration-200 cursor-pointer flex items-center justify-center overflow-hidden group/bar"
+            style={{ backgroundColor: group.color }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleClick([...group.dayIds]);
+            }}
+          >
+            <span className="opacity-0 group-hover/bar:opacity-100 transition-opacity duration-200 text-[0.65rem] text-white font-medium">
+              {group.name}
+            </span>
+          </div>
+        )}
+        <div
+          onClick={() => {
+            console.log(`adding day with id: ${id}`);
+            handleClick(id);
+          }}
+          className="w-full flex flex-col justify-start items-center self-center flex-grow"
         >
-          Edit
-        </Button>
-        <Button variant="secondary" className="text-xs p-1 w-full">
-          Import
-        </Button>
-      </div>
-    </>
-  );
-});
+          {workoutComponents}
+        </div>
+        <div className="flex flex-col gap-1 transition-opacity duration-300 opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto pointer-events-none">
+          <Button
+            variant="primary"
+            className="text-xs p-1 w-full"
+            onClick={() => handleEditWorkout(id)}
+          >
+            Edit
+          </Button>
+          <Button variant="secondary" className="text-xs p-1 w-full">
+            Import
+          </Button>
+        </div>
+      </>
+    );
+  }
+);
 
 DayData.displayName = "DayData";
 

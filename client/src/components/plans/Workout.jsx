@@ -2,7 +2,7 @@ import { memo, useCallback, useMemo } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-const Workout = memo(({ id, workout }) => {
+const Workout = memo(({ id, workout, handleClick }) => {
   const {
     attributes,
     listeners,
@@ -75,6 +75,10 @@ const Workout = memo(({ id, workout }) => {
           ? "opacity-30 border border-blue-500 bg-blue-200 text-blue-200 cursor-grab"
           : ""
       }`}
+      onClick={(e) => {
+        e.stopPropagation();
+        handleClick(workout.dayId);
+      }}
     >
       <div className="w-full text-xs">
         <div className="font-medium text-center">

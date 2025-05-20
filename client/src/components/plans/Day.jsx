@@ -27,6 +27,8 @@ function areDayPropsEqual(prev, next) {
     prev.isWeekCollapsed === next.isWeekCollapsed &&
     prev.handleEditWorkout === next.handleEditWorkout &&
     prev.isDaySelected === next.isDaySelected &&
+    prev.handleClick === next.handleClick &&
+    prev.group === next.group &&
     shallowEqualWorkouts(prev.workouts, next.workouts)
   );
 }
@@ -86,13 +88,12 @@ const DroppableContainer = memo(({ id, disabled, isDaySelected, children }) => {
     data: { type: "Day" },
     disabled,
   });
-
   return (
     <div
       ref={setNodeRef}
-      className={`group flex flex-col justify-between relative p-2 bg-white shadow-sm rounded-lg text-xs border border-transparent hover:border-primary hover:shadow-xl ${
-        isOver ? "bg-blue-50" : ""
-      } ${isDaySelected ? "border-primary" : ""}`}
+      className={`group flex flex-col justify-between relative p-2 bg-white shadow-sm rounded-lg text-xs border ${
+        isDaySelected ? "border-primary" : "border-transparent"
+      } hover:border-primary hover:shadow-xl ${isOver ? "bg-blue-50" : ""}`}
     >
       {children}
     </div>
@@ -148,7 +149,8 @@ const DayData = memo(
           </div>
         )}
         <div
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation();
             console.log(`adding day with id: ${id}`);
             handleClick(id);
           }}

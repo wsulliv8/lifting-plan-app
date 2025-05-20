@@ -1,9 +1,10 @@
 import { useState, useCallback, useEffect, useRef, useMemo, memo } from "react";
+import { FixedSizeList as List } from "react-window";
 import { useLoaderData, useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
 import {
   DndContext,
-  closestCenter,
+  rectIntersection,
   DragOverlay,
   PointerSensor,
   useSensor,
@@ -76,7 +77,7 @@ const PlanEditor = () => {
   // prevent sensing drag for click
   const pointerSensor = useSensor(PointerSensor, {
     activationConstraint: {
-      distance: 4, // Only start drag if user moves 8px
+      distance: 1, // Only start drag if user moves 8px
     },
   });
   const sensors = useSensors(pointerSensor);
@@ -87,7 +88,6 @@ const PlanEditor = () => {
     return chunk(days, 7);
   }, [totalDays]);
 
-  // Memoize the workouts by day calculation
   const workoutsByDay = useMemo(() => {
     const map = new Map();
     workouts.forEach((workout) => {
@@ -97,17 +97,7 @@ const PlanEditor = () => {
       }
       map.get(dayId).push(workout);
     });
-
-    // Convert workout maps to plain objects for each day
-    const result = new Map();
-    map.forEach((workoutsArray, dayId) => {
-      result.set(
-        dayId,
-        workoutsArray.map((workout) => ({ ...workout }))
-      );
-    });
-
-    return result;
+    return map;
   }, [workouts]);
 
   // Grid styling - memoized
@@ -470,7 +460,7 @@ const PlanEditor = () => {
 
   return (
     <DndContext
-      collisionDetection={closestCenter}
+      collisionDetection={rectIntersection}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       sensors={sensors}

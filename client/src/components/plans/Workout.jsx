@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo } from "react";
+import { memo, useMemo } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
@@ -13,7 +13,6 @@ const Workout = memo(({ id, workout, handleClick }) => {
   } = useSortable({
     id,
     data: { type: "Workout", workout },
-    // Disable some measurements for faster dragging
     measuring: {
       dragging: {
         containerScale: false,
@@ -29,26 +28,20 @@ const Workout = memo(({ id, workout, handleClick }) => {
     [transform, transition]
   );
 
-  // Memoize the reps string calculation
-  const getRepsString = useCallback((lift) => {
-    if (!lift.reps || lift.reps.length === 0) return "";
-
-    if (lift.reps.every((val) => val === lift.reps[0])) {
-      return `${lift.reps.length}x${lift.reps[0]}`;
-    }
-
-    if (lift.weight && lift.weight.length) {
-      return lift.weight.join(", ");
-    }
-
-    return lift.reps.join(", ");
-  }, []);
-
-  // Memoize lift list rendering
   const liftsContent = useMemo(() => {
     if (!workout.lifts || workout.lifts.length === 0) {
       return <div className="text-gray-500">No lifts</div>;
     }
+
+    const getRepsString = (lift) => {
+      if (!lift.reps || lift.reps.length === 0) return "";
+      if (lift.reps.every((val) => val === lift.reps[0])) {
+        return `${lift.reps.length}x${lift.reps[0]}`;
+      }
+      return lift.weight?.length
+        ? lift.weight.join(", ")
+        : lift.reps.join(", ");
+    };
 
     return (
       <ul className="list-disc pl-4 mt-1">
@@ -62,7 +55,7 @@ const Workout = memo(({ id, workout, handleClick }) => {
         ))}
       </ul>
     );
-  }, [workout.lifts, getRepsString]);
+  }, [workout.lifts]);
 
   return (
     <div
@@ -71,9 +64,7 @@ const Workout = memo(({ id, workout, handleClick }) => {
       {...attributes}
       {...listeners}
       className={`w-full p-1 mb-2 bg-gray-100 rounded hover:bg-gray-200 ${
-        isDragging
-          ? "opacity-30 border border-blue-500 bg-blue-200 text-blue-200 cursor-grab"
-          : ""
+        isDragging ? "opacity-50 border border-blue-500" : ""
       }`}
       onClick={(e) => {
         e.stopPropagation();
@@ -90,7 +81,6 @@ const Workout = memo(({ id, workout, handleClick }) => {
   );
 });
 
-// Use displayName for better debugging
 Workout.displayName = "Workout";
 
 export default Workout;

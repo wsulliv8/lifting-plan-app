@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, useMemo, memo } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { FixedSizeList as List } from "react-window";
 import { useLoaderData, useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
@@ -11,9 +11,10 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import Day from "./Day";
+import Workout from "./Workout";
 import Modal from "../common/Modal";
 import WorkoutEditor from "./WorkoutEditor";
-import Workout from "./Workout";
+import Toast from "./Toast";
 import Button from "../common/Button";
 import PlanSettingsForm from "../forms/PlanSettingsForm";
 import { savePlan } from "../../services/plans";
@@ -30,8 +31,6 @@ const EMPTY_WORKOUTS = [];
 const PlanEditor = () => {
   const { plan: initialPlan, baseLifts } = useLoaderData();
   const [plan, setPlan] = useState({ ...initialPlan, dayGroups: [] });
-
-  // Use a Map for efficient workout lookup and updates
   const [workouts, setWorkouts] = useState(() => {
     const initialWorkouts = new Map();
     initialPlan.weeks.forEach((week, weekIndex) => {
@@ -58,13 +57,23 @@ const PlanEditor = () => {
   const [collapsedDays, setCollapsedDays] = useState(Array(7).fill(false));
   const [editingDay, setEditingDay] = useState(null);
   const [selectedDays, setSelectedDays] = useState([]);
-
-  // state for grouping selected days
   const [showGroupForm, setShowGroupForm] = useState(false);
   const [groupName, setGroupName] = useState("");
   const [groupColor, setGroupColor] = useState("#4f46e5");
-
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showDuplicateForm, setShowDuplicateForm] = useState(false);
+  const [duplicateFormData, setDuplicateFormData] = useState({
+    selectedWeekDays: [],
+    startWeek: 1,
+    endWeek: 1,
+    repeatCount: 1,
+    overwriteExisting: false,
+  });
+  const [clipboard, setClipboard] = useState([]); // [{ dayId, workouts }]
+  const [contextMenu, setContextMenu] = useState(null); // { x, y, dayId }
+  const [showCopiedMessage, setShowCopiedMessage] = useState(false);
+  const contextMenuRef = useRef(null); // Ref for context menu
+
   const navigate = useNavigate();
   const [formInputs, setFormInputs] = useState({
     name: plan.name ? plan.name : "New Plan",
@@ -74,15 +83,11 @@ const PlanEditor = () => {
     description: plan.description,
   });
 
-  // prevent sensing drag for click
   const pointerSensor = useSensor(PointerSensor, {
-    activationConstraint: {
-      distance: 1, // Only start drag if user moves 8px
-    },
+    activationConstraint: { distance: 1 },
   });
   const sensors = useSensors(pointerSensor);
 
-  // Memoize the weeks calculation
   const weeks = useMemo(() => {
     const days = Array.from({ length: totalDays }, (_, i) => i);
     return chunk(days, 7);
@@ -100,7 +105,6 @@ const PlanEditor = () => {
     return map;
   }, [workouts]);
 
-  // Grid styling - memoized
   const gridStyle = useMemo(() => {
     return {
       gridTemplateColumns: `2rem ${Array(7)
@@ -127,7 +131,7 @@ const PlanEditor = () => {
     }
   }, [isModalOpen, plan]);
 
-  const handleGroupConfirm = () => {
+  const handleGroupConfirm = useCallback(() => {
     const newGroup = {
       id: Date.now(),
       name: groupName.trim(),
@@ -143,7 +147,7 @@ const PlanEditor = () => {
     setGroupName("");
     setGroupColor("#4f46e5");
     setSelectedDays([]);
-  };
+  }, [groupName, groupColor, selectedDays, plan]);
 
   const handleCloseModal = useCallback(() => {
     setIsModalOpen(false);
@@ -202,36 +206,43 @@ const PlanEditor = () => {
     });
   }, []);
 
-  // Optimized drag and drop handler
   const handleDragEnd = useCallback((event) => {
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
+    if (!over || active.id === over.id) {
+      setActiveWorkout(null);
+      return;
+    }
 
     const activeId = active.id;
     const overId = over.id;
     const isActiveAWorkout = active.data.current?.type === "Workout";
 
-    if (!isActiveAWorkout) return;
+    if (!isActiveAWorkout) {
+      setActiveWorkout(null);
+      return;
+    }
 
-    const currentWorkouts = new Map(workoutsRef.current); // Get latest workouts
-
+    const currentWorkouts = new Map(workoutsRef.current);
     const activeWorkout = currentWorkouts.get(activeId);
-    if (!activeWorkout) return;
+    if (!activeWorkout) {
+      setActiveWorkout(null);
+      return;
+    }
 
     if (over.data.current?.type === "Workout") {
       const overWorkout = currentWorkouts.get(overId);
-      if (!overWorkout) return;
+      if (!overWorkout) {
+        setActiveWorkout(null);
+        return;
+      }
 
       if (activeWorkout.dayId !== overWorkout.dayId) {
         currentWorkouts.set(activeId, {
           ...activeWorkout,
           dayId: overWorkout.dayId,
         });
-        setWorkouts(new Map(currentWorkouts)); // Create a new Map to trigger re-render
+        setWorkouts(new Map(currentWorkouts));
       }
-
-      // arrayMove is not needed with a Map, but if you need to reorder within the day:
-      //  (You'd need to track order within the day separately in the workout object)
     } else if (over.data.current?.type === "Day") {
       const targetDayId = overId;
       if (activeWorkout.dayId !== targetDayId) {
@@ -239,9 +250,10 @@ const PlanEditor = () => {
           ...activeWorkout,
           dayId: targetDayId,
         });
-        setWorkouts(new Map(currentWorkouts)); // Create a new Map to trigger re-render
+        setWorkouts(new Map(currentWorkouts));
       }
     }
+    setActiveWorkout(null);
   }, []);
 
   const handleEditWorkout = useCallback((dayId) => {
@@ -257,24 +269,21 @@ const PlanEditor = () => {
     (newWorkouts) => {
       setWorkouts((prevWorkouts) => {
         const updatedWorkouts = new Map(prevWorkouts);
-        // Delete old workouts for the day
         prevWorkouts.forEach((workout) => {
           if (workout.dayId === editingDay.dayId) {
             updatedWorkouts.delete(workout.id);
           }
         });
-        // Add the new workouts
         newWorkouts.forEach((workout) => {
           updatedWorkouts.set(workout.id, workout);
         });
-        return new Map(updatedWorkouts); // Create a new Map to trigger re-render
+        return new Map(updatedWorkouts);
       });
       setEditingDay(null);
     },
     [editingDay]
   );
 
-  // Memoize the stripIds function
   const stripIds = useCallback((plan) => {
     return {
       ...plan,
@@ -339,10 +348,8 @@ const PlanEditor = () => {
     await savePlan(stripIds(rebuiltPlan));
   }, [plan, totalDays, stripIds]);
 
-  // Memoize the week deletion handler
   const handleDeleteWeek = useCallback((weekIndex, e) => {
     e.stopPropagation();
-
     const deletedStart = weekIndex * 7;
     const deletedEnd = deletedStart + 6;
 
@@ -362,13 +369,12 @@ const PlanEditor = () => {
           updatedWorkouts.delete(workout.id);
         }
       });
-      return new Map(updatedWorkouts); // Create a new Map to trigger re-render
+      return new Map(updatedWorkouts);
     });
 
     setTotalDays((prev) => Math.max(0, prev - 7));
   }, []);
 
-  // Rendering optimization for the header days
   const headerDays = useMemo(() => {
     return Array(7)
       .fill()
@@ -385,7 +391,6 @@ const PlanEditor = () => {
       ));
   }, [collapsedDays, toggleDayCollapse]);
 
-  // Use drag start handler reference
   const handleDragStart = useCallback((event) => {
     if (event.active.data.current?.workout) {
       setActiveWorkout(event.active.data.current.workout);
@@ -396,7 +401,6 @@ const PlanEditor = () => {
     setSelectedDays((prev) => {
       const current = new Set(prev);
       const idsToToggle = Array.isArray(dayIds) ? dayIds : [dayIds];
-
       idsToToggle.forEach((id) => {
         if (current.has(id)) {
           current.delete(id);
@@ -404,7 +408,6 @@ const PlanEditor = () => {
           current.add(id);
         }
       });
-
       return Array.from(current);
     });
   }, []);
@@ -413,7 +416,206 @@ const PlanEditor = () => {
     console.log("Selected Days changed:", selectedDays);
   }, [selectedDays]);
 
-  // Render weeks once and memoize
+  // Duplication Logic
+  const handleDuplicateConfirm = useCallback(() => {
+    setWorkouts((prevWorkouts) => {
+      const updatedWorkouts = new Map(prevWorkouts);
+      let newTotalDays = totalDays;
+
+      if (selectedDays.length === 1) {
+        const sourceDayId = selectedDays[0];
+        const sourceWorkouts = Array.from(prevWorkouts.values()).filter(
+          (w) => w.dayId === sourceDayId
+        );
+        const { selectedWeekDays, startWeek, endWeek } = duplicateFormData;
+
+        if (
+          selectedWeekDays.length === 0 ||
+          startWeek < 1 ||
+          endWeek < startWeek
+        ) {
+          console.warn("Invalid duplication parameters");
+          return prevWorkouts;
+        }
+
+        for (let week = startWeek - 1; week < endWeek; week++) {
+          selectedWeekDays.forEach((dayIndex) => {
+            const targetDayId = week * 7 + dayIndex;
+            if (targetDayId >= newTotalDays) {
+              newTotalDays = targetDayId + 1;
+            }
+            sourceWorkouts.forEach((workout) => {
+              const newWorkout = {
+                ...workout,
+                id: Date.now() + Math.random(),
+                dayId: targetDayId,
+              };
+              updatedWorkouts.set(newWorkout.id, newWorkout);
+            });
+          });
+        }
+      } else if (selectedDays.length > 1) {
+        const { repeatCount, overwriteExisting } = duplicateFormData;
+        if (repeatCount < 1) {
+          console.warn("Invalid repeat count");
+          return prevWorkouts;
+        }
+
+        for (let i = 0; i < repeatCount; i++) {
+          selectedDays.forEach((sourceDayId) => {
+            const sourceWorkouts = Array.from(prevWorkouts.values()).filter(
+              (w) => w.dayId === sourceDayId
+            );
+            const targetDayId = newTotalDays;
+            newTotalDays += 1;
+
+            if (overwriteExisting) {
+              prevWorkouts.forEach((workout) => {
+                if (workout.dayId === targetDayId) {
+                  updatedWorkouts.delete(workout.id);
+                }
+              });
+            }
+
+            sourceWorkouts.forEach((workout) => {
+              const newWorkout = {
+                ...workout,
+                id: Date.now() + Math.random(),
+                dayId: targetDayId,
+              };
+              updatedWorkouts.set(newWorkout.id, newWorkout);
+            });
+          });
+        }
+      }
+
+      setTotalDays(newTotalDays);
+      return new Map(updatedWorkouts);
+    });
+
+    setShowDuplicateForm(false);
+    setDuplicateFormData({
+      selectedWeekDays: [],
+      startWeek: 1,
+      endWeek: weeks.length,
+      repeatCount: 1,
+      overwriteExisting: false,
+    });
+    setSelectedDays([]);
+  }, [selectedDays, duplicateFormData, totalDays, weeks.length]);
+
+  const handleDuplicateFormChange = useCallback((e) => {
+    const { name, value, type, checked } = e.target;
+    setDuplicateFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : parseInt(value) || value,
+    }));
+  }, []);
+
+  const handleWeekDayToggle = useCallback((dayIndex) => {
+    setDuplicateFormData((prev) => {
+      const selectedWeekDays = prev.selectedWeekDays.includes(dayIndex)
+        ? prev.selectedWeekDays.filter((d) => d !== dayIndex)
+        : [...prev.selectedWeekDays, dayIndex];
+      return { ...prev, selectedWeekDays };
+    });
+  }, []);
+
+  // Copy-Paste Logic
+  const handleCopy = useCallback(
+    (dayIds) => {
+      const daysToCopy = Array.isArray(dayIds) ? dayIds : [dayIds];
+      const copiedData = daysToCopy.map((dayId) => ({
+        dayId,
+        workouts: Array.from(workouts.values()).filter(
+          (w) => w.dayId === dayId
+        ),
+      }));
+      setClipboard(copiedData);
+      setSelectedDays([]); // Clear selection after copy
+      setShowCopiedMessage(true);
+      setTimeout(() => setShowCopiedMessage(false), 2000); // Hide after 2 seconds
+    },
+    [workouts]
+  );
+
+  const handlePaste = useCallback(
+    (startDayId) => {
+      setWorkouts((prevWorkouts) => {
+        const updatedWorkouts = new Map(prevWorkouts);
+        let newTotalDays = totalDays;
+
+        clipboard.forEach((clip, index) => {
+          const targetDayId = startDayId + index;
+          if (targetDayId >= newTotalDays) {
+            newTotalDays = targetDayId + 1;
+          }
+
+          // Append workouts (no overwriting)
+          clip.workouts.forEach((workout) => {
+            const newWorkout = {
+              ...workout,
+              id: Date.now() + Math.random(),
+              dayId: targetDayId,
+            };
+            updatedWorkouts.set(newWorkout.id, newWorkout);
+          });
+        });
+
+        setTotalDays(newTotalDays);
+        return new Map(updatedWorkouts);
+      });
+
+      setClipboard([]); // Clear clipboard after paste
+      setContextMenu(null); // Close context menu
+    },
+    [clipboard, totalDays]
+  );
+
+  // Context Menu Logic
+  const handleContextMenu = useCallback(
+    (e, dayId) => {
+      e.preventDefault();
+      const { clientX, clientY } = e;
+      // Adjust position to stay within viewport
+      const menuWidth = 120; // Approximate width of context menu
+      const menuHeight = clipboard.length > 0 ? 80 : 40; // Approximate height (2 or 1 item)
+      const x =
+        clientX + menuWidth > window.innerWidth ? clientX - menuWidth : clientX;
+      const y =
+        clientY + menuHeight > window.innerHeight
+          ? clientY - menuHeight
+          : clientY;
+
+      setContextMenu({ x, y, dayId });
+    },
+    [clipboard]
+  );
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  // Close context menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        contextMenu &&
+        contextMenuRef.current &&
+        !contextMenuRef.current.contains(event.target)
+      ) {
+        closeContextMenu();
+        event.stopPropagation();
+        event.preventDefault();
+      }
+    };
+
+    // Use capture phase to catch clicks before they’re handled by other elements
+    document.addEventListener("click", handleClickOutside, true);
+    return () =>
+      document.removeEventListener("click", handleClickOutside, true);
+  }, [contextMenu, closeContextMenu]);
+
   const renderedWeeks = weeks.map((week, weekIndex) => (
     <div key={`week-${weekIndex}`} className="contents">
       <div
@@ -445,13 +647,14 @@ const PlanEditor = () => {
             isWeekCollapsed={collapsedWeeks.has(weekIndex)}
             isDaySelected={isSelected}
             handleEditWorkout={handleEditWorkout}
-            workouts={workoutsByDay.get(actualDayId) || EMPTY_WORKOUTS} // Pass only the relevant workouts
+            workouts={workoutsByDay.get(actualDayId) || EMPTY_WORKOUTS}
             handleClick={selectDay}
             group={
               plan.dayGroups?.find((group) =>
                 group.dayIds.includes(actualDayId)
               ) || null
             }
+            onContextMenu={handleContextMenu}
           />
         );
       })}
@@ -514,94 +717,261 @@ const PlanEditor = () => {
             onClick={() => setTotalDays((prev) => prev + 7)}
           />
         </div>
-      </div>
 
-      {selectedDays.length > 0 && (
-        <div className="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-white shadow-md p-3 rounded flex gap-2 z-50">
-          <Button
-            className="btn btn-primary"
-            onClick={() => setShowGroupForm((prev) => !prev)}
-          >
-            Group
-          </Button>
-          {showGroupForm && (
-            <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-white p-4 rounded shadow-lg border w-64 z-50">
-              <h3 className="text-sm font-semibold mb-2">Create Group</h3>
-              <div className="mb-2">
-                <label className="block text-xs text-gray-500 mb-1">
-                  Group Name
-                </label>
-                <input
-                  type="text"
-                  className="w-full border px-2 py-1 rounded text-sm"
-                  value={groupName}
-                  onChange={(e) => setGroupName(e.target.value)}
-                />
+        {selectedDays.length > 0 && (
+          <div className="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-white shadow-md p-3 rounded flex gap-2 z-50">
+            <Button
+              className="btn btn-primary"
+              onClick={() => setShowGroupForm((prev) => !prev)}
+            >
+              Group
+            </Button>
+            {showGroupForm && (
+              <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-white p-4 rounded shadow-lg border w-64 z-50">
+                <h3 className="text-sm font-semibold mb-2">Create Group</h3>
+                <div className="mb-2">
+                  <label className="block text-xs text-gray-500 mb-1">
+                    Group Name
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full border px-2 py-1 rounded text-sm"
+                    value={groupName}
+                    onChange={(e) => setGroupName(e.target.value)}
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="block text-xs text-gray-500 mb-1">
+                    Group Color
+                  </label>
+                  <input
+                    type="color"
+                    value={groupColor}
+                    onChange={(e) => setGroupColor(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                <div className="flex justify-between text-sm">
+                  <button
+                    className="bg-indigo-500 text-white px-3 py-1 rounded hover:bg-indigo-600"
+                    onClick={() => handleGroupConfirm()}
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    className="text-gray-500 hover:text-gray-700"
+                    onClick={() => setShowGroupForm(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
-              <div className="mb-3">
-                <label className="block text-xs text-gray-500 mb-1">
-                  Group Color
-                </label>
-                <input
-                  type="color"
-                  value={groupColor}
-                  onChange={(e) => setGroupColor(e.target.value)}
-                  className="w-full"
-                />
+            )}
+            <Button
+              className="btn btn-primary"
+              onClick={() => handleCopy(selectedDays)}
+              disabled={selectedDays.length === 0}
+            >
+              Copy
+            </Button>
+            <Button
+              className="btn btn-primary"
+              onClick={() => {
+                setShowDuplicateForm(true);
+                setDuplicateFormData({
+                  selectedWeekDays: [],
+                  startWeek: 1,
+                  endWeek: weeks.length,
+                  repeatCount: 1,
+                  overwriteExisting: false,
+                });
+              }}
+            >
+              Duplicate
+            </Button>
+            {showDuplicateForm && selectedDays.length === 1 && (
+              <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-white p-4 rounded shadow-lg border w-64 z-50">
+                <h3 className="text-sm font-semibold mb-2">
+                  Duplicate Day {(selectedDays[0] % 7) + 1}
+                </h3>
+                <div className="mb-2">
+                  <label className="block text-xs text-gray-500 mb-1">
+                    Days of the Week
+                  </label>
+                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(
+                    (day, index) => (
+                      <label key={index} className="flex items-center text-sm">
+                        <input
+                          type="checkbox"
+                          checked={duplicateFormData.selectedWeekDays.includes(
+                            index
+                          )}
+                          onChange={() => handleWeekDayToggle(index)}
+                          className="mr-2"
+                        />
+                        {day}
+                      </label>
+                    )
+                  )}
+                </div>
+                <div className="mb-2">
+                  <label className="block text-xs text-gray-500 mb-1">
+                    From Week
+                  </label>
+                  <input
+                    type="number"
+                    name="startWeek"
+                    value={duplicateFormData.startWeek}
+                    onChange={handleDuplicateFormChange}
+                    className="w-full border px-2 py-1 rounded text-sm"
+                    min="1"
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="block text-xs text-gray-500 mb-1">
+                    To Week
+                  </label>
+                  <input
+                    type="number"
+                    name="endWeek"
+                    value={duplicateFormData.endWeek}
+                    onChange={handleDuplicateFormChange}
+                    className="w-full border px-2 py-1 rounded text-sm"
+                    min={duplicateFormData.startWeek}
+                  />
+                </div>
+                <div className="flex justify-between text-sm">
+                  <button
+                    className="bg-indigo-500 text-white px-3 py-1 rounded hover:bg-indigo-600"
+                    onClick={handleDuplicateConfirm}
+                    disabled={duplicateFormData.selectedWeekDays.length === 0}
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    className="text-gray-500 hover:text-gray-700"
+                    onClick={() => setShowDuplicateForm(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
-              <div className="flex justify-between text-sm">
-                <button
-                  className="bg-indigo-500 text-white px-3 py-1 rounded hover:bg-indigo-600"
-                  onClick={() => handleGroupConfirm()}
-                >
-                  Confirm
-                </button>
-                <button
-                  className="text-gray-500 hover:text-gray-700"
-                  onClick={() => setShowGroupForm(false)}
-                >
-                  Cancel
-                </button>
+            )}
+            {showDuplicateForm && selectedDays.length > 1 && (
+              <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-white p-4 rounded shadow-lg border w-64 z-50">
+                <h3 className="text-sm font-semibold mb-2">
+                  Duplicate Selected Days
+                </h3>
+                <div className="mb-2">
+                  <label className="block text-xs text-gray-500 mb-1">
+                    Repeat Times
+                  </label>
+                  <input
+                    type="number"
+                    name="repeatCount"
+                    value={duplicateFormData.repeatCount}
+                    onChange={handleDuplicateFormChange}
+                    className="w-full border px-2 py-1 rounded text-sm"
+                    min="1"
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="flex items-center text-sm">
+                    <input
+                      type="checkbox"
+                      name="overwriteExisting"
+                      checked={duplicateFormData.overwriteExisting}
+                      onChange={handleDuplicateFormChange}
+                      className="mr-2"
+                    />
+                    Overwrite existing workouts
+                  </label>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <button
+                    className="bg-indigo-500 text-white px-3 py-1 rounded hover:bg-indigo-600"
+                    onClick={handleDuplicateConfirm}
+                    disabled={duplicateFormData.repeatCount < 1}
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    className="text-gray-500 hover:text-gray-700"
+                    onClick={() => setShowDuplicateForm(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
-          <Button className="btn btn-primary">Copy</Button>
-          <Button className="btn btn-primary">Duplicate</Button>
-          <Button
-            className="btn btn-secondary"
-            onClick={() => setSelectedDays([])}
-          >
-            Cancel
-          </Button>
-        </div>
-      )}
-
-      <Modal
-        isOpen={editingDay !== null}
-        onClose={() => setEditingDay(null)}
-        title={`Week ${
-          editingDay ? Math.floor(editingDay.dayId / 7) + 1 : ""
-        } Day ${editingDay ? (editingDay.dayId % 7) + 1 : ""}`}
-        className="w-[95vw] h-[95vh]"
-      >
-        {editingDay && (
-          <WorkoutEditor
-            workouts={editingDay.workouts}
-            baseLifts={baseLifts}
-            onSave={saveEditedWorkouts}
-            dayId={editingDay.dayId}
-          />
+            )}
+            <Button
+              className="btn btn-secondary"
+              onClick={() => {
+                setSelectedDays([]);
+                setShowDuplicateForm(false);
+                setClipboard([]);
+                setContextMenu(null);
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
         )}
-      </Modal>
 
-      {createPortal(
-        <DragOverlay>
-          {activeWorkout && (
-            <Workout id={activeWorkout.id} workout={activeWorkout} />
+        {contextMenu && (
+          <div
+            ref={contextMenuRef}
+            className="fixed bg-white shadow-md rounded p-2 z-50 text-sm"
+            style={{ top: contextMenu.y, left: contextMenu.x }}
+            onClick={(e) => e.stopPropagation()} // Prevent clicks inside menu from closing it
+          >
+            <div
+              className="px-2 py-1 hover:bg-gray-100 cursor-pointer"
+              onClick={() => {
+                handleCopy(contextMenu.dayId);
+                closeContextMenu();
+              }}
+            >
+              Copy
+            </div>
+            {clipboard.length > 0 && (
+              <div
+                className="px-2 py-1 hover:bg-gray-100 cursor-pointer"
+                onClick={() => handlePaste(contextMenu.dayId)}
+              >
+                Paste
+              </div>
+            )}
+          </div>
+        )}
+        <Toast message={"Copied!"} visible={showCopiedMessage} />
+        <Modal
+          isOpen={editingDay !== null}
+          onClose={() => setEditingDay(null)}
+          title={`Week ${
+            editingDay ? Math.floor(editingDay.dayId / 7) + 1 : ""
+          } Day ${editingDay ? (editingDay.dayId % 7) + 1 : ""}`}
+          className="w-[95vw] h-[95vh]"
+        >
+          {editingDay && (
+            <WorkoutEditor
+              workouts={editingDay.workouts}
+              baseLifts={baseLifts}
+              onSave={saveEditedWorkouts}
+              dayId={editingDay.dayId}
+            />
           )}
-        </DragOverlay>,
-        document.body
-      )}
+        </Modal>
+
+        {createPortal(
+          <DragOverlay>
+            {activeWorkout && (
+              <Workout id={activeWorkout.id} workout={activeWorkout} />
+            )}
+          </DragOverlay>,
+          document.body
+        )}
+      </div>
     </DndContext>
   );
 };

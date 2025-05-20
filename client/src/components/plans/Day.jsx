@@ -44,6 +44,7 @@ const Day = memo(
     handleClick,
     group,
     isDragging,
+    onContextMenu,
   }) => {
     const workoutItems = useMemo(
       () => workouts.map((w) => w.id.toString()),
@@ -63,6 +64,7 @@ const Day = memo(
         isDaySelected={isDaySelected}
         isDragging={isDragging}
         handleClick={handleClick}
+        onContextMenu={(e) => onContextMenu(e, id)} // Pass dayId
       >
         <DaySortableWrapper id={id} workoutItems={workoutItems}>
           <DayData
@@ -82,23 +84,26 @@ const Day = memo(
 
 Day.displayName = "Day";
 
-const DroppableContainer = memo(({ id, disabled, isDaySelected, children }) => {
-  const { setNodeRef, isOver } = useDroppable({
-    id,
-    data: { type: "Day" },
-    disabled,
-  });
-  return (
-    <div
-      ref={setNodeRef}
-      className={`group flex flex-col justify-between relative p-2 bg-white shadow-sm rounded-lg text-xs border ${
-        isDaySelected ? "border-primary" : "border-transparent"
-      } hover:border-primary hover:shadow-xl ${isOver ? "bg-blue-50" : ""}`}
-    >
-      {children}
-    </div>
-  );
-});
+const DroppableContainer = memo(
+  ({ id, disabled, isDaySelected, onContextMenu, children }) => {
+    const { setNodeRef, isOver } = useDroppable({
+      id,
+      data: { type: "Day" },
+      disabled,
+    });
+    return (
+      <div
+        ref={setNodeRef}
+        className={`group flex flex-col justify-between relative p-2 bg-white shadow-sm rounded-lg text-xs border ${
+          isDaySelected ? "border-primary" : "border-transparent"
+        } hover:border-primary hover:shadow-xl ${isOver ? "bg-blue-50" : ""}`}
+        onContextMenu={onContextMenu} // Add context menu handler
+      >
+        {children}
+      </div>
+    );
+  }
+);
 
 const DaySortableWrapper = memo(({ id, workoutItems, children }) => {
   return (

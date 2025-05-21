@@ -12,6 +12,7 @@ model Users {
   email      String          @unique
   username   String          @unique
   password   String
+  experience String
   created_at DateTime        @default(now())
   plans      Plans[]         // Relation to Plans (one-to-many)
   workouts   Workouts[]      // Relation to Workouts (one-to-many)
@@ -78,11 +79,12 @@ model Workouts {
 model BaseLifts {
   id           Int             @id @default(autoincrement())
   name         String          @unique
-  description  String?
+  how_to       String[]
   video_url    String?
-  muscle_group String
+  primary_muscle_groups String[]
+  secondary_muscle_groups String[]
   lift_type    String
-  equipment    String
+  equipment    String[]
   created_at   DateTime        @default(now())
   lifts        Lifts[]         // One-to-many with Lifts
   user_data    UserLiftsData[] // One-to-many with user-specific data
@@ -95,7 +97,10 @@ model UserLiftsData {
   max_weights   Int[]
   rep_ranges    Int[]
   max_estimated Int[]
-  created_at    DateTime  @default(now())
+  set_counts    Int[]
+  week_starts   DateTime[]
+  weekly_reps   Int[]
+  weekly_volume Int[]
   user          Users     @relation(fields: [user_id], references: [id])
   base_lift     BaseLifts @relation(fields: [base_lift_id], references: [id])
 }

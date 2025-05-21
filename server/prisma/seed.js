@@ -1,6 +1,7 @@
 const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcrypt");
 const liftData = require("./data/liftData");
+const userLiftsData = require("./data/userLiftsData");
 
 const prisma = new PrismaClient();
 
@@ -42,20 +43,31 @@ async function seed() {
 
     // Create BaseLifts
     const baseLifts = await prisma.baseLifts.createMany({
-      data: liftData,
+      data: liftData.map((lift) => ({
+        ...lift,
+        name: lift.name.toLowerCase(),
+      })),
       skipDuplicates: true,
     });
 
     // Fetch BaseLifts IDs
     const benchPress = await prisma.baseLifts.findFirst({
-      where: { name: "Bench Press" },
+      where: { name: "bench press" },
     });
     const squat = await prisma.baseLifts.findFirst({
-      where: { name: "Squat" },
+      where: { name: "squat" },
     });
     const tricepDips = await prisma.baseLifts.findFirst({
-      where: { name: "Tricep Dips" },
+      where: { name: "tricep dips" },
     });
+
+    // Fetch all BaseLifts
+    const createdLifts = await prisma.baseLifts.findMany();
+
+    // Map lift names to IDs
+    const liftMap = new Map(
+      createdLifts.map((lift) => [lift.name.toLowerCase(), lift.id])
+    );
 
     // Create Plans
     const plans = await prisma.plans.createMany({
@@ -265,24 +277,61 @@ async function seed() {
       },
     });
 
+    // Generate UserLiftsData
+    const userLiftsDataEntries = userLiftsData
+      .map((lift) => {
+        const base_lift_id = liftMap.get(lift.name.toLowerCase());
+        if (!base_lift_id) {
+          console.warn(`Base lift not found for ${lift.name}`);
+          return null;
+        }
+
+        // Calculate max_estimated (1RM = weight * (1 + reps/30))
+        const max_estimated = lift.max_weights.map((weight, index) => {
+          const reps = lift.rep_ranges[index];
+          return Math.round(weight * (1 + reps / 30));
+        });
+
+        // Assume 3 sets for Main lifts, 2 for Supplementary (based on liftData.js)
+        const isMainLift =
+          liftData.find((l) => l.name.toLowerCase() === lift.name.toLowerCase())
+            ?.lift_type === "Main";
+        const set_counts = Array(lift.max_weights.length).fill(
+          isMainLift ? 3 : 2
+        );
+
+        // Generate week_starts for 3 weeks (current and previous two)
+        const week_starts = [
+          new Date("2025-05-20"),
+          new Date("2025-05-13"),
+          new Date("2025-05-06"),
+        ].slice(0, 3); // Limit to 3 weeks
+
+        // Calculate weekly_reps (sets * reps) and weekly_volume (sets * reps * weight)
+        const weekly_reps = lift.max_weights.map(
+          (weight, index) => set_counts[index] * lift.rep_ranges[index]
+        );
+        const weekly_volume = lift.max_weights.map(
+          (weight, index) => set_counts[index] * lift.rep_ranges[index] * weight
+        );
+
+        return {
+          user_id: user.id,
+          base_lift_id,
+          max_weights: lift.max_weights,
+          rep_ranges: lift.rep_ranges,
+          max_estimated,
+          set_counts,
+          week_starts,
+          weekly_reps,
+          weekly_volume,
+        };
+      })
+      .filter((entry) => entry !== null);
+
     // Create UserLiftsData
     await prisma.userLiftsData.createMany({
-      data: [
-        {
-          user_id: user.id,
-          base_lift_id: benchPress.id,
-          max_weights: [135, 145], // For rep ranges 8-10, 5-7
-          rep_ranges: [8, 5], // Min reps of ranges
-          max_estimated: [150, 160], // Rough 1RM: weight * (1 + reps/30)
-        },
-        {
-          user_id: user.id,
-          base_lift_id: squat.id,
-          max_weights: [225, 245],
-          rep_ranges: [5, 3],
-          max_estimated: [250, 270],
-        },
-      ],
+      data: userLiftsDataEntries,
     });
 
     console.log("Database seeded successfully!");

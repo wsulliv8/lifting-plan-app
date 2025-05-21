@@ -35,13 +35,14 @@ async function seed() {
         email: "test@example.com",
         username: "testuser",
         password: await bcrypt.hash("password123", 10),
+        experience: "intermediate",
         created_at: new Date(),
       },
     });
 
     // Create BaseLifts
     const baseLifts = await prisma.baseLifts.createMany({
-      data: [liftData],
+      data: liftData,
       skipDuplicates: true,
     });
 
@@ -273,7 +274,6 @@ async function seed() {
           max_weights: [135, 145], // For rep ranges 8-10, 5-7
           rep_ranges: [8, 5], // Min reps of ranges
           max_estimated: [150, 160], // Rough 1RM: weight * (1 + reps/30)
-          created_at: new Date(),
         },
         {
           user_id: user.id,
@@ -281,7 +281,6 @@ async function seed() {
           max_weights: [225, 245],
           rep_ranges: [5, 3],
           max_estimated: [250, 270],
-          created_at: new Date(),
         },
       ],
     });

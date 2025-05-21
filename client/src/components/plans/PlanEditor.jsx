@@ -29,7 +29,7 @@ import chunk from "lodash/chunk";
 const EMPTY_WORKOUTS = [];
 
 const PlanEditor = () => {
-  const { plan: initialPlan, baseLifts } = useLoaderData();
+  const { plan: initialPlan, baseLifts, userLiftsData } = useLoaderData();
   const [plan, setPlan] = useState({ ...initialPlan, dayGroups: [] });
   const [workouts, setWorkouts] = useState(() => {
     const initialWorkouts = new Map();

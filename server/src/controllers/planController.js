@@ -70,6 +70,7 @@ const planController = {
   async getPlanById(req, res, next) {
     const planId = parseInt(req.params.id);
     const { include } = req.query;
+    const userId = req.user.userId;
 
     try {
       const plan = await prisma.plans.findUnique({
@@ -99,6 +100,11 @@ const planController = {
 
       if (!plan) {
         return res.status(404).json({ error: "Plan not found" });
+      }
+      if (plan.user_id !== null && plan.user_id !== userId) {
+        return res
+          .status(403)
+          .json({ error: "Unauthorized access to this plan" });
       }
       res.json(plan);
     } catch (error) {

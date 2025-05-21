@@ -7,6 +7,7 @@ const authRoutes = require("./routes/authRoutes");
 const planRoutes = require("./routes/planRoutes");
 const workoutRoutes = require("./routes/workoutRoutes");
 const liftRoutes = require("./routes/liftRoutes");
+const userRoutes = require("./routes/userRoutes");
 const errorMiddleware = require("./middleware/errorMiddleware");
 const authRateLimiter = require("./middleware/rateLimitMiddleware");
 
@@ -22,6 +23,7 @@ app.use("/api/auth", authRateLimiter, authRoutes);
 app.use("/api/plans", planRoutes);
 app.use("/api/workouts", workoutRoutes);
 app.use("/api/lifts", liftRoutes);
+app.use("/api/user", userRoutes);
 
 // Error handling middleware
 app.use(errorMiddleware);

@@ -120,7 +120,7 @@ model Lifts {
   rpe_achieved     Int[]
   rest_time        Int[]
   volume           Int?
-  progression_rule String?
+  progression_rule Json?
   notes            String?
   created_at       DateTime        @default(now())
   workout          Workouts        @relation(fields: [workout_id], references: [id], onDelete: Cascade)

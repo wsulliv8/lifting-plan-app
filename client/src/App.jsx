@@ -15,7 +15,7 @@ import Layout from "./components/common/Layout";
 import ErrorPage from "./components/common/ErrorPage";
 import { getPlans, getPlanById } from "./services/plans";
 import { getAllBaseLifts } from "./services/lifts";
-import { getUserLiftsData } from "./services/user";
+import { getUserLiftsData, getCurrentUser } from "./services/user";
 
 const checkAuthLoader = async () => {
   const token = localStorage.getItem("token");
@@ -42,12 +42,13 @@ const plansLoader = async () => {
 
 const editPlanLoader = async ({ params }) => {
   try {
-    const [plan, baseLifts, userLiftsData] = await Promise.all([
+    const [plan, baseLifts, userLiftsData, currentUser] = await Promise.all([
       getPlanById(params.planId),
       getAllBaseLifts(),
       getUserLiftsData(),
+      getCurrentUser(),
     ]);
-    return { plan, baseLifts, userLiftsData };
+    return { plan, baseLifts, userLiftsData, currentUser };
   } catch (err) {
     if (err.response?.status === 401) {
       localStorage.removeItem("token");

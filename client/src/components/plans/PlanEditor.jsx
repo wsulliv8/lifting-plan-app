@@ -18,6 +18,7 @@ import Toast from "./Toast";
 import Button from "../common/Button";
 import PlanSettingsForm from "../forms/PlanSettingsForm";
 import { savePlan } from "../../services/plans";
+import { applyProgressionRule } from "../../utils/progressionAlgorithms";
 import {
   PlusCircleIcon,
   TrashIcon,
@@ -29,7 +30,12 @@ import chunk from "lodash/chunk";
 const EMPTY_WORKOUTS = [];
 
 const PlanEditor = () => {
-  const { plan: initialPlan, baseLifts, userLiftsData } = useLoaderData();
+  const {
+    plan: initialPlan,
+    baseLifts,
+    userLiftsData,
+    currentUser,
+  } = useLoaderData();
   const [plan, setPlan] = useState({ ...initialPlan, dayGroups: [] });
   const [workouts, setWorkouts] = useState(() => {
     const initialWorkouts = new Map();
@@ -412,15 +418,14 @@ const PlanEditor = () => {
     });
   }, []);
 
-  useEffect(() => {
-    console.log("Selected Days changed:", selectedDays);
-  }, [selectedDays]);
-
   // Duplication Logic
   const handleDuplicateConfirm = useCallback(() => {
     setWorkouts((prevWorkouts) => {
       const updatedWorkouts = new Map(prevWorkouts);
       let newTotalDays = totalDays;
+      const userLiftsMap = new Map(
+        userLiftsData.map((data) => [data.base_lift_id, data])
+      );
 
       if (selectedDays.length === 1) {
         const sourceDayId = selectedDays[0];
@@ -438,6 +443,7 @@ const PlanEditor = () => {
           return prevWorkouts;
         }
 
+        let sessionIndex = 0;
         for (let week = startWeek - 1; week < endWeek; week++) {
           selectedWeekDays.forEach((dayIndex) => {
             const targetDayId = week * 7 + dayIndex;
@@ -445,12 +451,22 @@ const PlanEditor = () => {
               newTotalDays = targetDayId + 1;
             }
             sourceWorkouts.forEach((workout) => {
+              const newLifts = workout.lifts.map((lift) => ({
+                ...applyProgressionRule(
+                  lift,
+                  sessionIndex,
+                  userLiftsMap.get(lift.base_lift_id)
+                ),
+                id: `${Date.now()}-${Math.random()}`,
+              }));
               const newWorkout = {
                 ...workout,
                 id: Date.now() + Math.random(),
                 dayId: targetDayId,
+                lifts: newLifts,
               };
               updatedWorkouts.set(newWorkout.id, newWorkout);
+              sessionIndex++;
             });
           });
         }
@@ -462,7 +478,7 @@ const PlanEditor = () => {
         }
 
         for (let i = 0; i < repeatCount; i++) {
-          selectedDays.forEach((sourceDayId) => {
+          selectedDays.forEach((sourceDayId, dayIndex) => {
             const sourceWorkouts = Array.from(prevWorkouts.values()).filter(
               (w) => w.dayId === sourceDayId
             );
@@ -478,10 +494,19 @@ const PlanEditor = () => {
             }
 
             sourceWorkouts.forEach((workout) => {
+              const newLifts = workout.lifts.map((lift) => ({
+                ...applyProgressionRule(
+                  lift,
+                  i * selectedDays.length + dayIndex,
+                  userLiftsMap.get(lift.base_lift_id)
+                ),
+                id: `${Date.now()}-${Math.random()}`,
+              }));
               const newWorkout = {
                 ...workout,
                 id: Date.now() + Math.random(),
                 dayId: targetDayId,
+                lifts: newLifts,
               };
               updatedWorkouts.set(newWorkout.id, newWorkout);
             });
@@ -502,7 +527,7 @@ const PlanEditor = () => {
       overwriteExisting: false,
     });
     setSelectedDays([]);
-  }, [selectedDays, duplicateFormData, totalDays, weeks.length]);
+  }, [selectedDays, duplicateFormData, totalDays, weeks.length, userLiftsData]);
 
   const handleDuplicateFormChange = useCallback((e) => {
     const { name, value, type, checked } = e.target;
@@ -544,6 +569,9 @@ const PlanEditor = () => {
       setWorkouts((prevWorkouts) => {
         const updatedWorkouts = new Map(prevWorkouts);
         let newTotalDays = totalDays;
+        const userLiftsMap = new Map(
+          userLiftsData.map((data) => [data.base_lift_id, data])
+        );
 
         clipboard.forEach((clip, index) => {
           const targetDayId = startDayId + index;
@@ -553,10 +581,19 @@ const PlanEditor = () => {
 
           // Append workouts (no overwriting)
           clip.workouts.forEach((workout) => {
+            const newLifts = workout.lifts.map((lift) => ({
+              ...applyProgressionRule(
+                lift,
+                index,
+                userLiftsMap.get(lift.base_lift_id)
+              ),
+              id: `${Date.now()}-${Math.random()}`,
+            }));
             const newWorkout = {
               ...workout,
               id: Date.now() + Math.random(),
               dayId: targetDayId,
+              lifts: newLifts,
             };
             updatedWorkouts.set(newWorkout.id, newWorkout);
           });
@@ -569,7 +606,7 @@ const PlanEditor = () => {
       setClipboard([]); // Clear clipboard after paste
       setContextMenu(null); // Close context menu
     },
-    [clipboard, totalDays]
+    [clipboard, totalDays, userLiftsData]
   );
 
   // Context Menu Logic
@@ -959,6 +996,8 @@ const PlanEditor = () => {
               baseLifts={baseLifts}
               onSave={saveEditedWorkouts}
               dayId={editingDay.dayId}
+              userLiftsData={userLiftsData}
+              experience={currentUser.experience}
             />
           )}
         </Modal>

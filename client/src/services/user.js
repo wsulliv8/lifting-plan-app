@@ -13,7 +13,13 @@ api.interceptors.request.use((config) => {
 });
 
 const getUserLiftsData = async () => {
+  const response = await api.get("/user/lifts");
+  return response.data;
+};
+
+const getCurrentUser = async () => {
   const response = await api.get("/user");
   return response.data;
 };
-export { getUserLiftsData };
+
+export { getUserLiftsData, getCurrentUser };

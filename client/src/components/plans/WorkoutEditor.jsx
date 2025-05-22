@@ -1,5 +1,5 @@
 import React from "react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { DndContext, closestCenter } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -15,6 +15,7 @@ import {
 import { PlusCircleIcon, MinusCircleIcon } from "@heroicons/react/24/outline";
 import Button from "../common/Button";
 import Input from "../common/Input";
+import { computeProgressionRule } from "../../utils/progressionAlgorithms";
 
 // Simple arrayMove function for reordering
 const arrayMove = (array, from, to) => {
@@ -29,12 +30,22 @@ const WorkoutEditor = ({
   baseLifts,
   dayId,
   onSave,
+  userLiftsData,
+  experience,
 }) => {
-  const [editedWorkouts, setEditedWorkouts] = useState(initialWorkouts);
+  const [editedWorkouts, setEditedWorkouts] = useState(
+    initialWorkouts && initialWorkouts.length > 0
+      ? initialWorkouts
+      : [{ id: `${Date.now()}`, dayId, name: "", lifts: [] }]
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [activeWorkoutIndex, setActiveWorkoutIndex] = useState(0);
   const filteredLifts = baseLifts.filter((w) =>
     w.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  const userLiftsMap = useMemo(
+    () => new Map(userLiftsData.map((data) => [data.base_lift_id, data])),
+    [userLiftsData]
   );
 
   // Update functions
@@ -45,14 +56,36 @@ const WorkoutEditor = ({
   };
 
   const addLift = (workoutIndex, baseLift) => {
-    const updated = [...editedWorkouts];
+    let updated = [...editedWorkouts];
+    if (!updated[workoutIndex]) updated = addWorkout();
+    const userLift = userLiftsMap.get(baseLift.id);
+    const progressionRule = computeProgressionRule(
+      baseLift.lift_type === "Main" ? "primary" : "supplementary",
+      experience
+    );
+
+    let reps = [8, 8, 8];
+    let weight = [0, 0, 0];
+    if (userLift) {
+      const index =
+        userLift.rep_ranges.indexOf(8) !== -1
+          ? userLift.rep_ranges.indexOf(8)
+          : userLift.rep_ranges.reduce((closestIndex, curr, i, arr) => {
+              const currDiff = Math.abs(curr - 8);
+              const closestDiff = Math.abs(arr[closestIndex] - 8);
+              return currDiff < closestDiff ? i : closestIndex;
+            }, 0);
+      reps = Array(3).fill(userLift.rep_ranges[index]);
+      weight = Array(3).fill(userLift.max_weights[index]);
+    }
     const newLift = {
       id: `${Date.now()}`,
       name: baseLift.name,
-      base_lift_id: baseLift.id, // Link to the BaseLift
-      reps: [0, 0, 0],
-      weight: [0, 0, 0],
+      base_lift_id: baseLift.id,
+      reps,
+      weight,
       sets: 3,
+      progressionRule,
     };
     updated[workoutIndex].lifts.push(newLift);
     setEditedWorkouts(updated);
@@ -60,7 +93,51 @@ const WorkoutEditor = ({
 
   const updateSet = (workoutIndex, liftIndex, setIndex, field, value) => {
     const updated = [...editedWorkouts];
-    updated[workoutIndex].lifts[liftIndex][field][setIndex] = value;
+    const lift = updated[workoutIndex].lifts[liftIndex];
+    const parsedValue = parseInt(value) || 0;
+    const oldValue = lift[field][setIndex];
+
+    if (field === "reps") {
+      const baseLiftId = lift.base_lift_id;
+      const userLift = userLiftsMap.get(baseLiftId);
+      lift.reps[setIndex] = parsedValue;
+
+      let closestIndex = -1;
+      let smallestDiff = Infinity;
+
+      if (userLift && value) {
+        userLift.rep_ranges.forEach((rep, idx) => {
+          const diff = Math.abs(rep - parsedValue);
+          if (diff < smallestDiff) {
+            smallestDiff = diff;
+            closestIndex = idx;
+          }
+        });
+
+        lift.weight[setIndex] =
+          smallestDiff <= 1 ? userLift.max_weights[closestIndex] : 0;
+      }
+
+      // Cascade to following sets that matched the old value
+      for (let i = setIndex + 1; i < lift.reps.length; i++) {
+        if (lift.reps[i] === oldValue) {
+          lift.reps[i] = parsedValue;
+          if (userLift && closestIndex !== -1) {
+            lift.weight[i] =
+              smallestDiff <= 1 ? userLift.max_weights[closestIndex] : 0;
+          }
+        }
+      }
+    } else {
+      lift[field][setIndex] = parsedValue;
+
+      for (let i = setIndex + 1; i < lift[field].length; i++) {
+        if (lift[field][i] === oldValue) {
+          lift[field][i] = parsedValue;
+        }
+      }
+    }
+
     setEditedWorkouts(updated);
   };
 
@@ -104,7 +181,9 @@ const WorkoutEditor = ({
 
   const addWorkout = () => {
     const newWorkout = { id: `${Date.now()}`, dayId, name: "", lifts: [] };
-    setEditedWorkouts([...editedWorkouts, newWorkout]);
+    const updated = [...editedWorkouts, newWorkout];
+    setEditedWorkouts(updated);
+    return updated;
   };
 
   const addWorkoutCopy = (workout) => {

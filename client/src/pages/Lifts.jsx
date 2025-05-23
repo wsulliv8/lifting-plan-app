@@ -23,7 +23,11 @@ const Lifts = () => {
         )}
       </div>
       <div className="w-1/3 h-screen flex justify-start items-center fixed right-0 top-0">
-        <LiftSearch lifts={lifts} onSelectLift={setSelectedLift} />
+        <LiftSearch
+          lifts={lifts}
+          onSelectLift={setSelectedLift}
+          className={"w-[90%] h-[95%]"}
+        />
       </div>
     </div>
   );

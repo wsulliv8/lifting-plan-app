@@ -15,6 +15,7 @@ import {
 import { PlusCircleIcon, MinusCircleIcon } from "@heroicons/react/24/outline";
 import Button from "../common/Button";
 import Input from "../common/Input";
+import LiftSearch from "../lifts/LiftSearch";
 import progressionAlgorithm from "../../utils/progressionAlgorithm";
 
 // Simple arrayMove function for reordering
@@ -55,9 +56,9 @@ const WorkoutEditor = ({
     setEditedWorkouts(updated);
   };
 
-  const addLift = (workoutIndex, baseLift) => {
+  const addLift = (baseLift) => {
     let updated = [...editedWorkouts];
-    if (!updated[workoutIndex]) updated = addWorkout();
+    if (!updated[activeWorkoutIndex]) updated = addWorkout();
     const userLift = userLiftsMap.get(baseLift.id);
     const progressionRule = progressionAlgorithm.computeProgressionRule(
       baseLift.lift_type === "Main" ? "primary" : "supplementary",
@@ -88,7 +89,7 @@ const WorkoutEditor = ({
       sets: 3,
       progressionRule,
     };
-    updated[workoutIndex].lifts.push(newLift);
+    updated[activeWorkoutIndex].lifts.push(newLift);
     setEditedWorkouts(updated);
   };
 
@@ -302,29 +303,12 @@ const WorkoutEditor = ({
       </div>
 
       {/* Searchable Lift List (1/3) */}
-      <div className="w-1/3 h-full p-3 bg-gray-100 overflow-y-auto">
-        <Input
-          type="text"
-          placeholder="Search Lifts"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+      <div className="w-1/3 h-full flex justify-center items-center">
+        <LiftSearch
+          lifts={baseLifts}
+          onSelectLift={addLift}
+          className="w-[100%] h-[100%] shadow-md border rounded-lg"
         />
-        <div className="space-y-2">
-          {filteredLifts.map((lift) => (
-            <div
-              key={lift.id}
-              className="flex justify-between items-center p-2 bg-gray-100 rounded"
-            >
-              <span>{lift.name}</span>
-              <button
-                onClick={() => addLift(activeWorkoutIndex, lift)}
-                className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-              >
-                Add
-              </button>
-            </div>
-          ))}
-        </div>
       </div>
       <button
         onClick={() => onSave(editedWorkouts)}

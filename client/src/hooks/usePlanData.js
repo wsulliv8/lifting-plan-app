@@ -6,7 +6,7 @@ export const usePlanData = ({
   userLiftsData,
   currentUser,
 }) => {
-  const [plan, setPlan] = useState({ ...initialPlan, dayGroups: [] });
+  const [plan, setPlan] = useState({ ...initialPlan });
   const [workouts, setWorkouts] = useState(() => {
     const initialWorkouts = new Map();
     initialPlan.weeks.forEach((week, weekIndex) => {

@@ -32,6 +32,7 @@ model Plans {
   user           Users?     @relation(fields: [user_id], references: [id], onDelete: SetNull)
   workouts       Workouts[] // Relation to Workouts (one-to-many)
   weeks          Week[]     // Relation to Week model
+  dayGroups      Json       @default("[]") // Store groups as JSON array
 }
 
 model Week {

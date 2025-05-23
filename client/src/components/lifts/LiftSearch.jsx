@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-const LiftSearch = ({ lifts, onSelectLift }) => {
+const LiftSearch = ({ lifts, onSelectLift, className }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMuscleGroup, setSelectedMuscleGroup] = useState("");
   const [selectedEquipment, setSelectedEquipment] = useState("");
@@ -33,19 +33,19 @@ const LiftSearch = ({ lifts, onSelectLift }) => {
   });
 
   return (
-    <div className="flex flex-col w-[90%] h-[95%] p-4 bg-white">
+    <div className={`flex flex-col  p-4 bg-white ${className}`}>
       <form className="space-y-2 mb-4">
         <input
           type="text"
           placeholder="Search lifts..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <select
           value={selectedMuscleGroup}
           onChange={(e) => setSelectedMuscleGroup(e.target.value)}
-          className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">All Muscle Groups</option>
           {muscleGroups.map((group) => (
@@ -57,7 +57,7 @@ const LiftSearch = ({ lifts, onSelectLift }) => {
         <select
           value={selectedEquipment}
           onChange={(e) => setSelectedEquipment(e.target.value)}
-          className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">All Equipment</option>
           {equipment.map((item) => (

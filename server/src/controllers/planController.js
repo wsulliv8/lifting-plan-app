@@ -137,7 +137,11 @@ const planController = {
           .json({ error: "Only admins can delete generic plans" });
       }
 
-      // Delete the plan (cascading deletes handle weeks and workouts)
+      await prisma.workouts.deleteMany({
+        where: { plan_id: planId },
+      });
+
+      // Delete the plan (cascading deletes handle weeks)
       await prisma.plans.delete({
         where: { id: planId },
       });
@@ -303,7 +307,7 @@ const planController = {
                       let liftRecord;
                       if (lift.id) {
                         liftRecord = await prismaTransaction.lifts.update({
-                          where: { id: liftId },
+                          where: { id: lift.id },
                           data: {
                             workout: { connect: { id: workoutRecord.id } },
                             name: lift.name,
@@ -314,6 +318,7 @@ const planController = {
                             reps: lift.reps,
                             weight: lift.weight,
                             rpe: lift.rpe,
+                            progression_rule: lift.progression_rule,
                           },
                         });
                       } else {
@@ -328,6 +333,7 @@ const planController = {
                             reps: lift.reps,
                             weight: lift.weight,
                             rpe: lift.rpe,
+                            progression_rule: lift.progression_rule,
                           },
                         });
                       }

@@ -339,7 +339,6 @@ const PlanEditor = () => {
     });
 
     const weeks = chunk(dayMap, 7);
-
     const rebuiltPlan = {
       ...plan,
       weeks: weeks.map((weekDays, weekIndex) => ({
@@ -364,7 +363,6 @@ const PlanEditor = () => {
         })),
       })),
     };
-
     setPlan(rebuiltPlan);
     await savePlan(stripIds(rebuiltPlan));
   }, [plan, totalDays, stripIds]);
@@ -433,7 +431,6 @@ const PlanEditor = () => {
     });
   }, []);
 
-  // Duplication Logic
   const handleDuplicateConfirm = useCallback(() => {
     setWorkouts((prevWorkouts) => {
       const updatedWorkouts = new Map(prevWorkouts);
@@ -447,7 +444,8 @@ const PlanEditor = () => {
         const sourceWorkouts = Array.from(prevWorkouts.values()).filter(
           (w) => w.dayId === sourceDayId
         );
-        const { selectedWeekDays, startWeek, endWeek } = duplicateFormData;
+        const { selectedWeekDays, startWeek, endWeek, overwriteExisting } =
+          duplicateFormData;
 
         if (
           selectedWeekDays.length === 0 ||
@@ -462,8 +460,17 @@ const PlanEditor = () => {
         for (let week = startWeek - 1; week < endWeek; week++) {
           selectedWeekDays.forEach((dayIndex) => {
             const targetDayId = week * 7 + dayIndex;
+            // Extend plan if necessary
             if (targetDayId >= newTotalDays) {
-              newTotalDays = targetDayId + 1;
+              newTotalDays = Math.ceil((targetDayId + 1) / 7) * 7; // Round up to next week
+            }
+            // Clear existing workouts if overwriteExisting is true
+            if (overwriteExisting) {
+              prevWorkouts.forEach((workout) => {
+                if (workout.dayId === targetDayId) {
+                  updatedWorkouts.delete(workout.id);
+                }
+              });
             }
             sourceWorkouts.forEach((workout) => {
               const newLifts = duplicateFormData.autoProgress
@@ -474,13 +481,18 @@ const PlanEditor = () => {
                       userLiftsMap.get(lift.base_lift_id)
                     ),
                     id: `${Date.now()}-${Math.random()}`,
+                    progressionRule: lift.progressionRule || "none", // Preserve progressionRule
                   }))
-                : null;
+                : workout.lifts.map((lift) => ({
+                    ...lift,
+                    id: `${Date.now()}-${Math.random()}`,
+                    progressionRule: lift.progressionRule || "none", // Preserve progressionRule
+                  }));
               const newWorkout = {
                 ...workout,
                 id: Date.now() + Math.random(),
                 dayId: targetDayId,
-                lifts: newLifts ?? workout.lifts,
+                lifts: newLifts,
               };
               updatedWorkouts.set(newWorkout.id, newWorkout);
               sessionIndex++;
@@ -494,17 +506,29 @@ const PlanEditor = () => {
           return prevWorkouts;
         }
 
+        // Determine insertion point
+        const lastSelectedDayId = Math.max(...selectedDays);
+        const insertionPoint = lastSelectedDayId + 1;
+        const totalNewDays = selectedDays.length * repeatCount;
+
+        // Extend plan if necessary
+        const maxTargetDayId = insertionPoint + totalNewDays - 1;
+        if (maxTargetDayId >= newTotalDays) {
+          newTotalDays = Math.ceil((maxTargetDayId + 1) / 7) * 7; // Round up to next week
+        }
+
+        // Duplicate selected days
+        let currentDayId = insertionPoint;
         for (let i = 0; i < repeatCount; i++) {
           selectedDays.forEach((sourceDayId, dayIndex) => {
             const sourceWorkouts = Array.from(prevWorkouts.values()).filter(
               (w) => w.dayId === sourceDayId
             );
-            const targetDayId = newTotalDays;
-            newTotalDays += 1;
 
+            // Overwrite existing workouts at targetDayId if specified
             if (overwriteExisting) {
               prevWorkouts.forEach((workout) => {
-                if (workout.dayId === targetDayId) {
+                if (workout.dayId === currentDayId) {
                   updatedWorkouts.delete(workout.id);
                 }
               });
@@ -519,16 +543,22 @@ const PlanEditor = () => {
                       userLiftsMap.get(lift.base_lift_id)
                     ),
                     id: `${Date.now()}-${Math.random()}`,
+                    progressionRule: lift.progressionRule || "none", // Preserve progressionRule
                   }))
-                : null;
+                : workout.lifts.map((lift) => ({
+                    ...lift,
+                    id: `${Date.now()}-${Math.random()}`,
+                    progressionRule: lift.progressionRule || "none", // Preserve progressionRule
+                  }));
               const newWorkout = {
                 ...workout,
                 id: Date.now() + Math.random(),
-                dayId: targetDayId,
-                lifts: newLifts ?? workout.lifts,
+                dayId: currentDayId,
+                lifts: newLifts,
               };
               updatedWorkouts.set(newWorkout.id, newWorkout);
             });
+            currentDayId++;
           });
         }
       }
@@ -593,10 +623,17 @@ const PlanEditor = () => {
           userLiftsData.map((data) => [data.base_lift_id, data])
         );
 
+        // Calculate the maximum target day ID needed
+        const maxTargetDayId = startDayId + clipboard.length - 1;
+        // Extend totalDays to the next week boundary if necessary
+        if (maxTargetDayId >= newTotalDays) {
+          newTotalDays = Math.ceil((maxTargetDayId + 1) / 7) * 7;
+        }
+
         clipboard.forEach((clip, index) => {
           const targetDayId = startDayId + index;
           if (targetDayId >= newTotalDays) {
-            newTotalDays = targetDayId + 1;
+            newTotalDays = Math.ceil((maxTargetDayId + 1) / 7) * 7; // Round up to next week
           }
 
           // Append workouts (no overwriting)
@@ -608,6 +645,7 @@ const PlanEditor = () => {
                 userLiftsMap.get(lift.base_lift_id)
               ),
               id: `${Date.now()}-${Math.random()}`,
+              progressionRule: lift.progressionRule || "none",
             }));
             const newWorkout = {
               ...workout,

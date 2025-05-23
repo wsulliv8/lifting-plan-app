@@ -34,6 +34,7 @@ function shallowEqualWorkouts(arr1, arr2) {
       if (
         lift1.id !== lift2.id ||
         lift1.sets !== lift2.sets ||
+        lift1.progressionRule !== lift2.progressionRule ||
         (lift1.reps || []).length !== (lift2.reps || []).length ||
         (lift1.reps || []).some((val, k) => val !== (lift2.reps || [])[k]) ||
         (lift1.weight || []).length !== (lift2.weight || []).length ||

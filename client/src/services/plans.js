@@ -46,6 +46,7 @@ const getPlanById = async (planId) => {
                 reps: lift.reps,
                 weight: lift.weight,
                 base_lift_id: lift.base_lift_id,
+                progressionRule: lift.progression_rule,
               })),
             })),
         })),

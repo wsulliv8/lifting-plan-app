@@ -179,6 +179,7 @@ const planController = {
               }),
               ...(planData.difficulty && { difficulty: planData.difficulty }),
               ...(planData.goal && { goal: planData.goal }),
+              ...(planData.dayGroups && { dayGroups: planData.dayGroups }),
             },
           });
           // Keep track of all week IDs to prevent deletion

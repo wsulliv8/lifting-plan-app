@@ -30,6 +30,7 @@ const getPlanById = async (planId) => {
     return {
       id: data.id,
       name: data.name,
+      dayGroups: data.dayGroups,
       weeks: data.weeks.map((week) => ({
         week_number: week.week_number,
         days: week.days.map((day) => ({

@@ -63,7 +63,7 @@ const Workout = memo(({ id, workout, handleClick }) => {
       style={style}
       {...attributes}
       {...listeners}
-      className={`w-full p-1 mb-2 bg-gray-100 rounded hover:bg-gray-200 ${
+      className={`w-full p-1 mb-2 bg-gray-100 rounded hover:bg-gray-200 first:mt-4 ${
         isDragging ? "opacity-50 border border-blue-500" : ""
       }`}
       onClick={(e) => {

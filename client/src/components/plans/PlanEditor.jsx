@@ -18,7 +18,7 @@ import Toast from "./Toast";
 import Button from "../common/Button";
 import PlanSettingsForm from "../forms/PlanSettingsForm";
 import { savePlan } from "../../services/plans";
-import { applyProgressionRule } from "../../utils/progressionAlgorithms";
+import progressionAlgorithm from "../../utils/progressionAlgorithm";
 import {
   PlusCircleIcon,
   TrashIcon,
@@ -74,6 +74,7 @@ const PlanEditor = () => {
     endWeek: 1,
     repeatCount: 1,
     overwriteExisting: false,
+    autoProgress: true,
   });
   const [clipboard, setClipboard] = useState([]); // [{ dayId, workouts }]
   const [contextMenu, setContextMenu] = useState(null); // { x, y, dayId }
@@ -106,7 +107,20 @@ const PlanEditor = () => {
       if (!map.has(dayId)) {
         map.set(dayId, []);
       }
-      map.get(dayId).push(workout);
+      // Deep copy workout, lifts, and nested properties
+      const copiedWorkout = {
+        ...workout,
+        name: workout.name,
+        lifts: (workout.lifts || []).map((lift) => ({
+          ...lift,
+          reps: [...(lift.reps || [])],
+          weight: [...(lift.weight || [])],
+          progressionRule: lift.progressionRule
+            ? { ...lift.progressionRule }
+            : undefined,
+        })),
+      };
+      map.get(dayId).push(copiedWorkout);
     });
     return map;
   }, [workouts]);
@@ -344,6 +358,7 @@ const PlanEditor = () => {
                 reps: lift.reps,
                 weight: lift.weight,
                 base_lift_id: lift.base_lift_id,
+                progression_rule: lift.progressionRule,
               })),
             })),
         })),
@@ -451,19 +466,21 @@ const PlanEditor = () => {
               newTotalDays = targetDayId + 1;
             }
             sourceWorkouts.forEach((workout) => {
-              const newLifts = workout.lifts.map((lift) => ({
-                ...applyProgressionRule(
-                  lift,
-                  sessionIndex,
-                  userLiftsMap.get(lift.base_lift_id)
-                ),
-                id: `${Date.now()}-${Math.random()}`,
-              }));
+              const newLifts = duplicateFormData.autoProgress
+                ? workout.lifts.map((lift) => ({
+                    ...progressionAlgorithm.applyProgressionRule(
+                      lift,
+                      sessionIndex,
+                      userLiftsMap.get(lift.base_lift_id)
+                    ),
+                    id: `${Date.now()}-${Math.random()}`,
+                  }))
+                : null;
               const newWorkout = {
                 ...workout,
                 id: Date.now() + Math.random(),
                 dayId: targetDayId,
-                lifts: newLifts,
+                lifts: newLifts ?? workout.lifts,
               };
               updatedWorkouts.set(newWorkout.id, newWorkout);
               sessionIndex++;
@@ -494,19 +511,21 @@ const PlanEditor = () => {
             }
 
             sourceWorkouts.forEach((workout) => {
-              const newLifts = workout.lifts.map((lift) => ({
-                ...applyProgressionRule(
-                  lift,
-                  i * selectedDays.length + dayIndex,
-                  userLiftsMap.get(lift.base_lift_id)
-                ),
-                id: `${Date.now()}-${Math.random()}`,
-              }));
+              const newLifts = duplicateFormData.autoProgress
+                ? workout.lifts.map((lift) => ({
+                    ...progressionAlgorithm.applyProgressionRule(
+                      lift,
+                      i * selectedDays.length + dayIndex,
+                      userLiftsMap.get(lift.base_lift_id)
+                    ),
+                    id: `${Date.now()}-${Math.random()}`,
+                  }))
+                : null;
               const newWorkout = {
                 ...workout,
                 id: Date.now() + Math.random(),
                 dayId: targetDayId,
-                lifts: newLifts,
+                lifts: newLifts ?? workout.lifts,
               };
               updatedWorkouts.set(newWorkout.id, newWorkout);
             });
@@ -525,6 +544,7 @@ const PlanEditor = () => {
       endWeek: weeks.length,
       repeatCount: 1,
       overwriteExisting: false,
+      autoProgress: true,
     });
     setSelectedDays([]);
   }, [selectedDays, duplicateFormData, totalDays, weeks.length, userLiftsData]);
@@ -582,7 +602,7 @@ const PlanEditor = () => {
           // Append workouts (no overwriting)
           clip.workouts.forEach((workout) => {
             const newLifts = workout.lifts.map((lift) => ({
-              ...applyProgressionRule(
+              ...progressionAlgorithm.applyProgressionRule(
                 lift,
                 index,
                 userLiftsMap.get(lift.base_lift_id)
@@ -821,6 +841,7 @@ const PlanEditor = () => {
                   endWeek: weeks.length,
                   repeatCount: 1,
                   overwriteExisting: false,
+                  autoProgress: true,
                 });
               }}
             >
@@ -877,6 +898,18 @@ const PlanEditor = () => {
                     min={duplicateFormData.startWeek}
                   />
                 </div>
+                <div className="mb-3">
+                  <label className="flex items-center text-sm">
+                    <input
+                      type="checkbox"
+                      name="autoProgress"
+                      checked={duplicateFormData.autoProgress}
+                      onChange={handleDuplicateFormChange}
+                      className="mr-2"
+                    />{" "}
+                    Auto-Progress Weights
+                  </label>
+                </div>
                 <div className="flex justify-between text-sm">
                   <button
                     className="bg-indigo-500 text-white px-3 py-1 rounded hover:bg-indigo-600"
@@ -922,6 +955,18 @@ const PlanEditor = () => {
                       className="mr-2"
                     />
                     Overwrite existing workouts
+                  </label>
+                </div>
+                <div className="mb-3">
+                  <label className="flex items-center text-sm">
+                    <input
+                      type="checkbox"
+                      name="autoProgress"
+                      checked={duplicateFormData.autoProgress}
+                      onChange={handleDuplicateFormChange}
+                      className="mr-2"
+                    />{" "}
+                    Auto-Progress Weights
                   </label>
                 </div>
                 <div className="flex justify-between text-sm">

@@ -15,7 +15,7 @@ import {
 import { PlusCircleIcon, MinusCircleIcon } from "@heroicons/react/24/outline";
 import Button from "../common/Button";
 import Input from "../common/Input";
-import { computeProgressionRule } from "../../utils/progressionAlgorithms";
+import progressionAlgorithm from "../../utils/progressionAlgorithm";
 
 // Simple arrayMove function for reordering
 const arrayMove = (array, from, to) => {
@@ -59,10 +59,11 @@ const WorkoutEditor = ({
     let updated = [...editedWorkouts];
     if (!updated[workoutIndex]) updated = addWorkout();
     const userLift = userLiftsMap.get(baseLift.id);
-    const progressionRule = computeProgressionRule(
+    const progressionRule = progressionAlgorithm.computeProgressionRule(
       baseLift.lift_type === "Main" ? "primary" : "supplementary",
       experience
     );
+    console.log(progressionRule);
 
     let reps = [8, 8, 8];
     let weight = [0, 0, 0];

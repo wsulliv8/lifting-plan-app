@@ -8,12 +8,39 @@ import Button from "../common/Button";
 import Workout from "./Workout";
 
 function shallowEqualWorkouts(arr1, arr2) {
-  if (arr1 === arr2) return true; // Same reference
-  if (!arr1 || !arr2 || arr1.length !== arr2.length) return false;
+  if (arr1 === arr2) {
+    return true;
+  }
+  if (!arr1 || !arr2 || arr1.length !== arr2.length) {
+    return false;
+  }
 
   for (let i = 0; i < arr1.length; i++) {
-    if (arr1[i].id !== arr2[i].id) {
+    const w1 = arr1[i];
+    const w2 = arr2[i];
+    if (w1.id !== w2.id || w1.name !== w2.name) {
       return false;
+    }
+
+    const lifts1 = w1.lifts || [];
+    const lifts2 = w2.lifts || [];
+    if (lifts1.length !== lifts2.length) {
+      return false;
+    }
+
+    for (let j = 0; j < lifts1.length; j++) {
+      const lift1 = lifts1[j];
+      const lift2 = lifts2[j];
+      if (
+        lift1.id !== lift2.id ||
+        lift1.sets !== lift2.sets ||
+        (lift1.reps || []).length !== (lift2.reps || []).length ||
+        (lift1.reps || []).some((val, k) => val !== (lift2.reps || [])[k]) ||
+        (lift1.weight || []).length !== (lift2.weight || []).length ||
+        (lift1.weight || []).some((val, k) => val !== (lift2.weight || [])[k])
+      ) {
+        return false;
+      }
     }
   }
 
@@ -21,7 +48,7 @@ function shallowEqualWorkouts(arr1, arr2) {
 }
 
 function areDayPropsEqual(prev, next) {
-  return (
+  const isEqual =
     prev.id === next.id &&
     prev.isDayCollapsed === next.isDayCollapsed &&
     prev.isWeekCollapsed === next.isWeekCollapsed &&
@@ -29,8 +56,9 @@ function areDayPropsEqual(prev, next) {
     prev.isDaySelected === next.isDaySelected &&
     prev.handleClick === next.handleClick &&
     prev.group === next.group &&
-    shallowEqualWorkouts(prev.workouts, next.workouts)
-  );
+    shallowEqualWorkouts(prev.workouts, next.workouts);
+
+  return isEqual;
 }
 
 const Day = memo(

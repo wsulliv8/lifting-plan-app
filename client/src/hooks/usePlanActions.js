@@ -389,7 +389,6 @@ export const usePlanActions = ({
   const handleSubmit = useCallback(
     async (e, formInputs) => {
       e.preventDefault();
-      console.log("handleSubmit: formInputs=", formInputs);
       const updatedPlan = {
         ...plan,
         name: formInputs.name,
@@ -398,10 +397,8 @@ export const usePlanActions = ({
         difficulty: formInputs.difficulty,
         description: formInputs.description,
       };
-      console.log("handleSubmit: updatedPlan=", updatedPlan);
       try {
         await savePlan(stripIds(updatedPlan));
-        console.log("savePlan succeeded");
         setPlan(updatedPlan);
 
         setIsModalOpen(false);

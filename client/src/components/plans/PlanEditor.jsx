@@ -72,7 +72,6 @@ const PlanEditor = () => {
     () => computeWorkoutsByDay(workouts),
     [workouts]
   );
-  console.log("initial plan!!!!!", plan);
   return (
     <div className="w-full h-full">
       <PlanToolbar

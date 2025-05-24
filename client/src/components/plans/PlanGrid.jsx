@@ -1,5 +1,6 @@
 import { DndContext, rectIntersection, DragOverlay } from "@dnd-kit/core";
 import { createPortal } from "react-dom";
+import { useRef, useEffect, useState, useMemo } from "react";
 import {
   computeWeeks,
   computeGridStyle,
@@ -29,8 +30,63 @@ const PlanGrid = ({
   setTotalDays,
 }) => {
   const weeks = computeWeeks(totalDays);
-  const gridStyle = computeGridStyle(weeks, collapsedWeeks, collapsedDays);
+  //const gridStyle = computeGridStyle(weeks, collapsedWeeks, collapsedDays);
   const headerDays = generateHeaderDays(collapsedDays, toggleDayCollapse);
+  const [availableWidth, setAvailableWidth] = useState(window.innerWidth - 100); // Navbar = 48px
+
+  const mainScrollRef = useRef(null);
+  const stickyScrollRef = useRef(null);
+  const [showStickyScrollbar, setShowStickyScrollbar] = useState(false);
+
+  // Update available width on resize
+  useEffect(() => {
+    const handleResize = () => {
+      setAvailableWidth(window.innerWidth - 100); // Adjust for navbar
+    };
+    window.addEventListener("resize", handleResize);
+    handleResize();
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Compute grid style with memoization
+  const gridStyle = useMemo(
+    () =>
+      computeGridStyle(
+        Array(Math.ceil(totalDays / 7)).fill(),
+        collapsedWeeks,
+        collapsedDays,
+        availableWidth
+      ),
+    [totalDays, collapsedWeeks, collapsedDays, availableWidth]
+  );
+
+  // Sync scroll positions
+  const handleMainScroll = () => {
+    if (mainScrollRef.current && stickyScrollRef.current) {
+      stickyScrollRef.current.scrollLeft = mainScrollRef.current.scrollLeft;
+    }
+  };
+
+  const handleStickyScroll = () => {
+    if (mainScrollRef.current && stickyScrollRef.current) {
+      mainScrollRef.current.scrollLeft = stickyScrollRef.current.scrollLeft;
+    }
+  };
+
+  // Check if content overflows to show/hide sticky scrollbar
+  useEffect(() => {
+    const checkOverflow = () => {
+      if (mainScrollRef.current) {
+        const hasOverflow =
+          mainScrollRef.current.scrollWidth > mainScrollRef.current.clientWidth;
+        setShowStickyScrollbar(hasOverflow);
+      }
+    };
+
+    checkOverflow();
+    window.addEventListener("resize", checkOverflow);
+    return () => window.removeEventListener("resize", checkOverflow);
+  }, [totalDays, collapsedWeeks, collapsedDays]);
 
   const renderedWeeks = weeks.map((week, weekIndex) => (
     <div key={`week-${weekIndex}`} className="contents">
@@ -84,11 +140,42 @@ const PlanGrid = ({
       onDragEnd={handleDragEnd}
       sensors={sensors}
     >
-      <div className="grid gap-2 w-full" style={gridStyle}>
-        <div></div>
-        {headerDays}
-        {renderedWeeks}
+      <div className="relative">
+        <div
+          ref={mainScrollRef}
+          className="overflow-x-hidden overflow-y-visible"
+          onScroll={handleMainScroll}
+        >
+          <div className="grid gap-2" style={gridStyle}>
+            <div></div>
+            {headerDays}
+            {renderedWeeks}
+          </div>
+        </div>
+
+        {/* Sticky horizontal scrollbar at bottom of screen - positioned to match grid width */}
+        {showStickyScrollbar && (
+          <div
+            className="fixed bottom-0 z-50 backdrop-blur-sm bg-white/90 border-t border-gray-200/50 shadow-lg"
+            style={{ left: "4rem", right: "0" }}
+          >
+            <div
+              ref={stickyScrollRef}
+              className="overflow-x-scroll overflow-y-hidden scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-400 hover:scrollbar-thumb-gray-500"
+              onScroll={handleStickyScroll}
+              style={{ height: "16px" }}
+            >
+              <div
+                style={{
+                  width: mainScrollRef.current?.scrollWidth || "100%",
+                  height: "1px",
+                }}
+              />
+            </div>
+          </div>
+        )}
       </div>
+
       <div className="mt-4 flex justify-center">
         <PlusCircleIcon
           className="h-8 w-8 text-green-500 hover:text-green-600 cursor-pointer"

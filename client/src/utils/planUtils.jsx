@@ -25,18 +25,44 @@ export const computeWorkoutsByDay = (workouts) => {
   return map;
 };
 
-// Compute gridStyle
-export const computeGridStyle = (weeks, collapsedWeeks, collapsedDays) => ({
-  gridTemplateColumns: `2rem ${Array(7)
-    .fill()
-    .map((_, i) => (collapsedDays[i] ? "2rem" : "minmax(6rem, 1fr)"))
-    .join(" ")}`,
-  gridTemplateRows: `2rem ${weeks
-    .map((_, weekIndex) =>
-      collapsedWeeks.has(weekIndex) ? "2rem" : "minmax(7rem, auto)"
-    )
-    .join(" ")}`,
-});
+export const computeGridStyle = (
+  weeks,
+  collapsedWeeks,
+  collapsedDays,
+  availableWidth
+) => {
+  const weekLabelWidth = "2rem";
+  const minDayWidth = "10rem"; // Match minmax minimum
+  const maxDayWidth = "12rem";
+
+  // Calculate natural grid width (7 days + week label)
+  const dayWidth = collapsedDays.map((collapsed) =>
+    collapsed ? "2rem" : minDayWidth
+  );
+  const naturalWidth =
+    parseFloat(weekLabelWidth) * 16 + // Convert rem to px (1rem = 16px)
+    dayWidth.reduce((sum, w) => sum + parseFloat(w) * 16, 0);
+
+  // If natural width fits within available width, use 1fr to expand
+  const useFractional = naturalWidth < availableWidth;
+  const dayColumnStyle = collapsedDays.map((collapsed, i) =>
+    collapsed
+      ? "2rem"
+      : useFractional
+      ? "1fr"
+      : `minmax(${minDayWidth}, ${maxDayWidth})`
+  );
+
+  return {
+    gridTemplateColumns: `${weekLabelWidth} ${dayColumnStyle.join(" ")}`,
+    gridTemplateRows: `2rem ${weeks
+      .map((_, weekIndex) =>
+        collapsedWeeks.has(weekIndex) ? "2rem" : "minmax(7rem, auto)"
+      )
+      .join(" ")}`,
+    width: useFractional ? `${availableWidth}px` : "max-content",
+  };
+};
 
 // Strip IDs for saving
 export const stripIds = (plan) => ({

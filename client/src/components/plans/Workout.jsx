@@ -32,15 +32,24 @@ const Workout = memo(({ id, workout, handleClick }) => {
     if (!workout.lifts || workout.lifts.length === 0) {
       return <div className="text-gray-500">No lifts</div>;
     }
-
     const getRepsString = (lift) => {
       if (!lift.reps || lift.reps.length === 0) return "";
-      if (lift.reps.every((val) => val === lift.reps[0])) {
-        return `${lift.reps.length}x${lift.reps[0]}`;
+
+      const sets = lift.reps.length;
+      const sameReps = lift.reps.every((val) => val === lift.reps[0]);
+      const reps = sameReps ? lift.reps[0] : lift.reps.join(", ");
+
+      if (!lift.weight || lift.weight.length === 0) {
+        return `${sets}x${reps}`;
       }
-      return lift.weight?.length
-        ? lift.weight.join(", ")
-        : lift.reps.join(", ");
+
+      const sameWeight = lift.weight.every((val) => val === lift.weight[0]);
+
+      if (sameReps && sameWeight) {
+        return `${sets}x${reps} @${lift.weight[0]}`;
+      }
+
+      return `${sets}x${reps} @${lift.weight.join(", ")}`;
     };
 
     return (

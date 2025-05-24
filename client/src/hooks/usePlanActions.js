@@ -31,6 +31,7 @@ export const usePlanActions = ({
   weeksLength,
   editingDay,
   setEditingDay,
+  setIsModalOpen,
 }) => {
   const handleDuplicateConfirm = useCallback(() => {
     setWorkouts((prevWorkouts) => {
@@ -385,6 +386,32 @@ export const usePlanActions = ({
     [workoutsRef, setEditingDay]
   );
 
+  const handleSubmit = useCallback(
+    async (e, formInputs) => {
+      e.preventDefault();
+      console.log("handleSubmit: formInputs=", formInputs);
+      const updatedPlan = {
+        ...plan,
+        name: formInputs.name,
+        goal: formInputs.goal,
+        categories: formInputs.categories,
+        difficulty: formInputs.difficulty,
+        description: formInputs.description,
+      };
+      console.log("handleSubmit: updatedPlan=", updatedPlan);
+      try {
+        await savePlan(stripIds(updatedPlan));
+        console.log("savePlan succeeded");
+        setPlan(updatedPlan);
+
+        setIsModalOpen(false);
+      } catch (error) {
+        console.error("savePlan failed:", error);
+      }
+    },
+    [plan, setPlan, setIsModalOpen]
+  );
+
   return {
     handleDuplicateConfirm,
     handleCopy,
@@ -394,5 +421,6 @@ export const usePlanActions = ({
     saveEditedWorkouts,
     handleDeleteWeek,
     handleEditWorkout,
+    handleSubmit,
   };
 };

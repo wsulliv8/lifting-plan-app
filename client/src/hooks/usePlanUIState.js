@@ -21,6 +21,7 @@ export const usePlanUIState = (weeksLength) => {
   const [contextMenu, setContextMenu] = useState(null);
   const [showCopiedMessage, setShowCopiedMessage] = useState(false);
   const [editingDay, setEditingDay] = useState(null);
+
   const contextMenuRef = useRef(null);
 
   const toggleWeekCollapse = useCallback((weekIndex) => {
@@ -79,6 +80,23 @@ export const usePlanUIState = (weeksLength) => {
     setContextMenu(null);
   }, []);
 
+  const handleContextMenu = useCallback(
+    (e, dayId) => {
+      e.preventDefault();
+      const { clientX, clientY } = e;
+      const menuWidth = 120;
+      const menuHeight = clipboard.length > 0 ? 80 : 40;
+      const x =
+        clientX + menuWidth > window.innerWidth ? clientX - menuWidth : clientX;
+      const y =
+        clientY + menuHeight > window.innerHeight
+          ? clientY - menuHeight
+          : clientY;
+      setContextMenu({ x, y, dayId });
+    },
+    [clipboard, setContextMenu]
+  );
+
   return {
     collapsedWeeks,
     collapsedDays,
@@ -111,5 +129,6 @@ export const usePlanUIState = (weeksLength) => {
     handleDuplicateFormChange,
     handleWeekDayToggle,
     closeContextMenu,
+    handleContextMenu,
   };
 };

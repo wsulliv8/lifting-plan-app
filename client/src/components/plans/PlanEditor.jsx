@@ -101,6 +101,7 @@ const PlanEditor = () => {
         totalDays={totalDays}
         collapsedWeeks={uiState.collapsedWeeks}
         collapsedDays={uiState.collapsedDays}
+        lastUncollapsedIndex={uiState.lastUncollapsedIndex}
         selectedDays={uiState.selectedDays}
         handleEditWorkout={actions.handleEditWorkout}
         handleClick={uiState.selectDay}

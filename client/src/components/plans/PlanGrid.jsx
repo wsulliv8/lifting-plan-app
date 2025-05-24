@@ -1,6 +1,6 @@
 import { DndContext, rectIntersection, DragOverlay } from "@dnd-kit/core";
 import { createPortal } from "react-dom";
-import { useRef, useEffect, useState, useMemo } from "react";
+import { useRef, useEffect, useState, useMemo, useLayoutEffect } from "react";
 import {
   computeWeeks,
   computeGridStyle,
@@ -32,11 +32,18 @@ const PlanGrid = ({
   const weeks = computeWeeks(totalDays);
   //const gridStyle = computeGridStyle(weeks, collapsedWeeks, collapsedDays);
   const headerDays = generateHeaderDays(collapsedDays, toggleDayCollapse);
-  const [availableWidth, setAvailableWidth] = useState(window.innerWidth - 100); // Navbar = 48px
+  const [availableWidth, setAvailableWidth] = useState(window.innerWidth - 100); // 100 px for navbar
+  const [scrollContentWidth, setScrollContentWidth] = useState(0);
 
   const mainScrollRef = useRef(null);
   const stickyScrollRef = useRef(null);
   const [showStickyScrollbar, setShowStickyScrollbar] = useState(false);
+
+  useLayoutEffect(() => {
+    if (mainScrollRef.current) {
+      setScrollContentWidth(mainScrollRef.current.scrollWidth + 2); // small buffer
+    }
+  }, [collapsedWeeks, collapsedDays, totalDays, availableWidth]);
 
   // Update available width on resize
   useEffect(() => {
@@ -94,7 +101,9 @@ const PlanGrid = ({
         className={`bg-gray-50 p-2 font-medium cursor-pointer hover:bg-gray-200 flex items-center justify-center writing-vertical-rl rotate-180 h-full whitespace-nowrap rounded relative group ${
           collapsedWeeks.has(weekIndex) ? "text-gray-400" : "text-gray-800"
         }`}
-        onClick={() => toggleWeekCollapse(weekIndex)}
+        onClick={() => {
+          toggleWeekCollapse(weekIndex);
+        }}
       >
         {!collapsedWeeks.has(weekIndex) ? "Week" : ""} {weekIndex + 1}
         <span>
@@ -104,7 +113,10 @@ const PlanGrid = ({
                 ? "opacity-0"
                 : "group-hover:opacity-100"
             }`}
-            onClick={(e) => handleDeleteWeek(weekIndex, e)}
+            onClick={(e) => {
+              if (!collapsedWeeks.has(weekIndex))
+                handleDeleteWeek(weekIndex, e);
+            }}
           />
         </span>
       </div>
@@ -167,7 +179,7 @@ const PlanGrid = ({
             >
               <div
                 style={{
-                  width: mainScrollRef.current?.scrollWidth || "100%",
+                  width: scrollContentWidth + 50 || "100%",
                   height: "1px",
                 }}
               />

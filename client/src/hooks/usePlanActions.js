@@ -42,12 +42,22 @@ export const usePlanActions = ({
       );
       const generateUniqueId = () => uuidv4();
 
+      // Track group updates
+      const updatedGroups = plan.dayGroups ? [...plan.dayGroups] : [];
+
       if (selectedDays.length === 1) {
         const sourceDayId = selectedDays[0];
         const sourceWorkouts = Array.from(prevWorkouts.values()).filter(
           (w) => w.dayId === sourceDayId
         );
         const { selectedWeekDays, startWeek, endWeek } = duplicateFormData;
+
+        // Find source day's group
+        const sourceGroupIndex = updatedGroups.findIndex((group) =>
+          group.dayIds.includes(sourceDayId)
+        );
+        const sourceGroup =
+          sourceGroupIndex !== -1 ? updatedGroups[sourceGroupIndex] : null;
 
         if (
           selectedWeekDays.length === 0 ||
@@ -97,6 +107,13 @@ export const usePlanActions = ({
               updatedWorkouts.set(newWorkout.id, newWorkout);
               sessionIndex++;
             });
+            // Add targetDayId to source group
+            if (sourceGroup && !sourceGroup.dayIds.includes(targetDayId)) {
+              updatedGroups[sourceGroupIndex] = {
+                ...sourceGroup,
+                dayIds: [...sourceGroup.dayIds, targetDayId],
+              };
+            }
           });
         }
       } else if (selectedDays.length > 1) {
@@ -121,6 +138,13 @@ export const usePlanActions = ({
             const sourceWorkouts = Array.from(prevWorkouts.values()).filter(
               (w) => w.dayId === sourceDayId
             );
+
+            // Find source day's group
+            const sourceGroupIndex = updatedGroups.findIndex((group) =>
+              group.dayIds.includes(sourceDayId)
+            );
+            const sourceGroup =
+              sourceGroupIndex !== -1 ? updatedGroups[sourceGroupIndex] : null;
 
             if (overwriteExisting) {
               prevWorkouts.forEach((workout) => {
@@ -154,9 +178,24 @@ export const usePlanActions = ({
               };
               updatedWorkouts.set(newWorkout.id, newWorkout);
             });
+            // Add targetDayId to source group
+            if (sourceGroup && !sourceGroup.dayIds.includes(currentDayId)) {
+              updatedGroups[sourceGroupIndex] = {
+                ...sourceGroup,
+                dayIds: [...sourceGroup.dayIds, currentDayId],
+              };
+            }
             currentDayId++;
           });
         }
+      }
+
+      // Update plan with new groups
+      if (updatedGroups.length > 0) {
+        setPlan((prevPlan) => ({
+          ...prevPlan,
+          dayGroups: updatedGroups,
+        }));
       }
 
       setTotalDays(newTotalDays);
@@ -184,6 +223,8 @@ export const usePlanActions = ({
     userLiftsData,
     setWorkouts,
     setShowDuplicateForm,
+    plan.dayGroups,
+    setPlan,
   ]);
 
   const handleCopy = useCallback(

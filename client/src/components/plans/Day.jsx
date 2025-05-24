@@ -200,9 +200,6 @@ const DayData = memo(
           >
             Edit
           </Button>
-          <Button variant="secondary" className="text-xs p-1 w-full">
-            Import
-          </Button>
         </div>
       </>
     );

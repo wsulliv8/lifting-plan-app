@@ -1,5 +1,5 @@
 import React from "react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useLayoutEffect } from "react";
 import { DndContext, closestCenter } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -14,7 +14,6 @@ import {
 } from "@heroicons/react/24/solid";
 import { PlusCircleIcon, MinusCircleIcon } from "@heroicons/react/24/outline";
 import Button from "../common/Button";
-import Input from "../common/Input";
 import LiftSearch from "../lifts/LiftSearch";
 import progressionAlgorithm from "../../utils/progressionAlgorithm";
 
@@ -39,15 +38,48 @@ const WorkoutEditor = ({
       ? initialWorkouts
       : [{ id: `${Date.now()}`, dayId, name: "", lifts: [] }]
   );
-  const [searchQuery, setSearchQuery] = useState("");
   const [activeWorkoutIndex, setActiveWorkoutIndex] = useState(0);
-  const filteredLifts = baseLifts.filter((w) =>
-    w.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const [scrollTrigger, setScrollTrigger] = useState(null); // Track when to scroll
+  const scrollContainerRef = useRef(null); // Ref for the scrollable container
+  const workoutRefs = useRef([]); // Refs for workout containers to get position
+
   const userLiftsMap = useMemo(
     () => new Map(userLiftsData.map((data) => [data.base_lift_id, data])),
     [userLiftsData]
   );
+
+  // Scroll to the active workout's bottom after adding a lift
+  useLayoutEffect(() => {
+    if (
+      scrollTrigger !== null &&
+      scrollContainerRef.current &&
+      workoutRefs.current[scrollTrigger]
+    ) {
+      const scrollContainer = scrollContainerRef.current;
+      const workoutContainer = workoutRefs.current[scrollTrigger];
+      const scrollHeight = scrollContainer.scrollHeight;
+      const clientHeight = scrollContainer.clientHeight;
+      const workoutBottom =
+        workoutContainer.offsetTop + workoutContainer.offsetHeight;
+
+      console.log("Scroll attempt:", {
+        scrollTrigger,
+        scrollHeight,
+        clientHeight,
+        hasOverflow: scrollHeight > clientHeight,
+        workoutBottom,
+        currentScrollTop: scrollContainer.scrollTop,
+      });
+
+      // Scroll to the bottom of the active workout
+      scrollContainer.scrollTo({
+        top: workoutBottom - clientHeight + 20, // Small padding
+        behavior: "smooth",
+      });
+
+      setScrollTrigger(null); // Reset trigger
+    }
+  }, [scrollTrigger]);
 
   // Update functions
   const updateWorkoutName = (workoutIndex, value) => {
@@ -91,6 +123,7 @@ const WorkoutEditor = ({
     };
     updated[activeWorkoutIndex].lifts.push(newLift);
     setEditedWorkouts(updated);
+    setScrollTrigger(activeWorkoutIndex); // Trigger scroll to active workout
   };
 
   const updateSet = (workoutIndex, liftIndex, setIndex, field, value) => {
@@ -177,14 +210,21 @@ const WorkoutEditor = ({
   };
 
   const removeWorkout = (workoutIndex) => {
-    const updated = [...editedWorkouts];
-    setEditedWorkouts(updated.filter((_, i) => i !== workoutIndex));
+    const filtered = editedWorkouts.filter((_, i) => i !== workoutIndex);
+    setEditedWorkouts(filtered);
+
+    // Prefer the next workout (same index), fallback to previous
+    const nextIndex =
+      workoutIndex < filtered.length ? workoutIndex : filtered.length - 1;
+
+    setActiveWorkoutIndex(nextIndex >= 0 ? nextIndex : null); // null if none left
   };
 
   const addWorkout = () => {
     const newWorkout = { id: `${Date.now()}`, dayId, name: "", lifts: [] };
     const updated = [...editedWorkouts, newWorkout];
     setEditedWorkouts(updated);
+    setActiveWorkoutIndex(updated.length - 1);
     return updated;
   };
 
@@ -232,7 +272,10 @@ const WorkoutEditor = ({
   return (
     <div className="w-full h-full bg-white rounded-lg flex gap-4">
       {/* Workouts and Lifts Section (2/3) */}
-      <div className="flex flex-col h-full items-center w-2/3 overflow-y-auto pr-2">
+      <div
+        ref={scrollContainerRef}
+        className="flex flex-col h-full items-center w-2/3 overflow-y-auto pr-2"
+      >
         <DndContext
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
@@ -241,6 +284,7 @@ const WorkoutEditor = ({
             workoutIndex === activeWorkoutIndex ? (
               <div
                 key={workout.id}
+                ref={(el) => (workoutRefs.current[workoutIndex] = el)} // Attach ref
                 className="w-full flex flex-col gap-4 p-5 bg-gray-100 rounded-lg mb-4 shadow-inner relative"
               >
                 <TrashIcon

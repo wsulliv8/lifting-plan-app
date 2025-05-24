@@ -57,19 +57,9 @@ const WorkoutEditor = ({
     ) {
       const scrollContainer = scrollContainerRef.current;
       const workoutContainer = workoutRefs.current[scrollTrigger];
-      const scrollHeight = scrollContainer.scrollHeight;
       const clientHeight = scrollContainer.clientHeight;
       const workoutBottom =
         workoutContainer.offsetTop + workoutContainer.offsetHeight;
-
-      console.log("Scroll attempt:", {
-        scrollTrigger,
-        scrollHeight,
-        clientHeight,
-        hasOverflow: scrollHeight > clientHeight,
-        workoutBottom,
-        currentScrollTop: scrollContainer.scrollTop,
-      });
 
       // Scroll to the bottom of the active workout
       scrollContainer.scrollTo({
@@ -97,7 +87,6 @@ const WorkoutEditor = ({
       experience
     );
     console.log(progressionRule);
-
     let reps = [8, 8, 8];
     let weight = [0, 0, 0];
     if (userLift) {

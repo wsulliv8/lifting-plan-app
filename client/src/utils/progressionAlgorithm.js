@@ -3,22 +3,22 @@ const progressionAlgorithm = {
     // Base increment map: [lbs]
     const baseIncrements = {
       beginner: { primary: 10, supplementary: 5 },
-      intermediate: { primary: 5, supplementary: 2.5 },
-      advanced: { primary: 2.5, supplementary: 1.25 },
+      intermediate: { primary: 5, supplementary: 5 },
+      advanced: { primary: 5, supplementary: 5 },
     };
 
     // Base frequency map: [sessions]
     const baseFrequencies = {
       beginner: { primary: 1, supplementary: 1 }, // every session
-      intermediate: { primary: 1, supplementary: 2 }, // every other session
-      advanced: { primary: 3, supplementary: 4 }, // every 3 sessions
+      intermediate: { primary: 2, supplementary: 3 },
+      advanced: { primary: 5, supplementary: 6 },
     };
 
     // Drop % if failed (can also be a range if you want more control)
     const regression = {
-      beginner: 0.1, // drop 10% on failure
-      intermediate: 0.07,
-      advanced: 0.05,
+      beginner: 10, // drop 10% on failure
+      intermediate: 5,
+      advanced: 5,
     };
 
     return {
@@ -29,6 +29,7 @@ const progressionAlgorithm = {
   },
 
   applyProgressionRule(lift, sessionIndex, userLiftData) {
+    console.log(lift, sessionIndex);
     if (!lift.progressionRule) console.log(lift);
     const { progressionIncrement, progressionFrequency } = lift.progressionRule;
     // Calculate increments based on session and frequency
@@ -45,7 +46,9 @@ const progressionAlgorithm = {
       if (maxWeight > 0) {
         return {
           ...lift,
-          weight: newWeight.map((w) => Math.min(w, maxWeight * 1.1)),
+          weight: newWeight.map((w) =>
+            Number(Math.min(w, maxWeight * 1.1).toFixed(1))
+          ),
         };
       }
     }

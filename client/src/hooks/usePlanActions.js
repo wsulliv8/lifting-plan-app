@@ -44,6 +44,7 @@ export const usePlanActions = ({
 
       // Track group updates
       const updatedGroups = plan.dayGroups ? [...plan.dayGroups] : [];
+      const newTargetDayIds = []; // Collect all targetDayIds
 
       if (selectedDays.length === 1) {
         const sourceDayId = selectedDays[0];
@@ -68,12 +69,16 @@ export const usePlanActions = ({
           return prevWorkouts;
         }
 
-        let sessionIndex = 0;
+        let sessionIndex = 1;
         for (let week = startWeek - 1; week < endWeek; week++) {
           selectedWeekDays.forEach((dayIndex) => {
             const targetDayId = week * 7 + dayIndex;
             if (targetDayId >= newTotalDays) {
               newTotalDays = Math.ceil((targetDayId + 1) / 7) * 7;
+            }
+            // Collect targetDayId for group update
+            if (sourceGroup && !newTargetDayIds.includes(targetDayId)) {
+              newTargetDayIds.push(targetDayId);
             }
             if (duplicateFormData.overwriteExisting) {
               prevWorkouts.forEach((workout) => {
@@ -106,14 +111,24 @@ export const usePlanActions = ({
               };
               updatedWorkouts.set(newWorkout.id, newWorkout);
               sessionIndex++;
+              // Add targetDayId to source group
+              // Update source group with all targetDayIds
+              if (sourceGroup && newTargetDayIds.length > 0) {
+                updatedGroups[sourceGroupIndex] = {
+                  ...sourceGroup,
+                  dayIds: [
+                    ...sourceGroup.dayIds,
+                    ...newTargetDayIds.filter(
+                      (id) => !sourceGroup.dayIds.includes(id)
+                    ),
+                  ],
+                };
+                console.log(
+                  "Updated group dayIds:",
+                  updatedGroups[sourceGroupIndex].dayIds
+                );
+              }
             });
-            // Add targetDayId to source group
-            if (sourceGroup && !sourceGroup.dayIds.includes(targetDayId)) {
-              updatedGroups[sourceGroupIndex] = {
-                ...sourceGroup,
-                dayIds: [...sourceGroup.dayIds, targetDayId],
-              };
-            }
           });
         }
       } else if (selectedDays.length > 1) {
@@ -159,7 +174,7 @@ export const usePlanActions = ({
                 ? workout.lifts.map((lift) => ({
                     ...progressionAlgorithm.applyProgressionRule(
                       lift,
-                      i * selectedDays.length + dayIndex,
+                      i + 1, //* selectedDays.length + dayIndex,
                       userLiftsMap.get(lift.base_lift_id)
                     ),
                     id: generateUniqueId(),

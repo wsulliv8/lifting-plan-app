@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 import { useLoaderData } from "react-router-dom";
 import PlanGrid from "./PlanGrid";
 import PlanToolbar from "./PlanToolbar";
@@ -8,7 +8,6 @@ import WorkoutEditorModal from "./WorkoutEditorModal";
 import DuplicateForm from "./DuplicateForm";
 import GroupForm from "./GroupForm";
 import Toast from "./Toast";
-import { savePlan } from "../../services/plans";
 import {
   computeWorkoutsByDay,
   stripIds,
@@ -35,7 +34,7 @@ const PlanEditor = () => {
 
   const weeks = useMemo(() => computeWeeks(totalDays), [totalDays]);
 
-  const uiState = usePlanUIState(weeks.length);
+  const uiState = usePlanUIState(weeks.length, plan);
   const { activeWorkout, sensors, handleDragStart, handleDragEnd } =
     usePlanDragAndDrop(workoutsRef, setWorkouts);
 
@@ -66,51 +65,14 @@ const PlanEditor = () => {
     editingDay: uiState.editingDay,
     setEditingDay: uiState.setEditingDay,
     stripIds,
+    setIsModalOpen: uiState.setIsModalOpen,
   });
 
   const workoutsByDay = useMemo(
     () => computeWorkoutsByDay(workouts),
     [workouts]
   );
-
-  const handleSubmit = useCallback(
-    async (e) => {
-      e.preventDefault();
-      const updatedPlan = {
-        ...plan,
-        name: uiState.formInputs.name,
-        goal: uiState.formInputs.goal,
-        categories: uiState.formInputs.categories,
-        difficulty: uiState.formInputs.difficulty,
-        description: uiState.formInputs.description,
-      };
-      setPlan(updatedPlan);
-      await savePlan(stripIds(updatedPlan));
-      uiState.setIsModalOpen(false);
-    },
-    [plan, setPlan, uiState]
-  );
-
-  // Context Menu Logic
-  const handleContextMenu = useCallback(
-    (e, dayId) => {
-      e.preventDefault();
-      const { clientX, clientY } = e;
-      // Adjust position to stay within viewport
-      const menuWidth = 120; // Approximate width of context menu
-      const menuHeight = uiState.clipboard.length > 0 ? 80 : 40; // Approximate height (2 or 1 item)
-      const x =
-        clientX + menuWidth > window.innerWidth ? clientX - menuWidth : clientX;
-      const y =
-        clientY + menuHeight > window.innerHeight
-          ? clientY - menuHeight
-          : clientY;
-
-      uiState.setContextMenu({ x, y, dayId });
-    },
-    [uiState]
-  );
-
+  console.log("initial plan!!!!!", plan);
   return (
     <div className="w-full h-full">
       <PlanToolbar
@@ -133,7 +95,7 @@ const PlanEditor = () => {
         isOpen={uiState.isModalOpen}
         onClose={() => uiState.setIsModalOpen(false)}
         plan={plan}
-        handleSubmit={handleSubmit}
+        handleSubmit={actions.handleSubmit}
       />
       <PlanGrid
         workouts={workoutsByDay}
@@ -151,7 +113,7 @@ const PlanEditor = () => {
         sensors={sensors}
         handleDragStart={handleDragStart}
         handleDragEnd={handleDragEnd}
-        onContextMenu={handleContextMenu}
+        onContextMenu={uiState.handleContextMenu}
         setTotalDays={setTotalDays}
       />
 

@@ -32,6 +32,10 @@ const PlanSettingsModal = ({ isOpen, onClose, plan, handleSubmit }) => {
     setFormInputs((prev) => ({ ...prev, categories: selectedCategories }));
   };
 
+  const handleFormSubmit = (e) => {
+    handleSubmit(e, formInputs);
+  };
+
   return (
     <Modal
       isOpen={isOpen}
@@ -42,7 +46,7 @@ const PlanSettingsModal = ({ isOpen, onClose, plan, handleSubmit }) => {
       <PlanSettingsForm
         formData={formInputs}
         handleInputChange={handleInputChange}
-        handleSubmit={handleSubmit}
+        handleSubmit={handleFormSubmit}
         handleCategoriesChange={handleCategoriesChange}
       />
     </Modal>

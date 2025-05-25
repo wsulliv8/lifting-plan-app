@@ -13,9 +13,9 @@ import {
   ArrowRightIcon,
 } from "@heroicons/react/24/solid";
 import { PlusCircleIcon, MinusCircleIcon } from "@heroicons/react/24/outline";
-import Button from "../common/Button";
-import LiftSearch from "../lifts/LiftSearch";
-import progressionAlgorithm from "../../utils/progressionAlgorithm";
+import Button from "../../common/Button";
+import LiftSearch from "../../lifts/LiftSearch";
+import progressionAlgorithm from "../../../utils/progressionAlgorithm";
 
 // Simple arrayMove function for reordering
 const arrayMove = (array, from, to) => {

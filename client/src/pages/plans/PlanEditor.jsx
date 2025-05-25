@@ -1,13 +1,13 @@
 import { useMemo } from "react";
 import { useLoaderData } from "react-router-dom";
-import PlanGrid from "./PlanGrid";
-import PlanToolbar from "./PlanToolbar";
-import PlanContextMenu from "./PlanContextMenu";
-import PlanSettingsModal from "./PlanSettingsModal";
-import WorkoutEditorModal from "./WorkoutEditorModal";
-import DuplicateForm from "./DuplicateForm";
-import GroupForm from "./GroupForm";
-import Toast from "./Toast";
+import PlanGrid from "../../components/plans/editor/PlanGrid";
+import PlanToolbar from "../../components/plans/editor/PlanToolbar";
+import PlanContextMenu from "../../components/plans/editor/PlanContextMenu";
+import PlanSettingsModal from "../../components/plans/modals/PlanSettingsModal";
+import WorkoutEditorModal from "../../components/plans/modals/WorkoutEditorModal";
+import DuplicateForm from "../../components/plans/forms/DuplicateForm";
+import GroupForm from "../../components/plans/forms/GroupForm";
+import Toast from "../../components/common/Toast";
 import {
   computeWorkoutsByDay,
   stripIds,

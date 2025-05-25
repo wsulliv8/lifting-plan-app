@@ -1,9 +1,9 @@
 import { useState, useCallback, memo } from "react";
 import { useLoaderData, useNavigate, useNavigation } from "react-router-dom";
-import PlanList from "../components/plans/PlanList";
-import Modal from "../components/common/Modal";
-import Input from "../components/common/Input";
-import { createPlan, deletePlan } from "../services/plans";
+import PlanList from "../../components/plans/PlanList";
+import Modal from "../../components/common/Modal";
+import Input from "../../components/common/Input";
+import { createPlan, deletePlan } from "../../services/plans";
 
 const Plans = () => {
   const [view, setView] = useState("your");

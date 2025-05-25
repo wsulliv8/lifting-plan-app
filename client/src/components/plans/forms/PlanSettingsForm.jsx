@@ -1,7 +1,7 @@
-import Input from "../common/Input";
-import Select from "../common/Select";
-import MultiSelect from "../common/MultiSelect";
-import TextArea from "../common/TextArea";
+import Input from "../../common/Input";
+import Select from "../../common/Select";
+import MultiSelect from "../../common/MultiSelect";
+import TextArea from "../../common/TextArea";
 
 // Memoized form component
 const PlanSettingsForm = ({

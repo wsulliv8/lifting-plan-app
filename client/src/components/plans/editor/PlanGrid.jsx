@@ -5,7 +5,7 @@ import {
   computeWeeks,
   computeGridStyle,
   generateHeaderDays,
-} from "../../utils/planUtils";
+} from "../../../utils/planUtils";
 import Day from "./Day";
 import Workout from "./Workout";
 import { TrashIcon, PlusCircleIcon } from "@heroicons/react/24/solid";

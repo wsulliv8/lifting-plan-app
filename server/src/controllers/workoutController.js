@@ -24,6 +24,42 @@ const workoutController = {
     }
   },
 
+  async getWorkoutById(req, res, next) {
+    try {
+      const { id } = req.params;
+      const userId = req.user.userId;
+
+      const workout = await prisma.workouts.findUnique({
+        where: {
+          id: parseInt(id),
+        },
+        include: {
+          lifts: true,
+          workoutDays: {
+            include: {
+              day: true,
+            },
+          },
+        },
+      });
+
+      if (!workout) {
+        return res.status(404).json({ error: "Workout not found" });
+      }
+
+      if (workout.user_id !== null && workout.user_id !== userId) {
+        return res
+          .status(403)
+          .json({ error: "Unauthorized access to this workout" });
+      }
+
+      return res.json(workout);
+    } catch (error) {
+      console.error("Failed to get workout:", error);
+      next(error);
+    }
+  },
+
   async completeWorkout(req, res, next) {
     try {
       const workoutId = parseInt(req.params.id);

@@ -1,5 +1,5 @@
-import Modal from "../common/Modal";
-import WorkoutEditor from "./WorkoutEditor";
+import Modal from "../../common/Modal";
+import WorkoutEditor from "../editor/WorkoutEditor";
 
 const WorkoutEditorModal = ({
   editingDay,

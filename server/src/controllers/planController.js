@@ -445,7 +445,27 @@ const planController = {
               },
             });
           }
+          // Find the "first" workout after all inserts
+          const firstWorkout = await prismaTransaction.workouts.findFirst({
+            where: {
+              plan_id: planId,
+              user_id: req.user.userId,
+            },
+            orderBy: [
+              { week_number: "asc" },
+              { plan_day: "asc" },
+              { id: "asc" }, // fallback
+            ],
+          });
 
+          if (firstWorkout) {
+            await prismaTransaction.plans.update({
+              where: { id: planId },
+              data: {
+                current_workout_id: firstWorkout.id,
+              },
+            });
+          }
           // Return success
           return { id: planId };
         }

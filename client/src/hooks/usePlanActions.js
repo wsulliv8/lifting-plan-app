@@ -325,30 +325,44 @@ export const usePlanActions = ({
     });
 
     const weeks = chunk(dayMap, 7);
+
+    let current_workout_id = null;
+
+    const weeksData = weeks.map((weekDays, weekIndex) => ({
+      week_number: weekIndex + 1,
+      days: weekDays.map((dayWorkouts, dayIndex) => {
+        const sortedWorkouts = dayWorkouts.sort(
+          (a, b) => (a.order || 0) - (b.order || 0)
+        );
+
+        // Set the first workout ID if we haven't already
+        if (!current_workout_id && sortedWorkouts.length > 0) {
+          current_workout_id = sortedWorkouts[0].id;
+        }
+        return {
+          day_of_week: dayIndex,
+          workouts: sortedWorkouts.map((w) => ({
+            id: w.id,
+            name: w.name,
+            lifts: w.lifts.map((lift) => ({
+              id: lift.id,
+              name: lift.name,
+              sets: lift.sets,
+              reps: lift.reps,
+              weight: lift.weight,
+              base_lift_id: lift.base_lift_id,
+              progression_rule: lift.progressionRule,
+            })),
+          })),
+        };
+      }),
+    }));
     const rebuiltPlan = {
       ...plan,
-      weeks: weeks.map((weekDays, weekIndex) => ({
-        week_number: weekIndex + 1,
-        days: weekDays.map((dayWorkouts, dayIndex) => ({
-          day_of_week: dayIndex,
-          workouts: dayWorkouts
-            .sort((a, b) => (a.order || 0) - (b.order || 0))
-            .map((w) => ({
-              id: w.id,
-              name: w.name,
-              lifts: w.lifts.map((lift) => ({
-                id: lift.id,
-                name: lift.name,
-                sets: lift.sets,
-                reps: lift.reps,
-                weight: lift.weight,
-                base_lift_id: lift.base_lift_id,
-                progression_rule: lift.progressionRule,
-              })),
-            })),
-        })),
-      })),
+      weeks: weeksData,
+      current_workout_id, // 👈 add this to plan for later usage if desired
     };
+
     setPlan(rebuiltPlan);
     await savePlan(stripIds(rebuiltPlan));
   }, [plan, totalDays, workoutsRef, setPlan]);

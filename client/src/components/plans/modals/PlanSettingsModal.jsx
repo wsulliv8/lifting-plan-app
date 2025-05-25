@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import Modal from "../common/Modal";
+import Modal from "../../common/Modal";
 import PlanSettingsForm from "../forms/PlanSettingsForm";
 
 const PlanSettingsModal = ({ isOpen, onClose, plan, handleSubmit }) => {

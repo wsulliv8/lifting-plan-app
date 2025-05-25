@@ -4,7 +4,7 @@ import {
 } from "@dnd-kit/sortable";
 import { useDroppable } from "@dnd-kit/core";
 import { memo, useMemo } from "react";
-import Button from "../common/Button";
+import Button from "../../common/Button";
 import Workout from "./Workout";
 
 function shallowEqualWorkouts(arr1, arr2) {

@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useLoaderData } from "react-router-dom";
-import LiftCard from "../components/lifts/LiftCard";
-import LiftsData from "../components/lifts/LiftsData";
-import LiftSearch from "../components/lifts/LiftSearch";
+import LiftCard from "../../components/lifts/LiftCard";
+import LiftsData from "../../components/lifts/LiftsData";
+import LiftSearch from "../../components/lifts/LiftSearch";
 
 const Lifts = () => {
   const [selectedLift, setSelectedLift] = useState(null);

@@ -19,7 +19,6 @@ const PlanCard = ({ plan, planType, onDelete }) => {
   const progressPercentage = plan.totalWorkouts
     ? Math.round((plan.completedWorkouts / plan.totalWorkouts) * 100)
     : 0;
-
   return (
     <div className="card flex flex-col gap-2">
       {/* Top Section: Image (Left) + Details (Right) */}
@@ -65,7 +64,7 @@ const PlanCard = ({ plan, planType, onDelete }) => {
           </div>
           <Button
             variant="secondary"
-            onClick={() => navigate(`/plans/${plan.id}/workout/next`)}
+            onClick={() => navigate(`/workouts/${plan.current_workout_id}`)}
             className="text-sm w-10/12 m-auto  bg-green-500 hover:bg-green-600"
           >
             Start Workout

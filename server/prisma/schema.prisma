@@ -22,12 +22,14 @@ model Users {
 model Plans {
   id             Int        @id @default(autoincrement())
   user_id        Int?       // Nullable for generic plans
+  source_plan_id Int?
   name           String
   categories     String[]
   description    String?
   duration_weeks Int
   difficulty     String
   goal           String
+  current_workout_id Int?  
   created_at     DateTime   @default(now())
   user           Users?     @relation(fields: [user_id], references: [id], onDelete: SetNull)
   workouts       Workouts[] // Relation to Workouts (one-to-many)

@@ -7,15 +7,17 @@ import {
 import LoginForm from "./components/auth/LoginForm";
 import RegisterForm from "./components/auth/RegisterForm";
 import Welcome from "./pages/Welcome";
-import Plans from "./pages/Plans";
-import PlanEditor from "./components/plans/PlanEditor";
-import Workouts from "./pages/Workouts";
-import Lifts from "./pages/Lifts";
+import Plans from "./pages/plans/Plans";
+import PlanEditor from "./pages/plans/PlanEditor";
+import ActiveWorkout from "./pages/plans/ActiveWorkout";
+import Workouts from "./pages/workouts/Workouts";
+import Lifts from "./pages/lifts/Lifts";
 import Layout from "./components/common/Layout";
 import ErrorPage from "./components/common/ErrorPage";
 import { getPlans, getPlanById } from "./services/plans";
 import { getAllBaseLifts } from "./services/lifts";
 import { getUserLiftsData, getCurrentUser } from "./services/user";
+import { getWorkoutById } from "./services/workouts";
 
 const checkAuthLoader = async () => {
   const token = localStorage.getItem("token");
@@ -60,6 +62,23 @@ const editPlanLoader = async ({ params }) => {
   }
 };
 
+const activeWorkoutLoader = async ({ params }) => {
+  console.log("Loading workout", params.id);
+
+  try {
+    const workout = await getWorkoutById(params.id);
+    return workout;
+  } catch (err) {
+    if (err.response?.status === 401) {
+      localStorage.removeItem("token");
+      return redirect("/login");
+    }
+    throw new Response("Failed to load workout", {
+      status: err.response?.status || 500,
+    });
+  }
+};
+
 const liftsLoader = async () => {
   try {
     const lifts = await getAllBaseLifts();
@@ -97,6 +116,12 @@ const router = createBrowserRouter([
       {
         path: "workouts",
         element: <Workouts />,
+        errorElement: <ErrorPage />,
+      },
+      {
+        path: "workouts/:id",
+        element: <ActiveWorkout />,
+        loader: activeWorkoutLoader,
         errorElement: <ErrorPage />,
       },
       {

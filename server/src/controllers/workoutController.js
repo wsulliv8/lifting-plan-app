@@ -40,6 +40,7 @@ const workoutController = {
               day: true,
             },
           },
+          plan: true,
         },
       });
 

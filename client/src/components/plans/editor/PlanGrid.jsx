@@ -1,6 +1,12 @@
 import { DndContext, rectIntersection, DragOverlay } from "@dnd-kit/core";
 import { createPortal } from "react-dom";
-import { useRef, useEffect, useState, useMemo, useLayoutEffect } from "react";
+import React, {
+  useRef,
+  useEffect,
+  useState,
+  useMemo,
+  useLayoutEffect,
+} from "react";
 import {
   computeWeeks,
   computeGridStyle,
@@ -30,30 +36,73 @@ const PlanGrid = ({
   setTotalDays,
 }) => {
   const weeks = computeWeeks(totalDays);
-  //const gridStyle = computeGridStyle(weeks, collapsedWeeks, collapsedDays);
   const headerDays = generateHeaderDays(collapsedDays, toggleDayCollapse);
-  const [availableWidth, setAvailableWidth] = useState(window.innerWidth - 100); // 100 px for navbar
+  const [availableWidth, setAvailableWidth] = useState(window.innerWidth - 100);
   const [scrollContentWidth, setScrollContentWidth] = useState(0);
+  const [prevDay7Collapsed, setPrevDay7Collapsed] = useState(collapsedDays[6]);
 
   const mainScrollRef = useRef(null);
   const stickyScrollRef = useRef(null);
+  const dayHeaderRefs = useRef([]);
   const [showStickyScrollbar, setShowStickyScrollbar] = useState(false);
+
+  // Initialize refs for each day column
+  useEffect(() => {
+    dayHeaderRefs.current = Array(7)
+      .fill()
+      .map((_, i) => dayHeaderRefs.current[i] || React.createRef());
+  }, []);
 
   useLayoutEffect(() => {
     if (mainScrollRef.current) {
-      setScrollContentWidth(mainScrollRef.current.scrollWidth + 2); // small buffer
+      setScrollContentWidth(mainScrollRef.current.scrollWidth + 2);
     }
   }, [collapsedWeeks, collapsedDays, totalDays, availableWidth]);
 
   // Update available width on resize
   useEffect(() => {
     const handleResize = () => {
-      setAvailableWidth(window.innerWidth - 100); // Adjust for navbar
+      setAvailableWidth(window.innerWidth - 100);
     };
     window.addEventListener("resize", handleResize);
     handleResize();
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // Effect to track Day 7's collapsed state changes
+  useEffect(() => {
+    const wasCollapsed = prevDay7Collapsed;
+    const isCollapsedNow = collapsedDays[6];
+
+    // Update the previous state for next comparison
+    setPrevDay7Collapsed(isCollapsedNow);
+
+    // Only scroll if Day 7 was collapsed and is now uncollapsed
+    if (wasCollapsed && !isCollapsedNow && dayHeaderRefs.current[6]?.current) {
+      const headerElement = dayHeaderRefs.current[6].current;
+      const scrollContainer = mainScrollRef.current;
+
+      if (headerElement && scrollContainer) {
+        const containerRect = scrollContainer.getBoundingClientRect();
+        const containerWidth = containerRect.width;
+        const totalScroll = scrollContainer.scrollWidth;
+
+        let targetScroll = headerElement.offsetLeft;
+
+        targetScroll = Math.max(
+          0,
+          Math.min(targetScroll, totalScroll - containerWidth)
+        );
+
+        if (mainScrollRef.current) {
+          mainScrollRef.current.scrollLeft = targetScroll;
+        }
+        if (stickyScrollRef.current) {
+          stickyScrollRef.current.scrollLeft = targetScroll;
+        }
+      }
+    }
+  }, [collapsedDays, prevDay7Collapsed]);
 
   // Compute grid style with memoization
   const gridStyle = useMemo(
@@ -160,12 +209,16 @@ const PlanGrid = ({
         >
           <div className="grid gap-2" style={gridStyle}>
             <div></div>
-            {headerDays}
+            {headerDays.map((day, index) => (
+              <div key={index} ref={dayHeaderRefs.current[index]}>
+                {day}
+              </div>
+            ))}
             {renderedWeeks}
           </div>
         </div>
 
-        {/* Sticky horizontal scrollbar at bottom of screen - positioned to match grid width */}
+        {/* Sticky horizontal scrollbar at bottom of screen */}
         {showStickyScrollbar && (
           <div
             className="fixed bottom-0 z-50 backdrop-blur-sm bg-white/90 border-t border-gray-200/50 shadow-lg"

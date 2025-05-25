@@ -63,8 +63,6 @@ const editPlanLoader = async ({ params }) => {
 };
 
 const activeWorkoutLoader = async ({ params }) => {
-  console.log("Loading workout", params.id);
-
   try {
     const workout = await getWorkoutById(params.id);
     return workout;

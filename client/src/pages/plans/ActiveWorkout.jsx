@@ -54,6 +54,7 @@ const ActiveWorkout = () => {
       })),
     };
   });
+  console.log(workout);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [totalVolume, setTotalVolume] = useState(() =>
     calculateVolume(workout.lifts)
@@ -276,7 +277,13 @@ const SortableLift = ({ lift, exerciseIndex, updateField, updateNotes }) => {
         />
       </div>
 
-      <div className="grid grid-cols-[auto_auto_1fr_1fr_1fr] place-items-center gap-x-2 gap-y-5">
+      <div
+        className={`grid ${
+          lift.rpe.length > 0
+            ? "grid-cols-[auto_auto_1fr_1fr_1fr]"
+            : "grid-cols-[auto_auto_1fr_1fr]"
+        } place-items-center gap-x-2 gap-y-5`}
+      >
         <div className="contents text-center">
           <div className="flex items-center justify-center"></div>
           <div className="flex items-center justify-center text-sm font-medium">
@@ -288,9 +295,11 @@ const SortableLift = ({ lift, exerciseIndex, updateField, updateNotes }) => {
           <div className="flex items-center justify-center text-sm font-medium">
             Reps
           </div>
-          <div className="flex items-center justify-center text-sm font-medium">
-            RPE
-          </div>
+          {lift.rpe.length > 0 ? (
+            <div className="flex items-center justify-center text-sm font-medium">
+              RPE
+            </div>
+          ) : null}
         </div>
 
         {Array.from({ length: lift.sets }).map((_, setIndex) => (
@@ -371,41 +380,43 @@ const SortableLift = ({ lift, exerciseIndex, updateField, updateNotes }) => {
                   <div className="absolute right-0 w-24 h-[2px] bg-gradient-to-l from-white via-blue-200/50 to-blue-200"></div>
                 </div>
                 <span className="absolute bg-white px-1 text-xs text-blue-500">
-                  {lift.rest?.[setIndex] || "120"}s
+                  {lift.rest_time?.[setIndex] || "120"}s
                 </span>
               </div>
             </div>
 
-            <div className="flex flex-col items-center w-full">
-              <Input
-                type="text"
-                value={lift.rpe_achieved[setIndex] ?? ""}
-                placeholder={lift.rpe[setIndex] ?? ""}
-                onChange={(e) => {
-                  const value = e.target.value.trim();
-                  const numValue = value === "" ? null : parseInt(value);
-                  const validValue =
-                    numValue !== null
-                      ? Math.min(Math.max(numValue, 1), 10)
-                      : null;
-                  updateField(
-                    exerciseIndex,
-                    setIndex,
-                    "rpe_achieved",
-                    isNaN(validValue) ? null : validValue
-                  );
-                }}
-                disabled={lift.set_completed?.[setIndex]}
-                className={`text-center w-20 p-1 ${
-                  lift.set_completed?.[setIndex] ? "bg-gray-100" : ""
-                } ${getValueColor(
-                  lift.rpe_achieved[setIndex],
-                  lift.rpe[setIndex],
-                  true
-                )}`}
-                containerClass="mb-0"
-              />
-            </div>
+            {lift.rpe.length > 0 ? (
+              <div className="flex flex-col items-center w-full">
+                <Input
+                  type="text"
+                  value={lift.rpe_achieved[setIndex] ?? ""}
+                  placeholder={lift.rpe[setIndex] ?? ""}
+                  onChange={(e) => {
+                    const value = e.target.value.trim();
+                    const numValue = value === "" ? null : parseInt(value);
+                    const validValue =
+                      numValue !== null
+                        ? Math.min(Math.max(numValue, 1), 10)
+                        : null;
+                    updateField(
+                      exerciseIndex,
+                      setIndex,
+                      "rpe_achieved",
+                      isNaN(validValue) ? null : validValue
+                    );
+                  }}
+                  disabled={lift.set_completed?.[setIndex]}
+                  className={`text-center w-20 p-1 ${
+                    lift.set_completed?.[setIndex] ? "bg-gray-100" : ""
+                  } ${getValueColor(
+                    lift.rpe_achieved[setIndex],
+                    lift.rpe[setIndex],
+                    true
+                  )}`}
+                  containerClass="mb-0"
+                />
+              </div>
+            ) : null}
           </React.Fragment>
         ))}
       </div>

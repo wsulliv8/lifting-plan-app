@@ -43,7 +43,7 @@ const WorkoutEditor = ({
   const [editedWorkouts, setEditedWorkouts] = useState(
     initialWorkouts && initialWorkouts.length > 0
       ? initialWorkouts
-      : [{ id: `${Date.now()}`, dayId, name: "", lifts: [] }]
+      : [{ id: `temp_${Date.now()}`, dayId, name: "", lifts: [] }]
   );
   const [activeWorkoutIndex, setActiveWorkoutIndex] = useState(0);
   const [scrollTrigger, setScrollTrigger] = useState(null); // Track when to scroll
@@ -115,7 +115,7 @@ const WorkoutEditor = ({
       weight = Array(3).fill(userLift.max_weights[index]);
     }
     const newLift = {
-      id: `${Date.now()}`,
+      id: `temp_${Date.now()}`,
       name: baseLift.name,
       base_lift_id: baseLift.id,
       reps,
@@ -211,7 +211,6 @@ const WorkoutEditor = ({
     lift.rpe.push(prevSetRPE);
     lift.rest.push(prevSetRest);
     lift.sets++;
-
     setEditedWorkouts(updated);
   };
 
@@ -249,7 +248,7 @@ const WorkoutEditor = ({
   };
 
   const addWorkout = () => {
-    const newWorkout = { id: `${Date.now()}`, dayId, name: "", lifts: [] };
+    const newWorkout = { id: `temp_${Date.now()}`, dayId, name: "", lifts: [] };
     const updated = [...editedWorkouts, newWorkout];
     setEditedWorkouts(updated);
     setActiveWorkoutIndex(updated.length - 1);
@@ -257,9 +256,9 @@ const WorkoutEditor = ({
   };
 
   const addWorkoutCopy = (workout) => {
-    const newWorkoutId = `${Date.now()}`;
+    const newWorkoutId = `temp_${Date.now()}`;
     const newLifts = workout.lifts.map((lift, index) => ({
-      id: `${newWorkoutId}-lift-${index}-${Date.now()}`,
+      id: `temp_${newWorkoutId}_lift_${index}_${Date.now()}`,
       name: lift.name,
       base_lift_id: lift.base_lift_id,
       reps: [...lift.reps],
@@ -304,18 +303,6 @@ const WorkoutEditor = ({
   };
 
   const onSaveClick = () => {
-    console.log("Saving workouts with RPE and Rest:");
-    editedWorkouts.forEach((workout, i) => {
-      workout.lifts.forEach((lift, j) => {
-        console.log(`Workout ${i}, Lift ${j}:`, {
-          name: lift.name,
-          rpe: lift.rpe,
-          rest: lift.rest,
-          showRPE: lift.showRPE,
-          showRest: lift.showRest,
-        });
-      });
-    });
     onSave(editedWorkouts);
   };
 

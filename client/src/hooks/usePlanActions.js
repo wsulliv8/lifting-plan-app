@@ -365,14 +365,15 @@ export const usePlanActions = ({
         };
       }),
     }));
+
     const rebuiltPlan = {
       ...plan,
       weeks: weeksData,
       current_workout_id,
     };
-    console.log(rebuiltPlan);
+
     setPlan(rebuiltPlan);
-    await savePlan(stripIds(rebuiltPlan));
+    await savePlan(rebuiltPlan);
   }, [plan, totalDays, workoutsRef, setPlan]);
 
   const handleGroupConfirm = useCallback(() => {
@@ -405,7 +406,6 @@ export const usePlanActions = ({
 
   const saveEditedWorkouts = useCallback(
     (newWorkouts) => {
-      console.log("Saving edited workouts:", newWorkouts);
       setWorkouts((prevWorkouts) => {
         const updatedWorkouts = new Map(prevWorkouts);
         // Remove old workouts for this day
@@ -414,14 +414,19 @@ export const usePlanActions = ({
             updatedWorkouts.delete(workout.id);
           }
         });
-        // Add new workouts with preserved RPE and Rest arrays
+        // Add new workouts with preserved RPE and Rest arrays, and handle temp IDs
         newWorkouts.forEach((workout) => {
+          const workoutId = String(workout.id)?.startsWith("temp_")
+            ? undefined
+            : workout.id;
           const workoutWithPreservedData = {
             ...workout,
+            id: workoutId || `${Date.now()}_${Math.random()}`, // Generate new ID if temp
             dayId: editingDay.dayId,
             lifts:
               workout.lifts?.map((lift) => ({
                 ...lift,
+                id: String(lift.id)?.startsWith("temp_") ? undefined : lift.id,
                 rpe: lift.rpe || [],
                 rest: lift.rest || [],
                 // Keep showRPE true if we have RPE values
@@ -430,7 +435,10 @@ export const usePlanActions = ({
                 showRest: lift.showRest || (lift.rest && lift.rest.length > 0),
               })) || [],
           };
-          updatedWorkouts.set(workout.id, workoutWithPreservedData);
+          updatedWorkouts.set(
+            workoutWithPreservedData.id,
+            workoutWithPreservedData
+          );
         });
         return new Map(updatedWorkouts);
       });

@@ -309,24 +309,64 @@ const planController = {
 
                   // Process lifts
                   if (workout.lifts && workout.lifts.length > 0) {
-                    // Delete existing lifts for this workout
-                    await prismaTransaction.lifts.deleteMany({
-                      where: { workout_id: workoutRecord.id },
-                    });
+                    const processedLiftIds = [];
+                    for (
+                      let liftIndex = 0;
+                      liftIndex < workout.lifts.length;
+                      liftIndex++
+                    ) {
+                      const lift = workout.lifts[liftIndex];
+                      let liftRecord;
+                      if (lift.id) {
+                        console.log(lift.id);
+                        // Update existing lift
+                        liftRecord = await prismaTransaction.lifts.update({
+                          where: { id: parseInt(lift.id) },
+                          data: {
+                            workout: { connect: { id: workoutRecord.id } },
+                            name: lift.name,
+                            base_lift: { connect: { id: lift.base_lift_id } },
+                            sets: lift.sets,
+                            reps: lift.reps.map((rep) => String(rep)),
+                            weight: lift.weight,
+                            rpe: lift.rpe,
+                            rest_time: lift.rest.map((time) => parseInt(time)),
+                            progression_rule: lift.progression_rule,
+                          },
+                        });
+                      } else {
+                        // Create new lift
+                        liftRecord = await prismaTransaction.lifts.create({
+                          data: {
+                            workout: { connect: { id: workoutRecord.id } },
+                            name: lift.name,
+                            base_lift: { connect: { id: lift.base_lift_id } },
+                            sets: lift.sets,
+                            reps: lift.reps.map((rep) => String(rep)),
+                            weight: lift.weight,
+                            rpe: lift.rpe,
+                            rest_time: lift.rest.map((time) => parseInt(time)),
+                            progression_rule: lift.progression_rule,
+                          },
+                        });
+                      }
 
-                    // Create new lifts
-                    await prismaTransaction.lifts.createMany({
-                      data: workout.lifts.map((lift) => ({
+                      processedLiftIds.push(liftRecord.id);
+                    }
+
+                    // Delete lifts that are no longer in the request
+                    await prismaTransaction.lifts.deleteMany({
+                      where: {
                         workout_id: workoutRecord.id,
-                        name: lift.name,
-                        base_lift_id: lift.base_lift_id,
-                        sets: lift.sets,
-                        reps: lift.reps,
-                        weight: lift.weight,
-                        rpe: lift.rpe,
-                        rest_time: lift.rest.map((time) => parseInt(time)),
-                        progression_rule: lift.progression_rule,
-                      })),
+                        id: { notIn: processedLiftIds },
+                      },
+                    });
+                  } else {
+                    // If no lifts provided, delete all lifts for this workout
+                    await prismaTransaction.lifts.deleteMany({
+                      where: {
+                        workout_id: workoutRecord.id,
+                      },
                     });
                   }
                 }

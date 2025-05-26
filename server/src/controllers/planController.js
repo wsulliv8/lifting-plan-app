@@ -194,7 +194,7 @@ const planController = {
             let weekRecord;
             if (week.id) {
               weekRecord = await prismaTransaction.week.update({
-                where: { id: weekId },
+                where: { id: week.id },
                 data: { week_number: weekNumber },
               });
             } else {
@@ -221,7 +221,7 @@ const planController = {
               let dayRecord;
               if (day.id) {
                 dayRecord = await prismaTransaction.day.update({
-                  where: { id: dayId },
+                  where: { id: day.id },
                   data: { day_of_week: dayOfWeek },
                 });
               } else {
@@ -229,7 +229,7 @@ const planController = {
                   data: {
                     day_of_week: dayOfWeek,
                     week: {
-                      connect: { id: weekRecord.id }, // Use connect to establish the relationship
+                      connect: { id: weekRecord.id },
                     },
                   },
                 });
@@ -243,14 +243,30 @@ const planController = {
                 // Keep track of processed workout IDs to delete removed ones later
                 const processedWorkoutDayIds = [];
 
+                // First get all existing workout days for this day
+                const existingWorkoutDays =
+                  await prismaTransaction.workoutDay.findMany({
+                    where: { day_id: dayRecord.id },
+                    include: {
+                      workout: {
+                        include: { lifts: true },
+                      },
+                    },
+                    orderBy: { order: "asc" },
+                  });
+
                 for (let index = 0; index < day.workouts.length; index++) {
                   const workout = day.workouts[index];
-
-                  // Create or update workout
                   let workoutRecord;
-                  if (workout.id) {
+                  let workoutDayRecord;
+
+                  // Try to find an existing workout day at this position
+                  const existingWorkoutDay = existingWorkoutDays[index];
+
+                  if (existingWorkoutDay) {
+                    // Update existing workout
                     workoutRecord = await prismaTransaction.workouts.update({
-                      where: { id: workout.id },
+                      where: { id: existingWorkoutDay.workout.id },
                       data: {
                         name: workout.name || `Workout ${index + 1}`,
                         week_number: weekNumber,
@@ -258,7 +274,15 @@ const planController = {
                         plan_day: dayOfWeek,
                       },
                     });
+
+                    // Update the workout day order if needed
+                    workoutDayRecord =
+                      await prismaTransaction.workoutDay.update({
+                        where: { id: existingWorkoutDay.id },
+                        data: { order: index },
+                      });
                   } else {
+                    // Create new workout
                     workoutRecord = await prismaTransaction.workouts.create({
                       data: {
                         name: workout.name || `Workout ${index + 1}`,
@@ -269,21 +293,8 @@ const planController = {
                         plan_day: dayOfWeek,
                       },
                     });
-                  }
 
-                  // Create or update workout day connection
-                  let workoutDayRecord;
-                  if (workout.workoutDayId) {
-                    const workoutDayId = parseInt(workout.workoutDayId);
-                    workoutDayRecord =
-                      await prismaTransaction.workoutDay.update({
-                        where: { id: workoutDayId },
-                        data: {
-                          order: index,
-                          workout_id: workoutRecord.id,
-                        },
-                      });
-                  } else {
+                    // Create new workout day
                     workoutDayRecord =
                       await prismaTransaction.workoutDay.create({
                         data: {
@@ -295,66 +306,27 @@ const planController = {
                   }
 
                   processedWorkoutDayIds.push(workoutDayRecord.id);
-                  // 5. Process lifts if they exist in the request
+
+                  // Process lifts
                   if (workout.lifts && workout.lifts.length > 0) {
-                    const processedLiftIds = [];
-                    for (
-                      let liftIndex = 0;
-                      liftIndex < workout.lifts.length;
-                      liftIndex++
-                    ) {
-                      const lift = workout.lifts[liftIndex];
-
-                      let liftRecord;
-                      if (lift.id) {
-                        liftRecord = await prismaTransaction.lifts.update({
-                          where: { id: lift.id },
-                          data: {
-                            workout: { connect: { id: workoutRecord.id } },
-                            name: lift.name,
-                            base_lift: {
-                              connect: { id: lift.base_lift_id },
-                            },
-                            sets: lift.sets,
-                            reps: lift.reps,
-                            weight: lift.weight,
-                            rpe: lift.rpe,
-                            progression_rule: lift.progression_rule,
-                          },
-                        });
-                      } else {
-                        liftRecord = await prismaTransaction.lifts.create({
-                          data: {
-                            workout: { connect: { id: workoutRecord.id } },
-                            name: lift.name,
-                            base_lift: {
-                              connect: { id: lift.base_lift_id },
-                            },
-                            sets: lift.sets,
-                            reps: lift.reps,
-                            weight: lift.weight,
-                            rpe: lift.rpe,
-                            progression_rule: lift.progression_rule,
-                          },
-                        });
-                      }
-
-                      processedLiftIds.push(liftRecord.id);
-                    }
-
-                    // Delete lifts that are no longer in the request
+                    // Delete existing lifts for this workout
                     await prismaTransaction.lifts.deleteMany({
-                      where: {
-                        workout_id: workoutRecord.id,
-                        id: { notIn: processedLiftIds },
-                      },
+                      where: { workout_id: workoutRecord.id },
                     });
-                  } else {
-                    // If no lifts provided, delete all lifts for this workout
-                    await prismaTransaction.lifts.deleteMany({
-                      where: {
+
+                    // Create new lifts
+                    await prismaTransaction.lifts.createMany({
+                      data: workout.lifts.map((lift) => ({
                         workout_id: workoutRecord.id,
-                      },
+                        name: lift.name,
+                        base_lift_id: lift.base_lift_id,
+                        sets: lift.sets,
+                        reps: lift.reps,
+                        weight: lift.weight,
+                        rpe: lift.rpe,
+                        rest_time: lift.rest.map((time) => parseInt(time)),
+                        progression_rule: lift.progression_rule,
+                      })),
                     });
                   }
                 }

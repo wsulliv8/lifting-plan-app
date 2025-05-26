@@ -45,7 +45,7 @@ export const computeGridStyle = (
 
   // If natural width fits within available width, use 1fr to expand
   const useFractional = naturalWidth < availableWidth;
-  const dayColumnStyle = collapsedDays.map((collapsed, i) =>
+  const dayColumnStyle = collapsedDays.map((collapsed) =>
     collapsed
       ? "2rem"
       : useFractional

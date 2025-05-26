@@ -26,7 +26,6 @@ const getPlanById = async (planId) => {
     });
 
     const data = response.data;
-
     return {
       id: data.id,
       name: data.name,
@@ -36,8 +35,10 @@ const getPlanById = async (planId) => {
       description: data.description,
       dayGroups: data.dayGroups,
       weeks: data.weeks.map((week) => ({
+        id: week.id,
         week_number: week.week_number,
         days: week.days.map((day) => ({
+          id: day.id,
           day_of_week: day.day_of_week,
           workouts: day.workoutDays
             .sort((a, b) => (a.order || 0) - (b.order || 0))
@@ -49,6 +50,8 @@ const getPlanById = async (planId) => {
                 name: lift.name,
                 sets: lift.sets,
                 reps: lift.reps,
+                rpe: lift.rpe,
+                rest: lift.rest_time,
                 weight: lift.weight,
                 base_lift_id: lift.base_lift_id,
                 progressionRule: lift.progression_rule,

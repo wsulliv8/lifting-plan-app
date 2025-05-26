@@ -58,6 +58,34 @@ const getWorkoutById = async (id) => {
   }
 };
 
-const updateWorkout = async (id) => {};
+const updateWorkout = async (planId, planDay, lifts, completed = true) => {
+  try {
+    const response = await api.post(`/workouts/${planId}/complete`, {
+      lifts: lifts.map((lift) => ({
+        id: lift.id,
+        base_lift_id: lift.base_lift_id,
+        name: lift.name,
+        sets: lift.sets,
+        reps: lift.reps,
+        reps_achieved: lift.reps_achieved,
+        weight: lift.weight,
+        weight_achieved: lift.weight_achieved,
+        rpe: lift.rpe || [],
+        rpe_achieved: lift.rpe_achieved,
+        rest_time: lift.rest || [],
+        volume: lift.volume,
+        completed: lift.completed,
+        notes: lift.notes,
+        progression_rule: lift.progressionRule,
+      })),
+      plan_day: planDay,
+      completed,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Failed to update workout:", error);
+    throw error;
+  }
+};
 
 export { getWorkoutById, updateWorkout };

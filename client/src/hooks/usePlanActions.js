@@ -330,6 +330,7 @@ export const usePlanActions = ({
 
     const weeksData = weeks.map((weekDays, weekIndex) => ({
       week_number: weekIndex + 1,
+      id: plan.weeks[weekIndex]?.id,
       days: weekDays.map((dayWorkouts, dayIndex) => {
         const sortedWorkouts = dayWorkouts.sort(
           (a, b) => (a.order || 0) - (b.order || 0)
@@ -339,7 +340,12 @@ export const usePlanActions = ({
         if (!current_workout_id && sortedWorkouts.length > 0) {
           current_workout_id = sortedWorkouts[0].id;
         }
+
+        // Get the existing day ID from the plan if it exists
+        const existingDay = plan.weeks[weekIndex]?.days[dayIndex];
+
         return {
+          id: existingDay?.id,
           day_of_week: dayIndex,
           workouts: sortedWorkouts.map((w) => ({
             id: w.id,
@@ -350,6 +356,8 @@ export const usePlanActions = ({
               sets: lift.sets,
               reps: lift.reps,
               weight: lift.weight,
+              rpe: lift.rpe,
+              rest: lift.rest,
               base_lift_id: lift.base_lift_id,
               progression_rule: lift.progressionRule,
             })),
@@ -360,9 +368,9 @@ export const usePlanActions = ({
     const rebuiltPlan = {
       ...plan,
       weeks: weeksData,
-      current_workout_id, // 👈 add this to plan for later usage if desired
+      current_workout_id,
     };
-
+    console.log(rebuiltPlan);
     setPlan(rebuiltPlan);
     await savePlan(stripIds(rebuiltPlan));
   }, [plan, totalDays, workoutsRef, setPlan]);
@@ -397,15 +405,32 @@ export const usePlanActions = ({
 
   const saveEditedWorkouts = useCallback(
     (newWorkouts) => {
+      console.log("Saving edited workouts:", newWorkouts);
       setWorkouts((prevWorkouts) => {
         const updatedWorkouts = new Map(prevWorkouts);
+        // Remove old workouts for this day
         prevWorkouts.forEach((workout) => {
           if (workout.dayId === editingDay.dayId) {
             updatedWorkouts.delete(workout.id);
           }
         });
+        // Add new workouts with preserved RPE and Rest arrays
         newWorkouts.forEach((workout) => {
-          updatedWorkouts.set(workout.id, workout);
+          const workoutWithPreservedData = {
+            ...workout,
+            dayId: editingDay.dayId,
+            lifts:
+              workout.lifts?.map((lift) => ({
+                ...lift,
+                rpe: lift.rpe || [],
+                rest: lift.rest || [],
+                // Keep showRPE true if we have RPE values
+                showRPE: lift.showRPE || (lift.rpe && lift.rpe.length > 0),
+                // Keep showRest true if we have Rest values
+                showRest: lift.showRest || (lift.rest && lift.rest.length > 0),
+              })) || [],
+          };
+          updatedWorkouts.set(workout.id, workoutWithPreservedData);
         });
         return new Map(updatedWorkouts);
       });
@@ -446,11 +471,26 @@ export const usePlanActions = ({
 
   const handleEditWorkout = useCallback(
     (dayId) => {
+      const dayWorkouts = Array.from(workoutsRef.current.values())
+        .filter((workout) => workout.dayId === dayId)
+        .map((workout) => ({
+          ...workout,
+          lifts:
+            workout.lifts?.map((lift) => ({
+              ...lift,
+              rpe: lift.rpe || [],
+              rest: lift.rest || [],
+              // Set showRPE to true if either it was previously true or if there are RPE values
+              showRPE: lift.showRPE || (lift.rpe && lift.rpe.length > 0),
+              // Set showRest to true if either it was previously true or if there are Rest values
+              showRest: lift.showRest || (lift.rest && lift.rest.length > 0),
+            })) || [],
+        }));
+
+      console.log("Setting editingDay with workouts:", dayWorkouts);
       setEditingDay({
         dayId,
-        workouts: Array.from(workoutsRef.current.values()).filter(
-          (workout) => workout.dayId === dayId
-        ),
+        workouts: dayWorkouts,
       });
     },
     [workoutsRef, setEditingDay]

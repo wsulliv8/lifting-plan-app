@@ -1,5 +1,12 @@
 import React from "react";
-import { useState, useMemo, useRef, useLayoutEffect } from "react";
+import {
+  useState,
+  useMemo,
+  useRef,
+  useLayoutEffect,
+  useEffect,
+  useCallback,
+} from "react";
 import { DndContext, closestCenter } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -48,6 +55,10 @@ const WorkoutEditor = ({
     [userLiftsData]
   );
 
+  const updateEditedWorkouts = useCallback((updater) => {
+    setEditedWorkouts(updater);
+  }, []);
+
   // Scroll to the active workout's bottom after adding a lift
   useLayoutEffect(() => {
     if (
@@ -86,9 +97,11 @@ const WorkoutEditor = ({
       baseLift.lift_type === "Main" ? "primary" : "supplementary",
       experience
     );
-    console.log(progressionRule);
     let reps = [8, 8, 8];
     let weight = [0, 0, 0];
+    let rpe = ["8", "8", "8"];
+    let rest = ["120", "120", "120"];
+
     if (userLift) {
       const index =
         userLift.rep_ranges.indexOf(8) !== -1
@@ -109,29 +122,41 @@ const WorkoutEditor = ({
       weight,
       sets: 3,
       progressionRule,
+      rpe,
+      rest,
+      showRPE: baseLift.lift_type === "Main",
+      showRest: true,
     };
     updated[activeWorkoutIndex].lifts.push(newLift);
     setEditedWorkouts(updated);
-    setScrollTrigger(activeWorkoutIndex); // Trigger scroll to active workout
+    setScrollTrigger(activeWorkoutIndex);
   };
 
   const updateSet = (workoutIndex, liftIndex, setIndex, field, value) => {
     const updated = [...editedWorkouts];
     const lift = updated[workoutIndex].lifts[liftIndex];
-    const parsedValue = parseInt(value) || 0;
+
+    // Initialize arrays if they don't exist
+    if (field === "rpe" && !lift.rpe) {
+      lift.rpe = Array(lift.sets).fill("8");
+    }
+    if (field === "rest" && !lift.rest) {
+      lift.rest = Array(lift.sets).fill("120");
+    }
+
     const oldValue = lift[field][setIndex];
 
     if (field === "reps") {
       const baseLiftId = lift.base_lift_id;
       const userLift = userLiftsMap.get(baseLiftId);
-      lift.reps[setIndex] = parsedValue;
+      lift.reps[setIndex] = parseInt(value) || 0;
 
       let closestIndex = -1;
       let smallestDiff = Infinity;
 
       if (userLift && value) {
         userLift.rep_ranges.forEach((rep, idx) => {
-          const diff = Math.abs(rep - parsedValue);
+          const diff = Math.abs(rep - value);
           if (diff < smallestDiff) {
             smallestDiff = diff;
             closestIndex = idx;
@@ -140,40 +165,52 @@ const WorkoutEditor = ({
 
         lift.weight[setIndex] =
           smallestDiff <= 1 ? userLift.max_weights[closestIndex] : 0;
-      }
 
-      // Cascade to following sets that matched the old value
-      for (let i = setIndex + 1; i < lift.reps.length; i++) {
-        if (lift.reps[i] === oldValue) {
-          lift.reps[i] = parsedValue;
-          if (userLift && closestIndex !== -1) {
-            lift.weight[i] =
-              smallestDiff <= 1 ? userLift.max_weights[closestIndex] : 0;
+        // Cascade weight changes
+        for (let i = setIndex + 1; i < lift.weight.length; i++) {
+          if (lift.reps[i] === oldValue) {
+            lift.reps[i] = parseInt(value) || 0;
+            if (closestIndex !== -1) {
+              lift.weight[i] =
+                smallestDiff <= 1 ? userLift.max_weights[closestIndex] : 0;
+            }
           }
         }
       }
     } else {
-      lift[field][setIndex] = parsedValue;
+      lift[field][setIndex] = value;
 
+      // Cascade changes for RPE and Rest
       for (let i = setIndex + 1; i < lift[field].length; i++) {
-        if (lift[field][i] === oldValue) {
-          lift[field][i] = parsedValue;
+        if (String(lift[field][i]) === String(oldValue)) {
+          lift[field][i] = value;
         }
       }
     }
 
+    console.log(`Updated ${field} for lift ${liftIndex}:`, lift[field]);
     setEditedWorkouts(updated);
   };
 
   const addSet = (workoutIndex, liftIndex) => {
     const updated = [...editedWorkouts];
+    const lift = updated[workoutIndex].lifts[liftIndex];
 
-    const prevSetReps = updated[workoutIndex].lifts[liftIndex].reps.at(-1);
-    const prevSetWeight = updated[workoutIndex].lifts[liftIndex].weight.at(-1);
+    const prevSetReps = lift.reps.at(-1);
+    const prevSetWeight = lift.weight.at(-1);
+    const prevSetRPE = lift.rpe?.at(-1) || "8";
+    const prevSetRest = lift.rest?.at(-1) || "120";
 
-    updated[workoutIndex].lifts[liftIndex].reps.push(prevSetReps);
-    updated[workoutIndex].lifts[liftIndex].weight.push(prevSetWeight);
-    updated[workoutIndex].lifts[liftIndex].sets++;
+    lift.reps.push(prevSetReps);
+    lift.weight.push(prevSetWeight);
+
+    // Initialize or extend RPE and Rest arrays
+    if (!lift.rpe) lift.rpe = Array(lift.sets).fill("8");
+    if (!lift.rest) lift.rest = Array(lift.sets).fill("120");
+
+    lift.rpe.push(prevSetRPE);
+    lift.rest.push(prevSetRest);
+    lift.sets++;
 
     setEditedWorkouts(updated);
   };
@@ -184,8 +221,10 @@ const WorkoutEditor = ({
       ...updated[workoutIndex].lifts[liftIndex],
       reps: updated[workoutIndex].lifts[liftIndex].reps.slice(0, -1),
       weight: updated[workoutIndex].lifts[liftIndex].weight.slice(0, -1),
+      rpe: updated[workoutIndex].lifts[liftIndex].rpe?.slice(0, -1) || [],
+      rest: updated[workoutIndex].lifts[liftIndex].rest?.slice(0, -1) || [],
+      sets: updated[workoutIndex].lifts[liftIndex].sets - 1,
     };
-    updated[workoutIndex].lifts[liftIndex].sets--;
 
     setEditedWorkouts(updated);
   };
@@ -222,9 +261,15 @@ const WorkoutEditor = ({
     const newLifts = workout.lifts.map((lift, index) => ({
       id: `${newWorkoutId}-lift-${index}-${Date.now()}`,
       name: lift.name,
-      base_lift_id: lift.base_lift_id, // retain link to base lift
+      base_lift_id: lift.base_lift_id,
       reps: [...lift.reps],
       weight: [...lift.weight],
+      sets: lift.sets,
+      progressionRule: lift.progressionRule,
+      rpe: lift.rpe ? [...lift.rpe] : [],
+      rest: lift.rest ? [...lift.rest] : [],
+      showRPE: lift.showRPE ?? false,
+      showRest: lift.showRest ?? false,
     }));
 
     const newWorkout = {
@@ -256,6 +301,22 @@ const WorkoutEditor = ({
     const updated = [...editedWorkouts];
     updated[sourceWorkoutIndex].lifts = newLifts;
     setEditedWorkouts(updated);
+  };
+
+  const onSaveClick = () => {
+    console.log("Saving workouts with RPE and Rest:");
+    editedWorkouts.forEach((workout, i) => {
+      workout.lifts.forEach((lift, j) => {
+        console.log(`Workout ${i}, Lift ${j}:`, {
+          name: lift.name,
+          rpe: lift.rpe,
+          rest: lift.rest,
+          showRPE: lift.showRPE,
+          showRest: lift.showRest,
+        });
+      });
+    });
+    onSave(editedWorkouts);
   };
 
   return (
@@ -305,6 +366,7 @@ const WorkoutEditor = ({
                         addSet={addSet}
                         removeSet={removeSet}
                         removeLift={removeLift}
+                        setEditedWorkouts={updateEditedWorkouts}
                       />
                     ))
                   ) : (
@@ -344,7 +406,7 @@ const WorkoutEditor = ({
         />
       </div>
       <button
-        onClick={() => onSave(editedWorkouts)}
+        onClick={onSaveClick}
         className="absolute top-9 right-[10%] px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
       >
         Save
@@ -361,6 +423,7 @@ const SortableLift = ({
   addSet,
   removeSet,
   removeLift,
+  setEditedWorkouts,
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id: lift.id });
@@ -369,72 +432,206 @@ const SortableLift = ({
     transition,
   };
 
+  const [showRPE, setShowRPE] = useState(lift.showRPE ?? false);
+  const [showRest, setShowRest] = useState(lift.showRest ?? false);
+
+  // Update lift's showRPE and showRest when they change
+  useEffect(() => {
+    setEditedWorkouts((prevWorkouts) => {
+      const updated = [...prevWorkouts];
+      const lift = updated[workoutIndex].lifts[liftIndex];
+
+      // Initialize arrays if they don't exist or if showing for the first time
+      if (showRPE && (!lift.rpe || lift.rpe.length === 0)) {
+        lift.rpe = Array(lift.sets).fill("8");
+      }
+      if (showRest && (!lift.rest || lift.rest.length === 0)) {
+        lift.rest = Array(lift.sets).fill("120");
+      }
+
+      // Update visibility flags
+      lift.showRPE = showRPE;
+      lift.showRest = showRest;
+
+      // If hiding, keep the arrays but empty them
+      if (!showRPE) {
+        lift.rpe = [];
+      }
+      if (!showRest) {
+        lift.rest = [];
+      }
+
+      return updated;
+    });
+  }, [liftIndex, workoutIndex, showRPE, showRest, setEditedWorkouts]);
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center  p-2 bg-white rounded-lg space-y-2 relative"
+      className="flex items-center p-2 bg-white rounded-lg space-y-2 relative"
     >
       <TrashIcon
         onClick={() => removeLift(workoutIndex, liftIndex)}
-        className="w-4 h-4 absolute top-1 right-1  text-red-400 hover:text-red-600 cursor-pointer "
+        className="w-4 h-4 absolute top-1 right-1 text-red-400 hover:text-red-600 cursor-pointer"
       />
-      <div
-        className="flex-shrink-0 pt-2 cursor-grab"
+
+      <h2
+        className="w-1/5 p-2 rounded cursor-grab font-semibold text-center capitalize"
         {...attributes}
         {...listeners}
       >
-        <Bars4Icon className="h-5 w-5 text-gray-500" />
-      </div>
-      <h2 className="w-5/12 p-2  rounded">{lift.name} </h2>
-      <div className="grid grid-cols-[1fr_1fr_1fr] grid-rows-[16px_1fr_1fr] gap-y-1 w-full place-items-center">
-        <h3>Sets</h3>
-        <h3>Reps</h3>
-        <h3>Weight</h3>
-        {lift.reps.map((repsValue, setIndex) => (
-          <React.Fragment key={`${lift.id}-set-${setIndex}`}>
-            <span className="h-8 w-8 flex items-center justify-center input-field">
-              {setIndex + 1}
-            </span>
-            <input
-              value={repsValue === 0 ? "" : repsValue}
-              onChange={(e) =>
-                updateSet(
-                  workoutIndex,
-                  liftIndex,
-                  setIndex,
-                  "reps",
-                  parseInt(e.target.value) || 0
-                )
-              }
-              className="h-8 w-1/2 text-center input-field"
+        {lift.name
+          .split(" ")
+          .map(
+            (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+          )
+          .join(" ")}
+      </h2>
+      <div className="flex justify-center flex-1 w-4/5">
+        <div
+          className={`grid flex-0 ${
+            showRPE && showRest
+              ? "grid-cols-[40px_minmax(60px,_120px)_minmax(60px,_120px)_minmax(60px,_120px)_minmax(60px,_120px)]"
+              : showRPE || showRest
+              ? "grid-cols-[40px_minmax(70px,_120px)_minmax(70px,_120px)_minmax(70px,_120px)]"
+              : "grid-cols-[40px_minmax(80px,_120px)_minmax(80px,_120px)]"
+          } grid-rows-[auto_1fr] auto-rows-auto gap-y-2 gap-x-2 sm:gap-x-1 md:gap-x-3 lg:gap-x-8 xl:gap-x-10 place-items-center`}
+        >
+          <h3 className="text-sm font-medium">Sets</h3>
+          <h3 className="text-sm font-medium">Reps</h3>
+          <h3 className="text-sm font-medium">Weight</h3>
+          {showRPE && <h3 className="text-sm font-medium">RPE</h3>}
+          {showRest && <h3 className="text-sm font-medium">Rest</h3>}
+
+          {lift.reps.map((repsValue, setIndex) => (
+            <React.Fragment key={`${lift.id}-set-${setIndex}`}>
+              <span className="h-8 w-8 flex items-center justify-center">
+                {setIndex + 1}
+              </span>
+              <input
+                value={repsValue === 0 ? "" : repsValue}
+                onChange={(e) =>
+                  updateSet(
+                    workoutIndex,
+                    liftIndex,
+                    setIndex,
+                    "reps",
+                    parseInt(e.target.value) || 0
+                  )
+                }
+                className="h-8 w-full text-center input-field"
+              />
+              <input
+                value={lift.weight[setIndex] === 0 ? "" : lift.weight[setIndex]}
+                onChange={(e) =>
+                  updateSet(
+                    workoutIndex,
+                    liftIndex,
+                    setIndex,
+                    "weight",
+                    parseInt(e.target.value) || 0
+                  )
+                }
+                className="h-8 w-full text-center input-field"
+              />
+              {showRPE && (
+                <select
+                  value={lift.rpe?.[setIndex] || "8"}
+                  onChange={(e) =>
+                    updateSet(
+                      workoutIndex,
+                      liftIndex,
+                      setIndex,
+                      "rpe",
+                      e.target.value === "" ? "" : parseInt(e.target.value)
+                    )
+                  }
+                  className="h-8 w-full p-1 text-center input-field"
+                >
+                  <option value="">-</option>
+                  {[...Array(10)].map((_, i) => (
+                    <option key={i + 1} value={i + 1}>
+                      {i + 1}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {showRest && (
+                <select
+                  value={lift.rest?.[setIndex] || "120"}
+                  onChange={(e) =>
+                    updateSet(
+                      workoutIndex,
+                      liftIndex,
+                      setIndex,
+                      "rest",
+                      e.target.value
+                    )
+                  }
+                  className="h-8 w-full p-1 text-center text-sm input-field"
+                >
+                  <option value="60">60s</option>
+                  <option value="90">90s</option>
+                  <option value="120" defaultValue>
+                    120s
+                  </option>
+                  <option value="180">180s</option>
+                  <option value="240">240s</option>
+                </select>
+              )}
+            </React.Fragment>
+          ))}
+          <div className="flex items-center gap-1 col-span-full">
+            <MinusCircleIcon
+              onClick={() => removeSet(workoutIndex, liftIndex)}
+              className="w-6 h-6 text-red-400 hover:text-red-600 cursor-pointer"
             />
-            <input
-              value={lift.weight[setIndex] === 0 ? "" : lift.weight[setIndex]}
-              onChange={(e) =>
-                updateSet(
-                  workoutIndex,
-                  liftIndex,
-                  setIndex,
-                  "weight",
-                  parseInt(e.target.value) || 0
-                )
-              }
-              className="h-8 w-1/2 text-center input-field"
+            <p className="text-xs">Sets</p>
+            <PlusCircleIcon
+              onClick={() => addSet(workoutIndex, liftIndex)}
+              className="w-6 h-6 text-green-400 hover:text-green-600 cursor-pointer"
             />
-          </React.Fragment>
-        ))}
-        <div className="flex items-center gap-1 col-span-full">
-          <MinusCircleIcon
-            onClick={() => removeSet(workoutIndex, liftIndex)}
-            className="w-6 h-6 text-red-400 hover:text-red-600 cursor-pointer"
-          />
-          <p className="text-xs">Sets</p>
-          <PlusCircleIcon
-            onClick={() => addSet(workoutIndex, liftIndex)}
-            className="w-6 h-6 text-green-400 hover:text-green-600 cursor-pointer"
-          />
+          </div>
         </div>
+
+        {/* Vertical Controls */}
+        {lift.sets > 0 && (
+          <div className="flex gap-2 ml-2 items-center">
+            <div className="flex flex-col items-center gap-1 group">
+              <span className="writing-vertical-rl rotate-180 text-xs cursor-default text-gray-600 group-hover:text-gray-800">
+                Add RPE
+              </span>
+              {!showRPE ? (
+                <PlusCircleIcon
+                  className={`w-5 h-5 cursor-pointer text-blue-400 hover:text-blue-600`}
+                  onClick={() => setShowRPE(!showRPE)}
+                />
+              ) : (
+                <MinusCircleIcon
+                  className="w-5 h-5 text-orange-400 hover:text-orange-500 cursor-pointer"
+                  onClick={() => setShowRPE(false)}
+                />
+              )}
+            </div>
+            <div className="flex flex-col items-center gap-1 group">
+              <span className="writing-vertical-rl rotate-180 text-xs cursor-default text-gray-600 group-hover:text-gray-800">
+                Add Rest
+              </span>
+              {!showRest ? (
+                <PlusCircleIcon
+                  className={`w-5 h-5 cursor-pointer text-blue-400 hover:text-blue-600`}
+                  onClick={() => setShowRest(!showRest)}
+                />
+              ) : (
+                <MinusCircleIcon
+                  className="w-5 h-5 text-orange-400 hover:text-orange-500 cursor-pointer"
+                  onClick={() => setShowRest(false)}
+                />
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -241,7 +241,7 @@ const PlanGrid = ({
         )}
       </div>
 
-      <div className="mt-4 flex justify-center">
+      <div className="mt-4 flex justify-center pb-6">
         <PlusCircleIcon
           className="h-8 w-8 text-green-500 hover:text-green-600 cursor-pointer"
           onClick={() => setTotalDays((prev) => prev + 7)}

@@ -58,39 +58,41 @@ const progressionAlgorithm = {
   },
 
   adjustFutureWeights(lift) {
-    if (!lift.progressionRule || !lift.actualPerformance) {
+    if (!lift.progression_rule || !lift.weight_achieved) {
       return 0; // No adjustment if missing data
     }
 
-    const { progressionIncrement, regressionOnFailure } = lift.progressionRule;
-    const { weight, reps, rpe } = lift;
-    const { actualWeight, actualReps, actualRPE } = lift.actualPerformance;
+    const { progressionIncrement, regressionOnFailure } = lift.progression_rule;
 
     // Count sets where performance exceeded expectations
     let exceededWeightOrRepsCount = 0;
     let lowRPECount = 0;
     let failedSetsCount = 0;
 
-    weight.forEach((targetWeight, index) => {
-      const setWeight = actualWeight[index];
-      const setReps = actualReps[index];
-      const setRPE = actualRPE[index];
+    lift.weight.forEach((targetWeight, index) => {
+      const achievedWeight = parseFloat(lift.weight_achieved[index]);
+      const targetReps = parseInt(lift.reps[index].split("-")[0]); // Use lower bound of rep range
+      const achievedReps = parseInt(lift.reps_achieved[index]);
+      const targetRPE = lift.rpe ? parseInt(lift.rpe[index]) : null;
+      const achievedRPE = lift.rpe_achieved
+        ? parseInt(lift.rpe_achieved[index])
+        : null;
 
       // Check for exceeded performance
-      if (setWeight > targetWeight || setReps > reps[index]) {
+      if (achievedWeight > targetWeight || achievedReps > targetReps) {
         exceededWeightOrRepsCount++;
       }
 
       // Check for significantly lower RPE (2 or more points under target)
-      if (setRPE <= rpe[index] - 2) {
+      if (targetRPE && achievedRPE && achievedRPE <= targetRPE - 2) {
         lowRPECount++;
       }
 
       // Check for failed sets
       if (
-        setWeight < targetWeight ||
-        setReps < reps[index] ||
-        setRPE > rpe[index]
+        achievedWeight < targetWeight ||
+        achievedReps < targetReps ||
+        (targetRPE && achievedRPE && achievedRPE > targetRPE)
       ) {
         failedSetsCount++;
       }
@@ -101,7 +103,7 @@ const progressionAlgorithm = {
       // Double the normal progression increment
       return progressionIncrement * 2;
     } else if (failedSetsCount >= 2) {
-      // Reduce by regression value (in pounds)
+      // Reduce by regression value
       return -regressionOnFailure;
     } else {
       // No adjustment needed

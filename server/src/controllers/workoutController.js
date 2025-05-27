@@ -194,22 +194,22 @@ const workoutController = {
           name: lift.name,
           completed: lift.completed,
           progression_rule: lift.progression_rule,
+          weight: lift.weight,
+          weight_achieved: lift.weight_achieved,
+          reps: lift.reps,
+          reps_achieved: lift.reps_achieved,
+          rpe: lift.rpe,
+          rpe_achieved: lift.rpe_achieved,
         });
 
         if (lift.completed && lift.progression_rule) {
-          // Prepare actual performance data
-          const actualPerformance = {
-            actualWeight: lift.weight_achieved,
-            actualReps: lift.reps_achieved,
-            actualRPE: lift.rpe_achieved,
-          };
-
-          // Calculate weight adjustment using the existing function
-          const weightAdjustment = progressionAlgorithm.adjustFutureWeights({
-            ...lift,
-            actualPerformance,
+          // Calculate weight adjustment
+          const weightAdjustment =
+            progressionAlgorithm.adjustFutureWeights(lift);
+          console.log("Weight adjustment calculation:", {
+            name: lift.name,
+            weightAdjustment,
           });
-          console.log("weightAdjustment", weightAdjustment);
 
           // If there's an adjustment needed, update future lifts in the plan
           if (weightAdjustment !== 0 && refreshedWorkout.plan) {

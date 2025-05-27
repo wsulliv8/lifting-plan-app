@@ -1,7 +1,6 @@
 import { useCallback } from "react";
-import { v4 as uuidv4 } from "uuid";
 import { savePlan } from "../services/plans";
-import progressionAlgorithm from "../utils/progressionAlgorithm";
+import progressionRules from "../utils/progressionRules";
 import { stripIds } from "../utils/planUtils";
 import chunk from "lodash/chunk";
 
@@ -40,7 +39,6 @@ export const usePlanActions = ({
       const userLiftsMap = new Map(
         userLiftsData.map((data) => [data.base_lift_id, data])
       );
-      const generateUniqueId = () => uuidv4();
 
       // Track group updates
       const updatedGroups = plan.dayGroups ? [...plan.dayGroups] : [];
@@ -89,23 +87,28 @@ export const usePlanActions = ({
             }
             sourceWorkouts.forEach((workout) => {
               const newLifts = duplicateFormData.autoProgress
-                ? workout.lifts.map((lift) => ({
-                    ...progressionAlgorithm.applyProgressionRule(
-                      lift,
-                      sessionIndex,
-                      userLiftsMap.get(lift.base_lift_id)
-                    ),
-                    id: generateUniqueId(),
-                    progressionRule: lift.progressionRule || "none",
-                  }))
-                : workout.lifts.map((lift) => ({
-                    ...lift,
-                    id: generateUniqueId(),
-                    progressionRule: lift.progressionRule || "none",
-                  }));
+                ? workout.lifts.map((lift) => {
+                    const { id: _, ...liftWithoutId } = lift;
+                    return {
+                      ...progressionRules.applyProgressionRule(
+                        liftWithoutId,
+                        sessionIndex,
+                        userLiftsMap.get(lift.base_lift_id)
+                      ),
+                      progressionRule: lift.progressionRule || "none",
+                    };
+                  })
+                : workout.lifts.map((lift) => {
+                    const { id: _, ...liftWithoutId } = lift;
+                    return {
+                      ...liftWithoutId,
+                      progressionRule: lift.progressionRule || "none",
+                    };
+                  });
+              const { id: _, ...workoutWithoutId } = workout;
               const newWorkout = {
-                ...workout,
-                id: generateUniqueId(),
+                ...workoutWithoutId,
+                id: `temp_${Date.now()}_${Math.random()}`,
                 dayId: targetDayId,
                 lifts: newLifts,
               };
@@ -149,7 +152,7 @@ export const usePlanActions = ({
 
         let currentDayId = insertionPoint;
         for (let i = 0; i < repeatCount; i++) {
-          selectedDays.forEach((sourceDayId, dayIndex) => {
+          selectedDays.forEach((sourceDayId) => {
             const sourceWorkouts = Array.from(prevWorkouts.values()).filter(
               (w) => w.dayId === sourceDayId
             );
@@ -171,23 +174,28 @@ export const usePlanActions = ({
 
             sourceWorkouts.forEach((workout) => {
               const newLifts = duplicateFormData.autoProgress
-                ? workout.lifts.map((lift) => ({
-                    ...progressionAlgorithm.applyProgressionRule(
-                      lift,
-                      i + 1, //* selectedDays.length + dayIndex,
-                      userLiftsMap.get(lift.base_lift_id)
-                    ),
-                    id: generateUniqueId(),
-                    progressionRule: lift.progressionRule || "none",
-                  }))
-                : workout.lifts.map((lift) => ({
-                    ...lift,
-                    id: generateUniqueId(),
-                    progressionRule: lift.progressionRule || "none",
-                  }));
+                ? workout.lifts.map((lift) => {
+                    const { id: _, ...liftWithoutId } = lift;
+                    return {
+                      ...progressionRules.applyProgressionRule(
+                        liftWithoutId,
+                        i + 1,
+                        userLiftsMap.get(lift.base_lift_id)
+                      ),
+                      progressionRule: lift.progressionRule || "none",
+                    };
+                  })
+                : workout.lifts.map((lift) => {
+                    const { id: _, ...liftWithoutId } = lift;
+                    return {
+                      ...liftWithoutId,
+                      progressionRule: lift.progressionRule || "none",
+                    };
+                  });
+              const { id: _, ...workoutWithoutId } = workout;
               const newWorkout = {
-                ...workout,
-                id: generateUniqueId(),
+                ...workoutWithoutId,
+                id: `temp_${Date.now()}_${Math.random()}`,
                 dayId: currentDayId,
                 lifts: newLifts,
               };
@@ -267,7 +275,6 @@ export const usePlanActions = ({
         const userLiftsMap = new Map(
           userLiftsData.map((data) => [data.base_lift_id, data])
         );
-        const generateUniqueId = () => uuidv4();
 
         const maxTargetDayId = startDayId + clipboard.length - 1;
         if (maxTargetDayId >= newTotalDays) {
@@ -278,18 +285,22 @@ export const usePlanActions = ({
           const targetDayId = startDayId + index;
 
           clip.workouts.forEach((workout) => {
-            const newLifts = workout.lifts.map((lift) => ({
-              ...progressionAlgorithm.applyProgressionRule(
-                lift,
-                index,
-                userLiftsMap.get(lift.base_lift_id)
-              ),
-              id: generateUniqueId(),
-              progressionRule: lift.progressionRule || "none",
-            }));
+            const { id: _, ...workoutWithoutId } = workout;
+            const newLifts = workout.lifts.map((lift) => {
+              const { id: _, ...liftWithoutId } = lift;
+              return {
+                ...progressionRules.applyProgressionRule(
+                  liftWithoutId,
+                  index,
+                  userLiftsMap.get(lift.base_lift_id)
+                ),
+                progressionRule: lift.progressionRule || "none",
+              };
+            });
+
             const newWorkout = {
-              ...workout,
-              id: generateUniqueId(),
+              ...workoutWithoutId,
+              id: `temp_${Date.now()}_${Math.random()}`,
               dayId: targetDayId,
               lifts: newLifts,
             };
@@ -371,7 +382,7 @@ export const usePlanActions = ({
       weeks: weeksData,
       current_workout_id,
     };
-
+    console.log("rebuiltPlan", rebuiltPlan);
     setPlan(rebuiltPlan);
     await savePlan(rebuiltPlan);
   }, [plan, totalDays, workoutsRef, setPlan]);

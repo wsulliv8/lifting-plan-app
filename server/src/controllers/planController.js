@@ -318,7 +318,7 @@ const planController = {
                       const lift = workout.lifts[liftIndex];
                       let liftRecord;
                       if (lift.id) {
-                        console.log(lift.id);
+                        console.log("lift id:", lift.id);
                         // Update existing lift
                         liftRecord = await prismaTransaction.lifts.update({
                           where: { id: parseInt(lift.id) },
@@ -329,7 +329,7 @@ const planController = {
                             sets: lift.sets,
                             reps: lift.reps.map((rep) => String(rep)),
                             weight: lift.weight,
-                            rpe: lift.rpe,
+                            rpe: lift.rpe.map((rpe) => String(rpe)),
                             rest_time: lift.rest.map((time) => parseInt(time)),
                             progression_rule: lift.progression_rule,
                           },
@@ -344,7 +344,7 @@ const planController = {
                             sets: lift.sets,
                             reps: lift.reps.map((rep) => String(rep)),
                             weight: lift.weight,
-                            rpe: lift.rpe,
+                            rpe: lift.rpe.map((rpe) => String(rpe)),
                             rest_time: lift.rest.map((time) => parseInt(time)),
                             progression_rule: lift.progression_rule,
                           },

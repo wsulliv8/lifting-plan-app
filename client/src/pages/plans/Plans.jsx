@@ -137,7 +137,6 @@ const Plans = () => {
         planType={view}
         onDelete={handleDelete}
       />
-
       {isModalOpen && (
         <Modal
           isOpen={isModalOpen}

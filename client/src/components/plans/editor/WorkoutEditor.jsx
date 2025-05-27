@@ -22,7 +22,7 @@ import {
 import { PlusCircleIcon, MinusCircleIcon } from "@heroicons/react/24/outline";
 import Button from "../../common/Button";
 import LiftSearch from "../../lifts/LiftSearch";
-import progressionAlgorithm from "../../../utils/progressionAlgorithm";
+import progressionRules from "../../../utils/progressionRules";
 
 // Simple arrayMove function for reordering
 const arrayMove = (array, from, to) => {
@@ -93,7 +93,7 @@ const WorkoutEditor = ({
     let updated = [...editedWorkouts];
     if (!updated[activeWorkoutIndex]) updated = addWorkout();
     const userLift = userLiftsMap.get(baseLift.id);
-    const progressionRule = progressionAlgorithm.computeProgressionRule(
+    const progressionRule = progressionRules.computeProgressionRule(
       baseLift.lift_type === "Main" ? "primary" : "supplementary",
       experience
     );

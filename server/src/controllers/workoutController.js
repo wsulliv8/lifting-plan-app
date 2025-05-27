@@ -1,4 +1,5 @@
 const { PrismaClient } = require("@prisma/client");
+const progressionAlgorithm = require("../utils/progressionAlgorithm");
 
 const prisma = new PrismaClient();
 
@@ -64,37 +65,189 @@ const workoutController = {
   async completeWorkout(req, res, next) {
     try {
       const workoutId = parseInt(req.params.id);
+      console.log("workoutId", workoutId);
+      const { lifts: updatedLifts } = req.body;
+      console.log(
+        "Received lifts:",
+        updatedLifts.map((l) => ({
+          name: l.name,
+          completed: l.completed,
+        }))
+      );
+
       const workout = await prisma.workouts.findUnique({
         where: { id: workoutId },
-        include: { lifts: { include: { base_lift: true } } },
+        include: {
+          lifts: { include: { base_lift: true } },
+          plan: {
+            include: {
+              weeks: {
+                include: {
+                  days: {
+                    include: {
+                      workoutDays: {
+                        include: {
+                          workout: {
+                            include: {
+                              lifts: true,
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       });
 
       if (!workout) {
         throw new Error("Workout not found", { cause: { status: 404 } });
       }
 
-      // Update workout completion
-      await prisma.workouts.update({
+      // Update all lifts first
+      for (const updatedLift of updatedLifts) {
+        await prisma.lifts.update({
+          where: { id: updatedLift.id },
+          data: {
+            completed: updatedLift.completed,
+            reps_achieved: updatedLift.reps_achieved.map((lift) =>
+              parseInt(lift)
+            ),
+            weight_achieved: updatedLift.weight_achieved.map((lift) =>
+              parseFloat(lift)
+            ),
+            rpe_achieved: updatedLift.rpe_achieved.map((lift) =>
+              parseInt(lift)
+            ),
+            volume: updatedLift.volume,
+            notes: updatedLift.notes,
+          },
+        });
+      }
+
+      // Refresh workout data after updates
+      const refreshedWorkout = await prisma.workouts.findUnique({
         where: { id: workoutId },
-        data: {
-          total_volume: workout.lifts.reduce(
-            (sum, lift) => sum + (lift.volume || 0),
-            0
-          ),
+        include: {
+          lifts: { include: { base_lift: true } },
+          plan: {
+            include: {
+              weeks: {
+                include: {
+                  days: {
+                    include: {
+                      workoutDays: {
+                        include: {
+                          workout: {
+                            include: {
+                              lifts: true,
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       });
 
-      // Process progression for completed lifts
-      for (const lift of workout.lifts) {
-        if (lift.completed && lift.progression_rule) {
-          const avgWeightAchieved =
-            lift.weight_achieved.reduce((sum, w) => sum + w, 0) /
-            lift.weight_achieved.length;
-          const avgRepsAchieved =
-            lift.reps_achieved.reduce((sum, r) => sum + r, 0) /
-            lift.reps_achieved.length;
-          const minReps = parseInt(lift.reps[0].split("-")[0]);
+      // Find the next workout in the plan
+      if (refreshedWorkout.plan) {
+        const allWorkouts = refreshedWorkout.plan.weeks
+          .flatMap((week) =>
+            week.days.flatMap((day) =>
+              day.workoutDays.map((wd) => ({
+                ...wd.workout,
+                week_number: week.week_number,
+                day_of_week: day.day_of_week,
+              }))
+            )
+          )
+          .sort((a, b) => {
+            if (a.week_number !== b.week_number) {
+              return a.week_number - b.week_number;
+            }
+            return parseInt(a.day_of_week) - parseInt(b.day_of_week);
+          });
 
+        const currentIndex = allWorkouts.findIndex((w) => w.id === workoutId);
+        const nextWorkout = allWorkouts[currentIndex + 1];
+
+        // Update the plan's current_workout_id
+        await prisma.plans.update({
+          where: { id: refreshedWorkout.plan.id },
+          data: {
+            current_workout_id: nextWorkout ? nextWorkout.id : null,
+          },
+        });
+      }
+
+      // Process progression for completed lifts using refreshed data
+      for (const lift of refreshedWorkout.lifts) {
+        console.log("Processing lift:", {
+          name: lift.name,
+          completed: lift.completed,
+          progression_rule: lift.progression_rule,
+        });
+
+        if (lift.completed && lift.progression_rule) {
+          // Prepare actual performance data
+          const actualPerformance = {
+            actualWeight: lift.weight_achieved,
+            actualReps: lift.reps_achieved,
+            actualRPE: lift.rpe_achieved,
+          };
+
+          // Calculate weight adjustment using the existing function
+          const weightAdjustment = progressionAlgorithm.adjustFutureWeights({
+            ...lift,
+            actualPerformance,
+          });
+          console.log("weightAdjustment", weightAdjustment);
+
+          // If there's an adjustment needed, update future lifts in the plan
+          if (weightAdjustment !== 0 && refreshedWorkout.plan) {
+            // Get all future workouts in the plan
+            const futureWorkouts = refreshedWorkout.plan.weeks
+              .flatMap((week) =>
+                week.days.flatMap((day) =>
+                  day.workoutDays.map((wd) => wd.workout)
+                )
+              )
+              .filter(
+                (w) =>
+                  w.week_number > refreshedWorkout.week_number ||
+                  (w.week_number === refreshedWorkout.week_number &&
+                    parseInt(w.day_of_week) >
+                      parseInt(refreshedWorkout.day_of_week))
+              );
+
+            // Update weights in future lifts of the same type
+            for (const futureWorkout of futureWorkouts) {
+              const futureLift = futureWorkout.lifts.find(
+                (l) => l.base_lift_id === lift.base_lift_id
+              );
+
+              if (futureLift) {
+                await prisma.lifts.update({
+                  where: { id: futureLift.id },
+                  data: {
+                    weight: futureLift.weight.map((w) =>
+                      Math.max(0, Number((w + weightAdjustment).toFixed(1)))
+                    ),
+                  },
+                });
+              }
+            }
+          }
+
+          // Update user lift data as before
           let userLiftData = await prisma.userLiftsData.findFirst({
             where: {
               user_id: req.user.userId,
@@ -107,22 +260,27 @@ const workoutController = {
               data: {
                 user_id: req.user.userId,
                 base_lift_id: lift.base_lift_id,
-                max_weights: [avgWeightAchieved],
-                rep_ranges: [minReps],
+                max_weights: [lift.weight[0]],
+                rep_ranges: [parseInt(lift.reps[0].split("-")[0])],
                 max_estimated: [
-                  Math.round(avgWeightAchieved * (1 + minReps / 30)),
+                  Math.round(
+                    lift.weight[0] *
+                      (1 + parseInt(lift.reps[0].split("-")[0]) / 30)
+                  ),
                 ],
                 created_at: new Date(),
               },
             });
           } else {
-            const index = userLiftData.rep_ranges.indexOf(minReps);
+            const index = userLiftData.rep_ranges.indexOf(
+              parseInt(lift.reps[0].split("-")[0])
+            );
             const newMaxWeight = Math.max(
-              avgWeightAchieved,
+              lift.weight[0],
               userLiftData.max_weights[index] || 0
             );
             const newMaxEstimated = Math.round(
-              newMaxWeight * (1 + minReps / 30)
+              newMaxWeight * (1 + parseInt(lift.reps[0].split("-")[0]) / 30)
             );
 
             const updatedMaxWeights = [...userLiftData.max_weights];
@@ -133,7 +291,9 @@ const workoutController = {
             } else {
               updatedMaxWeights.push(newMaxWeight);
               updatedMaxEstimated.push(newMaxEstimated);
-              userLiftData.rep_ranges.push(minReps);
+              userLiftData.rep_ranges.push(
+                parseInt(lift.reps[0].split("-")[0])
+              );
             }
 
             await prisma.userLiftsData.update({

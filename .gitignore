@@ -30,6 +30,8 @@ logs/
 # HTTPS certificates
 server/key.pem
 server/cert.pem
+server/server.cert
+server/server.key
 server/localhost-key.pem
 server/localhost.pem
 

@@ -3,6 +3,7 @@ import { useLoaderData, useNavigate, useNavigation } from "react-router-dom";
 import PlanList from "../../components/plans/PlanList";
 import Modal from "../../components/common/Modal";
 import Input from "../../components/common/Input";
+import Button from "../../components/common/Button";
 import { createPlan, deletePlan } from "../../services/plans";
 
 const Plans = () => {
@@ -91,12 +92,12 @@ const Plans = () => {
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold w-[200px]">
+        <h2 className="heading w-[200px]">
           {view === "your" ? "Your Plans" : "Pre-Made Plans"}
         </h2>
         {/* Toggle Button */}
         <div className="flex justify-center">
-          <div className="relative inline-flex bg-gray-200 rounded-full p-1 w-64">
+          <div className="relative inline-flex bg-surface rounded-full p-1 w-64 shadow-sm">
             {/* Toggle Background Slider */}
             <div
               className={`absolute top-1 bottom-1 w-1/2 bg-primary rounded-full transition-transform duration-300 ease-in-out ${
@@ -107,7 +108,7 @@ const Plans = () => {
             <button
               onClick={handleViewYour}
               className={`relative z-10 w-1/2 py-2 text-sm font-medium transition-colors duration-300 ${
-                view === "your" ? "text-white" : "text-gray-700"
+                view === "your" ? "text-background" : "text-text-primary"
               }`}
               aria-pressed={view === "your"}
               aria-label="View Your Plans"
@@ -118,7 +119,7 @@ const Plans = () => {
             <button
               onClick={handleViewPreMade}
               className={`relative z-10 w-1/2 py-2 text-sm font-medium transition-colors duration-300 ${
-                view === "pre-made" ? "text-white" : "text-gray-700"
+                view === "pre-made" ? "text-background" : "text-text-primary"
               }`}
               aria-pressed={view === "pre-made"}
               aria-label="View Pre-Made Plans"
@@ -127,9 +128,9 @@ const Plans = () => {
             </button>
           </div>
         </div>
-        <button onClick={handleOpenModal} className="btn-primary">
+        <Button onClick={handleOpenModal} variant="primary">
           Create Plan
-        </button>
+        </Button>
       </div>
       <PlanList
         plans={displayedPlans}
@@ -165,6 +166,7 @@ const FormContent = memo(
           name="name"
           value={formData.name}
           onChange={handleInputChange}
+          required
         />
         <Input
           label="Duration (Weeks)"
@@ -173,26 +175,22 @@ const FormContent = memo(
           value={formData.duration_weeks}
           onChange={handleInputChange}
           min="1"
+          required
         />
 
         <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={handleCloseModal}
-            className="px-4 py-2 text-gray-700 bg-gray-200 rounded hover:bg-gray-300"
-          >
+          <Button variant="secondary" onClick={handleCloseModal}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            className="px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600"
-          >
+          </Button>
+          <Button variant="primary" type="submit">
             Create
-          </button>
+          </Button>
         </div>
       </form>
     );
   }
 );
+
+FormContent.displayName = "FormContent";
 
 export default Plans;

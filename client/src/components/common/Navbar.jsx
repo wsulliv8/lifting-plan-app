@@ -12,6 +12,7 @@ import {
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { logout } from "../../services/auth";
+import ThemeToggle from "./ThemeToggle";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -32,7 +33,7 @@ const Navbar = () => {
     try {
       await logout();
       navigate("/login");
-    } catch (err) {
+    } catch {
       console.error("Logout failed");
     }
   };
@@ -95,8 +96,22 @@ const Navbar = () => {
           </div>
         ))}
       </div>
+
+      {/* Theme Toggle */}
+      <div className="relative group flex justify-center items-center">
+        <ThemeToggle />
+        {/* Hover Label (Desktop) */}
+        <span className="nav-label hidden md:block left-full ml-2 top-1/2 transform -translate-y-1/2 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-200">
+          Theme
+        </span>
+        {/* Label Always Visible (Mobile) */}
+        <span className="md:hidden text-gray-600 text-sm mt-1 text-center block">
+          Theme
+        </span>
+      </div>
+
       {/* User Profile Dropdown */}
-      <div className="mt-auto p-2" ref={profileRef}>
+      <div className="mt-2 p-2" ref={profileRef}>
         <div className="relative group">
           <button
             className={`nav-item ${

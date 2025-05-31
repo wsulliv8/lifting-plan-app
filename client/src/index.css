@@ -1,59 +1,153 @@
 @tailwind base;
 @tailwind components;
 
-@layer components {
-  .btn-primary {
-    /* Mobile: Compact padding, full-width */
-    @apply w-auto py-2 px-4 bg-primary text-white rounded hover:bg-opacity-90 focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
-    /* Desktop: Slightly larger */
-    @apply md:w-auto md:py-2 md:px-6;
+@layer base {
+  :root {
+    --primary: theme("colors.light.primary.500");
+    --primary-dark: theme("colors.light.primary.600");
+    --primary-light: theme("colors.light.primary.400");
+
+    --secondary: theme("colors.light.secondary.500");
+    --secondary-dark: theme("colors.light.secondary.600");
+    --secondary-light: theme("colors.light.secondary.400");
+
+    --accent: theme("colors.light.accent.500");
+    --accent-dark: theme("colors.light.accent.600");
+    --accent-light: theme("colors.light.accent.400");
+
+    --background: theme("colors.light.background.100");
+    --background-alt: theme("colors.light.background.200");
+    --background-dark: theme("colors.light.background.300");
+
+    --text-primary: theme("colors.light.text.primary.500");
+    --text-primary-light: theme("colors.light.text.primary.300");
+    --text-secondary: theme("colors.light.text.secondary.400");
+
+    --surface: theme("colors.light.background.50");
+    --border: theme("colors.light.background.300");
   }
-  .btn-secondary {
-    @apply w-auto py-2 px-4 bg-gray-200 text-gray-900 rounded hover:bg-gray-300 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
-    @apply md:w-auto md:py-2 md:px-6;
+
+  .dark {
+    --primary: theme("colors.dark.primary.500");
+    --primary-dark: theme("colors.dark.primary.600");
+    --primary-light: theme("colors.dark.primary.400");
+
+    --secondary: theme("colors.dark.secondary.500");
+    --secondary-dark: theme("colors.dark.secondary.600");
+    --secondary-light: theme("colors.dark.secondary.400");
+
+    --accent: theme("colors.dark.accent.500");
+    --accent-dark: theme("colors.dark.accent.600");
+    --accent-light: theme("colors.dark.accent.400");
+
+    --background: theme("colors.dark.background.200");
+    --background-alt: theme("colors.dark.background.100");
+    --background-dark: theme("colors.dark.background.300");
+
+    --text-primary: theme("colors.dark.text.primary.100");
+    --text-primary-light: theme("colors.dark.text.primary.300");
+    --text-secondary: theme("colors.dark.text.secondary.200");
+
+    --surface: theme("colors.dark.background.100");
+    --border: theme("colors.dark.background.50");
   }
-  .input-field {
-    /* Mobile: Full-width */
-    @apply w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none;
+
+  html {
+    @apply scroll-smooth;
   }
-  .border-error {
-    @apply border-red-500 ring-error ring-1;
-  }
-  .form-card {
-    /* Mobile: Full-width, less padding */
-    @apply w-full p-4 bg-white shadow-md rounded-lg mx-auto;
-    /* Tablet/Desktop: Constrained width, more padding */
-    @apply sm:max-w-md sm:p-6;
-  }
-  .card {
-    /* Mobile: Full-width */
-    @apply w-full p-4 bg-white rounded-lg shadow-md;
-    /* Tablet: Slightly constrained */
-    @apply sm:max-w-lg;
-  }
-  .error-text {
-    @apply text-error text-sm mt-2;
-  }
-  .heading {
-    /* Mobile: Smaller */
-    @apply text-xl font-bold text-gray-900;
-    /* Desktop: Larger */
-    @apply md:text-2xl;
-  }
-  .nav-item {
-    @apply flex items-center justify-center p-2 w-12 h-12 rounded-full transition-all duration-200;
-  }
-  .nav-label {
-    @apply absolute bg-gray-800 text-white text-sm px-2 py-1 rounded opacity-0 transition-opacity duration-200;
+
+  body {
+    @apply font-sans text-base;
+    background-color: var(--background);
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 }
 
-@layer base {
-  html {
-    @apply scroll-smooth; /* Scrollbar always visible for consistency */
+@layer components {
+  .btn-primary {
+    @apply w-auto py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed;
+    background-color: var(--primary);
+    color: var(--text-primary-light);
+
+    &:hover {
+      background-color: var(--primary-dark);
+    }
+
+    &:focus {
+      @apply ring-2 ring-offset-2;
+      --tw-ring-color: var(--primary);
+    }
+
+    @apply md:w-auto md:py-2 md:px-6;
   }
-  body {
-    @apply font-sans text-base text-gray-900 bg-background min-h-screen;
+
+  .btn-secondary {
+    @apply w-auto py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed;
+    background-color: var(--background-alt);
+    color: var(--text-primary);
+
+    &:hover {
+      background-color: var(--background-dark);
+    }
+
+    &:focus {
+      @apply ring-2 ring-offset-2;
+      --tw-ring-color: var(--secondary);
+    }
+
+    @apply md:w-auto md:py-2 md:px-6;
+  }
+
+  .input-field {
+    @apply w-full p-2 rounded;
+    background-color: var(--surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+
+    &:focus {
+      @apply ring-2 outline-none;
+      --tw-ring-color: var(--primary);
+      border-color: var(--primary);
+    }
+  }
+
+  .border-error {
+    border-color: var(--accent);
+    @apply ring-1;
+    --tw-ring-color: var(--accent);
+  }
+
+  .form-card {
+    @apply w-full p-4 rounded-lg mx-auto shadow-md;
+    background-color: var(--surface);
+    @apply sm:max-w-md sm:p-6;
+  }
+
+  .card {
+    @apply w-full p-4 rounded-lg shadow-md;
+    background-color: var(--surface);
+    @apply sm:max-w-lg;
+  }
+
+  .error-text {
+    @apply text-sm mt-2;
+    color: var(--accent);
+  }
+
+  .heading {
+    @apply text-xl font-bold md:text-2xl;
+    color: var(--text-primary);
+  }
+
+  .nav-item {
+    @apply flex items-center justify-center p-2 w-12 h-12 rounded-full transition-all duration-200;
+  }
+
+  .nav-label {
+    @apply absolute text-sm px-2 py-1 rounded opacity-0 transition-opacity duration-200;
+    background-color: var(--text-primary);
+    color: var(--surface);
   }
 }
 

@@ -82,7 +82,7 @@ const Day = memo(
 
     if (isDayCollapsed || isWeekCollapsed) {
       return (
-        <div className="p-2 bg-white shadow-sm rounded-lg text-xs border border-transparent"></div>
+        <div className="p-2 bg-[var(--surface)] shadow-sm rounded-lg text-xs border border-transparent"></div>
       );
     }
 
@@ -93,7 +93,7 @@ const Day = memo(
         isDaySelected={isDaySelected}
         isDragging={isDragging}
         handleClick={handleClick}
-        onContextMenu={(e) => onContextMenu(e, id)} // Pass dayId
+        onContextMenu={(e) => onContextMenu(e, id)}
       >
         <DaySortableWrapper id={id} workoutItems={workoutItems}>
           <DayData
@@ -123,10 +123,12 @@ const DroppableContainer = memo(
     return (
       <div
         ref={setNodeRef}
-        className={`group flex flex-col justify-between relative p-2 bg-white shadow-sm rounded-lg text-xs border ${
-          isDaySelected ? "border-primary" : "border-transparent"
-        } hover:border-primary hover:shadow-xl ${isOver ? "bg-blue-50" : ""}`}
-        onContextMenu={onContextMenu} // Add context menu handler
+        className={`group flex flex-col justify-between relative p-2 bg-[var(--surface)] shadow-sm rounded-lg text-xs border ${
+          isDaySelected ? "border-[var(--primary)]" : "border-transparent"
+        } hover:border-[var(--primary-light)] hover:shadow-xl ${
+          isOver ? "bg-[var(--primary-light)] bg-opacity-10" : ""
+        }`}
+        onContextMenu={onContextMenu}
       >
         {children}
       </div>
@@ -150,7 +152,11 @@ const DayData = memo(
   ({ id, workouts, handleEditWorkout, handleClick, isDragging, group }) => {
     const workoutComponents = useMemo(() => {
       if (!workouts.length) {
-        return <span className="text-gray-500 p-1 pt-5">Rest Day</span>;
+        return (
+          <span className="text-[var(--text-secondary)] p-1 pt-5">
+            Rest Day
+          </span>
+        );
       }
 
       return workouts
@@ -194,7 +200,7 @@ const DayData = memo(
         </div>
         <div className="flex flex-col gap-1 transition-opacity duration-300 opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto pointer-events-none">
           <Button
-            variant="primary"
+            variant="tertiary"
             className="text-xs p-1 w-full"
             onClick={() => handleEditWorkout(id)}
           >

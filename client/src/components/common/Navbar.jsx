@@ -46,21 +46,21 @@ const Navbar = () => {
   ];
 
   return (
-    <nav className="bg-white shadow-md h-screen md:w-16 flex flex-col fixed z-50">
+    <nav className="h-screen md:w-16 flex flex-col fixed z-50 shadow-md bg-[var(--surface)]">
       {/* Logo */}
-      <div className="p-3 border-b">
-        <h2 className="font-bold text-primary">Hevy</h2>
+      <div className="p-3 border-[var(--border)] border-b">
+        <h2 className="font-bold text-[var(--text-primary)]">Hevy</h2>
       </div>
 
       {/* Hamburger Toggle (Mobile) */}
       <button
-        className="md:hidden p-4 focus:outline-none"
+        className="md:hidden p-4 focus:outline-none text-[var(--text-primary)]"
         onClick={() => setIsOpen(!isOpen)}
       >
         {isOpen ? (
-          <XMarkIcon className="h-6 w-6 text-gray-900" />
+          <XMarkIcon className="h-6 w-6" />
         ) : (
-          <Bars3Icon className="h-6 w-6 text-gray-900" />
+          <Bars3Icon className="h-6 w-6" />
         )}
       </button>
 
@@ -77,8 +77,8 @@ const Navbar = () => {
               className={({ isActive }) =>
                 `nav-item ${
                   isActive
-                    ? "bg-primary text-white"
-                    : "text-gray-600 hover:bg-gray-100"
+                    ? "bg-[var(--primary)] text-[var(--text-primary-light)] "
+                    : "text-[var(--text-primary)] hover:bg-[var(--background)] "
                 }`
               }
               onClick={() => setIsOpen(false)}
@@ -90,7 +90,7 @@ const Navbar = () => {
               {item.label}
             </span>
             {/* Label Always Visible (Mobile) */}
-            <span className="md:hidden text-gray-600 text-sm mt-1 text-center block">
+            <span className="md:hidden text-sm mt-1 text-center block text-[var(--text-secondary)]">
               {item.label}
             </span>
           </div>
@@ -101,11 +101,11 @@ const Navbar = () => {
       <div className="relative group flex justify-center items-center">
         <ThemeToggle />
         {/* Hover Label (Desktop) */}
-        <span className="nav-label hidden md:block left-full ml-2 top-1/2 transform -translate-y-1/2 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-200">
+        <span className="nav-label hidden md:block left-full ml-2 top-1/2  transform -translate-y-1/2 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-200">
           Theme
         </span>
         {/* Label Always Visible (Mobile) */}
-        <span className="md:hidden text-gray-600 text-sm mt-1 text-center block">
+        <span className="md:hidden text-sm mt-1 text-center block text-[var(--text-secondary)]">
           Theme
         </span>
       </div>
@@ -116,8 +116,8 @@ const Navbar = () => {
           <button
             className={`nav-item ${
               isProfileOpen
-                ? "bg-primary text-white"
-                : "text-gray-600 hover:bg-gray-100"
+                ? "bg-[var(--primary)] text-[var(--text-primary-light)]"
+                : "text-[var(--text-primary)] hover:bg-[var(--background)]"
             }`}
             onClick={() => setIsProfileOpen(!isProfileOpen)}
           >
@@ -128,15 +128,15 @@ const Navbar = () => {
             Profile
           </span>
           {/* Label Always Visible (Mobile) */}
-          <span className="md:hidden text-gray-600 text-sm mt-1 text-center block">
+          <span className="md:hidden text-sm mt-1 text-center block text-[var(--text-secondary)]">
             Profile
           </span>
           {/* Dropdown */}
           {isProfileOpen && (
-            <div className="absolute bottom-full mb-2 md:left-full md:ml-2 bg-white shadow-lg rounded-lg w-40 py-2 z-50">
+            <div className="absolute bottom-full mb-2 md:left-full md:ml-2 shadow-lg rounded-lg w-40 py-2 z-50 bg-[var(--surface)]">
               <NavLink
                 to="/settings"
-                className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:bg-gray-100"
+                className="flex items-center space-x-2 px-4 py-2 text-[var(--text-primary)] hover:bg-[var(--background-alt)]"
                 onClick={() => setIsProfileOpen(false)}
               >
                 <CogIcon className="h-5 w-5" />
@@ -144,7 +144,7 @@ const Navbar = () => {
               </NavLink>
               <button
                 onClick={handleLogout}
-                className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:bg-gray-100 w-full text-left"
+                className="flex items-center space-x-2 px-4 py-2 w-full text-left text-[var(--text-primary)] hover:bg-[var(--background-alt)]"
               >
                 <ArrowLeftOnRectangleIcon className="h-5 w-5" />
                 <span>Sign Out</span>

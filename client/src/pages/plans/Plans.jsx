@@ -97,18 +97,18 @@ const Plans = () => {
         </h2>
         {/* Toggle Button */}
         <div className="flex justify-center">
-          <div className="relative inline-flex bg-surface rounded-full p-1 w-64 shadow-sm">
+          <div className="toggle-container">
             {/* Toggle Background Slider */}
             <div
-              className={`absolute top-1 bottom-1 w-1/2 bg-primary rounded-full transition-transform duration-300 ease-in-out ${
+              className={`toggle-slider ${
                 view === "your" ? "translate-x-0" : "translate-x-full"
               }`}
             ></div>
             {/* Your Plans Option */}
             <button
               onClick={handleViewYour}
-              className={`relative z-10 w-1/2 py-2 text-sm font-medium transition-colors duration-300 ${
-                view === "your" ? "text-background" : "text-text-primary"
+              className={`toggle-button ${
+                view === "your" ? "active" : "inactive"
               }`}
               aria-pressed={view === "your"}
               aria-label="View Your Plans"
@@ -118,8 +118,8 @@ const Plans = () => {
             {/* Pre-Made Plans Option */}
             <button
               onClick={handleViewPreMade}
-              className={`relative z-10 w-1/2 py-2 text-sm font-medium transition-colors duration-300 ${
-                view === "pre-made" ? "text-background" : "text-text-primary"
+              className={`toggle-button ${
+                view === "pre-made" ? "active" : "inactive"
               }`}
               aria-pressed={view === "pre-made"}
               aria-label="View Pre-Made Plans"

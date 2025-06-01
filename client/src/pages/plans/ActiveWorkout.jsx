@@ -166,24 +166,28 @@ const ActiveWorkout = () => {
   };
 
   if (!workout || !workout.lifts || workout.lifts.length === 0)
-    return <div className="p-4">No exercises available</div>;
+    return (
+      <div className="p-4 text-[var(--text-secondary)]">
+        No exercises available
+      </div>
+    );
 
   return (
-    <div className="fixed inset-0 z-50 bg-gray-100 overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-[var(--background)] overflow-y-auto">
       <div className="max-w-2xl mx-auto px-4 py-6 pb-32 flex flex-col gap-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2">
+          <h1 className="text-2xl font-bold mb-2 text-[var(--text-primary)]">
             {workout.plan?.name} - {workout.name}
           </h1>
-          <div className="flex justify-center gap-20 text-sm text-gray-600">
+          <div className="flex justify-center gap-20 text-[var(--text-secondary)]">
             <div className="flex flex-col">
-              <span className="text-sm">Duration</span>{" "}
+              <span className="text-sm">Duration</span>
               <span className="text-sm">{formatTime(elapsedTime)}</span>
             </div>
-            <div className="flex flex-col ">
-              <span className="text-sm">Volume</span>{" "}
+            <div className="flex flex-col">
+              <span className="text-sm">Volume</span>
               <span className="text-sm">{totalVolume} kg</span>
-            </div>{" "}
+            </div>
           </div>
         </div>
 
@@ -201,16 +205,20 @@ const ActiveWorkout = () => {
       </div>
 
       <div className="fixed bottom-2 left-0 right-0 flex justify-center items-center">
-        <div className="max-w-2xl mx-auto flex justify-between p-4 gap-4 z-50 bg-white border">
+        <div className="max-w-2xl mx-auto flex justify-between p-4 gap-4 z-50 bg-[var(--surface)] border border-[var(--border)] rounded-lg shadow-md">
           <Button
             onClick={handleSave}
-            className="flex-1 bg-green-500 text-white"
+            variant="primary"
+            size="lg"
+            className="flex-1"
           >
             Finish
           </Button>
           <Button
             onClick={() => navigate("/plans")}
-            className="flex-1 bg-red-500 text-white"
+            variant="danger"
+            size="lg"
+            className="flex-1"
           >
             Discard
           </Button>
@@ -293,21 +301,22 @@ const SortableLift = ({ lift, exerciseIndex, updateField, updateNotes }) => {
 
   const getValueColor = (achieved, target, isRPE = false) => {
     if (achieved === undefined || achieved === null || achieved === "")
-      return "text-gray-900";
+      return "text-[var(--text-primary)]";
 
     const achievedNum = parseInt(achieved);
     const targetNum = parseInt(target);
 
-    if (isNaN(achievedNum) || isNaN(targetNum)) return "text-gray-900";
+    if (isNaN(achievedNum) || isNaN(targetNum))
+      return "text-[var(--text-primary)]";
 
     if (isRPE) {
-      if (achievedNum > targetNum) return "text-red-500";
-      if (achievedNum < targetNum) return "text-green-500";
+      if (achievedNum > targetNum) return "text-[var(--danger)]";
+      if (achievedNum < targetNum) return "text-[var(--primary)]";
     } else {
-      if (achievedNum < targetNum) return "text-red-500";
-      if (achievedNum > targetNum) return "text-green-500";
+      if (achievedNum < targetNum) return "text-[var(--danger)]";
+      if (achievedNum > targetNum) return "text-[var(--primary)]";
     }
-    return "text-gray-900";
+    return "text-[var(--text-primary)]";
   };
 
   if (isCollapsed) {
@@ -315,10 +324,10 @@ const SortableLift = ({ lift, exerciseIndex, updateField, updateNotes }) => {
       <div
         ref={setNodeRef}
         onClick={() => setIsCollapsed(false)}
-        className="bg-white rounded-lg shadow-sm p-4 cursor-pointer hover:bg-gray-50"
+        className="bg-[var(--surface)] rounded-lg shadow-md border border-[var(--border)] p-4 cursor-pointer hover:bg-[var(--background)] transition-colors"
       >
         <div className="flex justify-between items-center">
-          <h2 className="text-lg font-semibold capitalize">
+          <h2 className="text-lg font-semibold capitalize text-[var(--text-primary)]">
             {lift.name
               .split(" ")
               .map(
@@ -327,19 +336,22 @@ const SortableLift = ({ lift, exerciseIndex, updateField, updateNotes }) => {
               )
               .join(" ")}
             {isComplete && (
-              <CheckIcon className="inline-block w-5 h-5 ml-2 text-green-500" />
+              <CheckIcon className="inline-block w-5 h-5 ml-2 text-[var(--primary)]" />
             )}
           </h2>
-          <ChevronDownIcon className="w-5 h-5 text-gray-600" />
+          <ChevronDownIcon className="w-5 h-5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors" />
         </div>
       </div>
     );
   }
 
   return (
-    <div ref={setNodeRef} className="bg-white rounded-lg shadow-sm p-4 pb-6">
+    <div
+      ref={setNodeRef}
+      className="bg-[var(--surface)] rounded-lg shadow-md border border-[var(--border)] p-4 pb-8"
+    >
       <div className="flex justify-between items-center mb-2">
-        <h2 className="text-lg font-semibold capitalize">
+        <h2 className="text-lg font-semibold capitalize text-[var(--text-primary)]">
           {lift.name
             .split(" ")
             .map(
@@ -349,7 +361,7 @@ const SortableLift = ({ lift, exerciseIndex, updateField, updateNotes }) => {
             .join(" ")}
         </h2>
         <ChevronDownIcon
-          className="w-5 h-5 text-gray-600 cursor-pointer transform rotate-180 hover:text-gray-700"
+          className="w-5 h-5 text-[var(--text-secondary)] cursor-pointer transform rotate-180 hover:text-[var(--text-primary)] transition-colors"
           onClick={() => setIsCollapsed(true)}
         />
       </div>
@@ -367,12 +379,12 @@ const SortableLift = ({ lift, exerciseIndex, updateField, updateNotes }) => {
             e.target.style.height = e.target.scrollHeight + "px";
           }}
           placeholder="Add notes..."
-          className="w-full p-2 border rounded text-sm min-h-[2.5rem] overflow-hidden"
+          className="input-field min-h-[2.5rem] overflow-hidden"
           style={{ resize: "none" }}
         />
       </div>
 
-      <div className="flex flex-col place-items-center gap-x-2 gap-y-5">
+      <div className="flex flex-col place-items-center gap-x-2 gap-y-8">
         <div
           className={`w-full grid ${
             lift.rpe.length > 0
@@ -381,17 +393,17 @@ const SortableLift = ({ lift, exerciseIndex, updateField, updateNotes }) => {
           } place-items-center gap-x-2`}
         >
           <div className="flex items-center justify-center w-8"></div>
-          <div className="flex items-center justify-center text-sm font-medium">
+          <div className="flex items-center justify-center text-sm font-medium text-[var(--text-primary)]">
             Set
           </div>
-          <div className="flex items-center justify-center text-sm font-medium">
+          <div className="flex items-center justify-center text-sm font-medium text-[var(--text-primary)]">
             Weight
           </div>
-          <div className="flex items-center justify-center text-sm font-medium">
+          <div className="flex items-center justify-center text-sm font-medium text-[var(--text-primary)]">
             Reps
           </div>
           {lift.rpe.length > 0 ? (
-            <div className="flex items-center justify-center text-sm font-medium">
+            <div className="flex items-center justify-center text-sm font-medium text-[var(--text-primary)]">
               RPE
             </div>
           ) : null}
@@ -414,18 +426,20 @@ const SortableLift = ({ lift, exerciseIndex, updateField, updateNotes }) => {
                   onChange={(e) =>
                     handleSetComplete(setIndex, e.target.checked)
                   }
-                  className="h-5 w-5 appearance-none border-2 border-gray-300 rounded checked:border-green-500 checked:bg-green-500 relative"
+                  className="h-5 w-5 appearance-none border-2 border-[var(--border)] rounded checked:border-[var(--primary)] checked:bg-[var(--primary)] relative transition-colors"
                 />
                 <CheckIcon
                   className={`absolute h-4 w-4 pointer-events-none ${
                     lift.set_completed?.[setIndex]
                       ? "text-white"
-                      : "text-gray-300"
+                      : "text-[var(--text-secondary)]"
                   }`}
                 />
               </div>
             </div>
-            <div className="text-sm w-4 text-center">{setIndex + 1}</div>
+            <div className="text-sm w-4 text-center text-[var(--text-primary)]">
+              {setIndex + 1}
+            </div>
             <div className="flex flex-col items-center w-full">
               <Input
                 type="text"
@@ -443,7 +457,7 @@ const SortableLift = ({ lift, exerciseIndex, updateField, updateNotes }) => {
                 }}
                 disabled={lift.set_completed?.[setIndex]}
                 className={`text-center w-20 p-1 ${
-                  lift.set_completed?.[setIndex] ? "bg-gray-100" : ""
+                  lift.set_completed?.[setIndex] ? "bg-[var(--background)]" : ""
                 } ${getValueColor(
                   lift.weight_achieved?.[setIndex],
                   lift.weight?.[setIndex]
@@ -468,7 +482,7 @@ const SortableLift = ({ lift, exerciseIndex, updateField, updateNotes }) => {
                 }}
                 disabled={lift.set_completed?.[setIndex]}
                 className={`text-center w-20 p-1 ${
-                  lift.set_completed?.[setIndex] ? "bg-gray-100" : ""
+                  lift.set_completed?.[setIndex] ? "bg-[var(--background)]" : ""
                 } ${getValueColor(
                   lift.reps_achieved?.[setIndex],
                   lift.reps?.[setIndex]
@@ -498,7 +512,9 @@ const SortableLift = ({ lift, exerciseIndex, updateField, updateNotes }) => {
                   }}
                   disabled={lift.set_completed?.[setIndex]}
                   className={`text-center w-20 p-1 ${
-                    lift.set_completed?.[setIndex] ? "bg-gray-100" : ""
+                    lift.set_completed?.[setIndex]
+                      ? "bg-[var(--background)]"
+                      : ""
                   } ${getValueColor(
                     lift.rpe_achieved?.[setIndex],
                     lift.rpe?.[setIndex],
@@ -526,7 +542,7 @@ const SortableLift = ({ lift, exerciseIndex, updateField, updateNotes }) => {
 
 const RestTimeIndicator = ({ restTime, progress }) => {
   return (
-    <div className="absolute -bottom-[0.6rem] left-4 right-4 flex items-center justify-center">
+    <div className="absolute -bottom-[1rem] left-4 right-4 flex items-center justify-center">
       <div
         className="relative w-full flex items-center"
         style={{
@@ -535,11 +551,11 @@ const RestTimeIndicator = ({ restTime, progress }) => {
           transition: "transform 1s linear",
         }}
       >
-        <div className="absolute left-0 w-12 h-[2px] bg-gradient-to-r from-white via-blue-200/50 to-blue-200"></div>
-        <div className="h-[2px] w-[calc(100%-96px)] mx-12 bg-blue-200"></div>
-        <div className="absolute right-0 w-12 h-[2px] bg-gradient-to-l from-white via-blue-200/50 to-blue-200"></div>
+        <div className="absolute left-0 w-12 h-[2px] bg-gradient-to-r from-[var(--surface)] via-[var(--primary-light)] to-[var(--primary-light)]"></div>
+        <div className="h-[2px] w-[calc(100%-96px)] mx-12 bg-[var(--primary-light)]"></div>
+        <div className="absolute right-0 w-12 h-[2px] bg-gradient-to-l from-[var(--surface)] via-[var(--primary-light)] to-[var(--primary-light)]"></div>
       </div>
-      <span className="absolute bg-white px-1 text-xs text-blue-500">
+      <span className="absolute bg-[var(--surface)] px-1 text-xs text-[var(--primary-light)]">
         {restTime}s
       </span>
     </div>

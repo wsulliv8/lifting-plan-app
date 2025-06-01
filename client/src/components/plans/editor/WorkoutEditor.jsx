@@ -36,15 +36,21 @@ const WorkoutEditor = ({
   workouts: initialWorkouts,
   baseLifts,
   dayId,
-  onSave,
   userLiftsData,
   experience,
+  onWorkoutsChange,
 }) => {
   const [editedWorkouts, setEditedWorkouts] = useState(
     initialWorkouts && initialWorkouts.length > 0
       ? initialWorkouts
       : [{ id: `temp_${Date.now()}`, dayId, name: "", lifts: [] }]
   );
+
+  // Add effect to notify parent of workouts changes
+  useEffect(() => {
+    onWorkoutsChange?.(editedWorkouts);
+  }, [editedWorkouts, onWorkoutsChange]);
+
   const [activeWorkoutIndex, setActiveWorkoutIndex] = useState(0);
   const [scrollTrigger, setScrollTrigger] = useState(null); // Track when to scroll
   const scrollContainerRef = useRef(null); // Ref for the scrollable container
@@ -255,31 +261,6 @@ const WorkoutEditor = ({
     return updated;
   };
 
-  const addWorkoutCopy = (workout) => {
-    const newWorkoutId = `temp_${Date.now()}`;
-    const newLifts = workout.lifts.map((lift, index) => ({
-      id: `temp_${newWorkoutId}_lift_${index}_${Date.now()}`,
-      name: lift.name,
-      base_lift_id: lift.base_lift_id,
-      reps: [...lift.reps],
-      weight: [...lift.weight],
-      sets: lift.sets,
-      progressionRule: lift.progressionRule,
-      rpe: lift.rpe ? [...lift.rpe] : [],
-      rest: lift.rest ? [...lift.rest] : [],
-      showRPE: lift.showRPE ?? false,
-      showRest: lift.showRest ?? false,
-    }));
-
-    const newWorkout = {
-      id: newWorkoutId,
-      name: workout.name + " (Copy)",
-      lifts: newLifts,
-    };
-
-    setEditedWorkouts([...editedWorkouts, newWorkout]);
-  };
-
   const handleDragEnd = (event) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -302,12 +283,8 @@ const WorkoutEditor = ({
     setEditedWorkouts(updated);
   };
 
-  const onSaveClick = () => {
-    onSave(editedWorkouts);
-  };
-
   return (
-    <div className="w-full h-full bg-white rounded-lg flex gap-4">
+    <div className="w-full h-full rounded-lg flex gap-4">
       {/* Workouts and Lifts Section (2/3) */}
       <div
         ref={scrollContainerRef}
@@ -321,12 +298,12 @@ const WorkoutEditor = ({
             workoutIndex === activeWorkoutIndex ? (
               <div
                 key={workout.id}
-                ref={(el) => (workoutRefs.current[workoutIndex] = el)} // Attach ref
-                className="w-full flex flex-col gap-4 p-5 bg-gray-100 rounded-lg mb-4 shadow-inner relative"
+                ref={(el) => (workoutRefs.current[workoutIndex] = el)}
+                className="w-full flex flex-col gap-4 p-5 border border-[var(--border)] rounded-lg mb-4 shadow-inner relative"
               >
                 <TrashIcon
                   onClick={() => removeWorkout(workoutIndex)}
-                  className="w-4 h-4 absolute top-1 right-1  text-red-400 hover:text-red-600 cursor-pointer"
+                  className="w-4 h-4 absolute top-1 right-1 text-[var(--danger)] hover:text-[var(--danger-dark)] cursor-pointer"
                 />
                 <input
                   type="text"
@@ -335,7 +312,7 @@ const WorkoutEditor = ({
                   onChange={(e) =>
                     updateWorkoutName(workoutIndex, e.target.value)
                   }
-                  className="w-full p-2 border rounded"
+                  className="input-field"
                 />
                 <SortableContext
                   id={`workout-${workoutIndex}`}
@@ -357,7 +334,7 @@ const WorkoutEditor = ({
                       />
                     ))
                   ) : (
-                    <span className="flex gap-2 justify-center text-primary">
+                    <span className="flex gap-2 justify-center text-[var(--text-secondary)] ">
                       Add lifts from the lift library!{" "}
                       <ArrowRightIcon className="w-6 h-6" />{" "}
                     </span>
@@ -367,7 +344,7 @@ const WorkoutEditor = ({
             ) : (
               <div
                 key={workout.id}
-                className="w-full p-3 h-min bg-gray-100 rounded-lg space-y-4 mb-4 text-center cursor-pointer shadow-md"
+                className="w-full p-3 h-min border border-[var(--border)] rounded-lg space-y-4 mb-4 text-center cursor-pointer shadow-md hover:bg-[var(--background)] text-[var(--text-primary)]"
                 onClick={() => setActiveWorkoutIndex(workoutIndex)}
               >
                 {workout.name || "New Workout"}
@@ -376,7 +353,7 @@ const WorkoutEditor = ({
           )}
           <Button
             onClick={() => addWorkout()}
-            type={"primary"}
+            variant="primary"
             className="w-1/3"
           >
             Add Workout
@@ -389,15 +366,9 @@ const WorkoutEditor = ({
         <LiftSearch
           lifts={baseLifts}
           onSelectLift={addLift}
-          className="w-[100%] h-[100%] shadow-md border rounded-lg"
+          className="w-[100%] h-[100%] shadow-md border border-[var(--border)] rounded-lg"
         />
       </div>
-      <button
-        onClick={onSaveClick}
-        className="absolute top-9 right-[10%] px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-      >
-        Save
-      </button>
     </div>
   );
 };
@@ -456,15 +427,15 @@ const SortableLift = ({
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center p-2 bg-white rounded-lg space-y-2 relative"
+      className="flex items-center p-2 bg-[var(--surface)] rounded-lg space-y-2 relative border border-[var(--border)]"
     >
       <TrashIcon
         onClick={() => removeLift(workoutIndex, liftIndex)}
-        className="w-4 h-4 absolute top-1 right-1 text-red-400 hover:text-red-600 cursor-pointer"
+        className="w-4 h-4 absolute top-1 right-1 text-[var(--danger)] hover:text-[var(--danger-dark)] cursor-pointer"
       />
 
       <h2
-        className="w-1/5 p-2 rounded cursor-grab font-semibold text-center capitalize"
+        className="w-1/5 p-2 rounded cursor-grab font-semibold text-center capitalize text-[var(--text-primary)]"
         {...attributes}
         {...listeners}
       >
@@ -475,6 +446,7 @@ const SortableLift = ({
           )
           .join(" ")}
       </h2>
+
       <div className="flex justify-center flex-1 w-4/5">
         <div
           className={`grid flex-0 ${
@@ -485,15 +457,29 @@ const SortableLift = ({
               : "grid-cols-[40px_minmax(80px,_120px)_minmax(80px,_120px)]"
           } grid-rows-[auto_1fr] auto-rows-auto gap-y-2 gap-x-2 sm:gap-x-1 md:gap-x-3 lg:gap-x-8 xl:gap-x-10 place-items-center`}
         >
-          <h3 className="text-sm font-medium">Sets</h3>
-          <h3 className="text-sm font-medium">Reps</h3>
-          <h3 className="text-sm font-medium">Weight</h3>
-          {showRPE && <h3 className="text-sm font-medium">RPE</h3>}
-          {showRest && <h3 className="text-sm font-medium">Rest</h3>}
+          <h3 className="text-sm font-medium text-[var(--text-primary)]">
+            Sets
+          </h3>
+          <h3 className="text-sm font-medium text-[var(--text-primary)]">
+            Reps
+          </h3>
+          <h3 className="text-sm font-medium text-[var(--text-primary)]">
+            Weight
+          </h3>
+          {showRPE && (
+            <h3 className="text-sm font-medium text-[var(--text-primary)]">
+              RPE
+            </h3>
+          )}
+          {showRest && (
+            <h3 className="text-sm font-medium text-[var(--text-primary)]">
+              Rest
+            </h3>
+          )}
 
           {lift.reps.map((repsValue, setIndex) => (
             <React.Fragment key={`${lift.id}-set-${setIndex}`}>
-              <span className="h-8 w-8 flex items-center justify-center">
+              <span className="h-8 w-8 flex items-center justify-center text-[var(--text-secondary)]">
                 {setIndex + 1}
               </span>
               <input
@@ -507,7 +493,7 @@ const SortableLift = ({
                     parseInt(e.target.value) || 0
                   )
                 }
-                className="h-8 w-full text-center input-field"
+                className="input-field h-8 w-full text-center"
               />
               <input
                 value={lift.weight[setIndex] === 0 ? "" : lift.weight[setIndex]}
@@ -520,7 +506,7 @@ const SortableLift = ({
                     parseInt(e.target.value) || 0
                   )
                 }
-                className="h-8 w-full text-center input-field"
+                className="input-field h-8 w-full text-center"
               />
               {showRPE && (
                 <select
@@ -534,7 +520,7 @@ const SortableLift = ({
                       e.target.value === "" ? "" : parseInt(e.target.value)
                     )
                   }
-                  className="h-8 w-full p-1 text-center input-field"
+                  className="input-field h-8 w-full p-1 text-center"
                 >
                   <option value="">-</option>
                   {[...Array(10)].map((_, i) => (
@@ -556,7 +542,7 @@ const SortableLift = ({
                       e.target.value
                     )
                   }
-                  className="h-8 w-full p-1 text-center text-sm input-field"
+                  className="input-field h-8 w-full p-1 text-center text-sm"
                 >
                   <option value="60">60s</option>
                   <option value="90">90s</option>
@@ -572,12 +558,12 @@ const SortableLift = ({
           <div className="flex items-center gap-1 col-span-full">
             <MinusCircleIcon
               onClick={() => removeSet(workoutIndex, liftIndex)}
-              className="w-6 h-6 text-red-400 hover:text-red-600 cursor-pointer"
+              className="w-6 h-6 text-[var(--danger)] hover:text-[var(--danger-dark)] cursor-pointer"
             />
-            <p className="text-xs">Sets</p>
+            <p className="text-xs text-[var(--text-secondary)]">Sets</p>
             <PlusCircleIcon
               onClick={() => addSet(workoutIndex, liftIndex)}
-              className="w-6 h-6 text-green-400 hover:text-green-600 cursor-pointer"
+              className="w-6 h-6 text-[var(--primary-light)] hover:text-[var(--primary)] cursor-pointer"
             />
           </div>
         </div>
@@ -586,33 +572,33 @@ const SortableLift = ({
         {lift.sets > 0 && (
           <div className="flex gap-2 ml-2 items-center">
             <div className="flex flex-col items-center gap-1 group">
-              <span className="writing-vertical-rl rotate-180 text-xs cursor-default text-gray-600 group-hover:text-gray-800">
+              <span className="writing-vertical-rl rotate-180 text-xs cursor-default text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]">
                 Add RPE
               </span>
               {!showRPE ? (
                 <PlusCircleIcon
-                  className={`w-5 h-5 cursor-pointer text-blue-400 hover:text-blue-600`}
+                  className={`w-5 h-5 cursor-pointer text-[var(--primary-light)] hover:text-[var(--primary)]`}
                   onClick={() => setShowRPE(!showRPE)}
                 />
               ) : (
                 <MinusCircleIcon
-                  className="w-5 h-5 text-orange-400 hover:text-orange-500 cursor-pointer"
+                  className="w-5 h-5 text-[var(--danger)] hover:text-[var(--danger-dark)] cursor-pointer"
                   onClick={() => setShowRPE(false)}
                 />
               )}
             </div>
             <div className="flex flex-col items-center gap-1 group">
-              <span className="writing-vertical-rl rotate-180 text-xs cursor-default text-gray-600 group-hover:text-gray-800">
+              <span className="writing-vertical-rl rotate-180 text-xs cursor-default text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]">
                 Add Rest
               </span>
               {!showRest ? (
                 <PlusCircleIcon
-                  className={`w-5 h-5 cursor-pointer text-blue-400 hover:text-blue-600`}
+                  className={`w-5 h-5 cursor-pointer text-[var(--primary-light)] hover:text-[var(--primary)]`}
                   onClick={() => setShowRest(!showRest)}
                 />
               ) : (
                 <MinusCircleIcon
-                  className="w-5 h-5 text-orange-400 hover:text-orange-500 cursor-pointer"
+                  className="w-5 h-5 text-[var(--danger)] hover:text-[var(--danger-dark)] cursor-pointer"
                   onClick={() => setShowRest(false)}
                 />
               )}

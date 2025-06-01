@@ -1,6 +1,15 @@
 import { useEffect, useRef, memo } from "react";
+import Button from "./Button";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 
-const Modal = ({ isOpen, onClose, title, children, className }) => {
+const Modal = ({
+  isOpen,
+  onClose,
+  title,
+  children,
+  className,
+  headerContent,
+}) => {
   const modalRef = useRef(null);
   const firstRenderRef = useRef(true);
 
@@ -70,7 +79,7 @@ const Modal = ({ isOpen, onClose, title, children, className }) => {
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      className="fixed inset-0 flex items-center justify-center z-50 bg-[var(--background-dark)]/80 backdrop-blur-sm"
       onClick={handleOverlayClick}
       role="dialog"
       aria-modal="true"
@@ -78,37 +87,27 @@ const Modal = ({ isOpen, onClose, title, children, className }) => {
     >
       <div
         ref={modalRef}
-        className={`flex flex-col bg-white rounded-lg shadow-md p-6 max-w-[95vw] max-h-[95vh] overflow-hidden ${className}`}
+        className={`flex flex-col rounded-lg shadow-md p-6 max-w-[95vw] max-h-[95vh] overflow-hidden bg-[var(--surface)] border border-[var(--border)] ${className}`}
         tabIndex={-1}
-        style={{ maxHeight: "95vh" }}
       >
         <div className="h-8 flex justify-between items-center mb-4">
           <h2
             id="modal-title"
-            className="text-lg font-semibold text-gray-900"
+            className="text-lg font-semibold text-[var(--text-primary)]"
             tabIndex={-1}
           >
             {title}
           </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-600 hover:text-gray-900"
-            aria-label="Close modal"
-          >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          <div className="flex items-center gap-4">
+            {headerContent}
+            <button
+              onClick={onClose}
+              className="text-[var(--danger)] hover:text-[var(--danger-dark)]"
+              aria-label="Close modal"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
+              <XMarkIcon className="w-6 h-6" />
+            </button>
+          </div>
         </div>
         <div
           className="flex-1 min-h-0 overflow-y-auto"

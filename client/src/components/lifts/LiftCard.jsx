@@ -4,24 +4,24 @@ const LiftCard = ({ lift }) => {
   const [activeTab, setActiveTab] = useState("general");
 
   return (
-    <div className="rounded-lg bg-white shadow border-gray-300">
+    <div className="rounded-lg bg-[var(--surface)] shadow-md border border-[var(--border)]">
       {/* Tabs */}
-      <div className="flex border-b-0">
+      <div className="flex">
         <button
-          className={`flex-1 py-1 px-4 text-center text-sm rounded-tl-lg ${
+          className={`flex-1 py-1 px-4 text-center text-sm rounded-tl-lg transition-colors ${
             activeTab === "general"
-              ? "bg-white shadow-[0_-1px_0_0_rgba(0,0,0,0)] "
-              : "bg-gray-200  text-gray-600"
+              ? "bg-[var(--surface)] text-[var(--text-primary)]"
+              : "bg-[var(--background)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           }`}
           onClick={() => setActiveTab("general")}
         >
           General Info
         </button>
         <button
-          className={`flex-1 py-1 px-4 text-center rounded-tr-lg ${
+          className={`flex-1 py-1 px-4 text-center text-sm rounded-tr-lg transition-colors ${
             activeTab === "instructions"
-              ? "bg-white  shadow-[0_-1px_0_0_rgba(0,0,0,0)]"
-              : "bg-gray-200  text-gray-600"
+              ? "bg-[var(--surface)] text-[var(--text-primary)]"
+              : "bg-[var(--background)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           }`}
           onClick={() => setActiveTab("instructions")}
         >
@@ -29,32 +29,36 @@ const LiftCard = ({ lift }) => {
         </button>
       </div>
       {/* Card Content */}
-      <div className="flex justify-between rounded-lg p-4 bg-white shadow rounded-t-lg">
+      <div className="flex justify-between p-4 bg-[var(--surface)] rounded-b-lg">
         {/* Name (Left) */}
         <div>
-          <h2 className="text-xl font-semibold">{lift.name}</h2>
+          <h2 className="text-xl font-semibold text-[var(--text-primary)]">
+            {lift.name}
+          </h2>
           {activeTab === "general" ? (
-            <div className="mt-2 text-sm">
-              <p>
-                <span className="font-semibold">Primary: </span>{" "}
+            <div className="mt-2 text-sm space-y-1">
+              <p className="text-[var(--text-primary)]">
+                <span className="font-semibold">Primary: </span>
                 {lift.primary_muscle_groups.join(", ")}
               </p>
-              <p>
+              <p className="text-[var(--text-primary)]">
                 <span className="font-semibold">Secondary: </span>
                 {lift.secondary_muscle_groups.join(", ")}
               </p>
-              <p>
+              <p className="text-[var(--text-primary)]">
                 <span className="font-semibold">Type: </span> {lift.lift_type}
               </p>
-              <p>
-                <span className="font-semibold">Equipment: </span>{" "}
+              <p className="text-[var(--text-primary)]">
+                <span className="font-semibold">Equipment: </span>
                 {lift.equipment.join(", ")}
               </p>
             </div>
           ) : (
             <div>
-              <h3 className=" font-medium">How to Perform:</h3>
-              <ol className="text-sm list-decimal pl-5 mt-1 text-gray-600">
+              <h3 className="font-medium text-[var(--text-primary)]">
+                How to Perform:
+              </h3>
+              <ol className="text-sm list-decimal pl-5 mt-1 text-[var(--text-secondary)]">
                 {lift.how_to.length > 0 ? (
                   lift.how_to.map((step, index) => <li key={index}>{step}</li>)
                 ) : (
@@ -70,11 +74,13 @@ const LiftCard = ({ lift }) => {
             <img
               src={lift.video_url}
               alt={`${lift.name} demo`}
-              className="w-56 h-48 object-cover rounded"
+              className="w-56 h-48 object-cover rounded-lg border border-[var(--border)]"
             />
           ) : (
-            <div className="w-56 h-48 bg-gray-200 flex items-center justify-center rounded">
-              <span className="text-gray-500">No GIF available</span>
+            <div className="w-56 h-48 bg-[var(--background)] flex items-center justify-center rounded-lg border border-[var(--border)]">
+              <span className="text-[var(--text-secondary)]">
+                No GIF available
+              </span>
             </div>
           )}
         </div>

@@ -12,7 +12,9 @@ const Select = ({
 }) => (
   <div className={`mb-4 ${containerClass}`}>
     {label && (
-      <label className="block text-gray-700 text-sm mb-1">{label}</label>
+      <label className="block text-sm mb-1 text-[var(--text-primary)]">
+        {label}
+      </label>
     )}
     <select
       value={value}

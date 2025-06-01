@@ -15,6 +15,10 @@
     --accent-dark: theme("colors.light.accent.600");
     --accent-light: theme("colors.light.accent.400");
 
+    --danger: theme("colors.light.danger.500");
+    --danger-dark: theme("colors.light.danger.600");
+    --danger-light: theme("colors.light.danger.400");
+
     --background: theme("colors.light.background.100");
     --background-alt: theme("colors.light.background.200");
     --background-dark: theme("colors.light.background.300");
@@ -39,6 +43,10 @@
     --accent: theme("colors.dark.accent.500");
     --accent-dark: theme("colors.dark.accent.600");
     --accent-light: theme("colors.dark.accent.400");
+
+    --danger: theme("colors.dark.danger.500");
+    --danger-dark: theme("colors.dark.danger.600");
+    --danger-light: theme("colors.dark.danger.400");
 
     --background: theme("colors.dark.background.200");
     --background-alt: theme("colors.dark.background.100");
@@ -68,7 +76,7 @@
   .btn-primary {
     @apply w-auto py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed;
     background-color: var(--primary);
-    color: var(--text-primary-light);
+    color: var(--text-primary);
 
     &:hover {
       background-color: var(--primary-dark);
@@ -84,11 +92,11 @@
 
   .btn-secondary {
     @apply w-auto py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed;
-    background-color: var(--background-alt);
+    background-color: var(--secondary);
     color: var(--text-primary);
 
     &:hover {
-      background-color: var(--background-dark);
+      background-color: var(--secondary-dark);
     }
 
     &:focus {
@@ -99,23 +107,61 @@
     @apply md:w-auto md:py-2 md:px-6;
   }
 
+  .btn-tertiary {
+    @apply w-auto py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed;
+    background-color: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+
+    &:hover {
+      background-color: var(--background-alt);
+      border-color: var(--text-secondary);
+    }
+
+    &:focus {
+      @apply ring-2 ring-offset-2;
+      --tw-ring-color: var(--border);
+    }
+
+    @apply md:w-auto md:py-2 md:px-6;
+  }
+
+  .btn-danger {
+    @apply w-auto py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed;
+    background-color: transparent;
+    color: var(--danger);
+    border: 1px solid var(--danger);
+
+    &:hover {
+      background-color: var(--danger);
+      color: white;
+    }
+
+    &:focus {
+      @apply ring-2 ring-offset-2;
+      --tw-ring-color: var(--danger);
+    }
+
+    @apply md:w-auto md:py-2 md:px-6;
+  }
+
   .input-field {
     @apply w-full p-2 rounded;
-    background-color: var(--surface);
-    color: var(--text-primary);
+    background-color: var(--background);
+    color: var(--text-secondary);
     border: 1px solid var(--border);
 
     &:focus {
       @apply ring-2 outline-none;
-      --tw-ring-color: var(--primary);
-      border-color: var(--primary);
+      --tw-ring-color: var(--primary-light);
+      border-color: var(--primary-light);
     }
   }
 
   .border-error {
-    border-color: var(--accent);
+    border-color: var(--danger);
     @apply ring-1;
-    --tw-ring-color: var(--accent);
+    --tw-ring-color: var(--danger);
   }
 
   .form-card {
@@ -132,7 +178,7 @@
 
   .error-text {
     @apply text-sm mt-2;
-    color: var(--accent);
+    color: var(--danger);
   }
 
   .heading {
@@ -148,6 +194,26 @@
     @apply absolute text-sm px-2 py-1 rounded opacity-0 transition-opacity duration-200;
     background-color: var(--text-primary);
     color: var(--surface);
+  }
+
+  .toggle-container {
+    @apply relative inline-flex rounded-full p-1 w-64 shadow-sm;
+    background-color: var(--background-alt);
+  }
+
+  .toggle-slider {
+    @apply absolute top-1 bottom-1 w-1/2 rounded-full transition-transform duration-300 ease-in-out;
+    background-color: var(--primary);
+  }
+
+  .toggle-button {
+    @apply relative z-10 w-1/2 py-2 text-sm font-medium transition-colors duration-300;
+    &.active {
+      color: var(--text-primary);
+    }
+    &.inactive {
+      color: var(--text-secondary);
+    }
   }
 }
 

@@ -30,12 +30,12 @@ const PlanContextMenu = ({
   return (
     <div
       ref={contextMenuRef}
-      className="fixed bg-white shadow-md rounded p-2 z-50 text-sm"
+      className="fixed bg-[var(--surface)] shadow-md rounded p-2 z-50 text-sm border border-[var(--border)]"
       style={{ top: contextMenu.y, left: contextMenu.x }}
       onClick={(e) => e.stopPropagation()}
     >
       <div
-        className="px-2 py-1 hover:bg-gray-100 cursor-pointer"
+        className="px-2 py-1 hover:bg-[var(--background-alt)] cursor-pointer text-[var(--text-primary)]"
         onClick={() => {
           handleCopy(contextMenu.dayId);
           closeContextMenu();
@@ -45,7 +45,7 @@ const PlanContextMenu = ({
       </div>
       {clipboard.length > 0 && (
         <div
-          className="px-2 py-1 hover:bg-gray-100 cursor-pointer"
+          className="px-2 py-1 hover:bg-[var(--background-alt)] cursor-pointer text-[var(--text-primary)]"
           onClick={() => handlePaste(contextMenu.dayId)}
         >
           Paste

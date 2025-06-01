@@ -30,9 +30,9 @@ const TextArea = ({
   return (
     <div className={`mb-4 ${containerClass}`}>
       {label && (
-        <label className="block text-gray-700 text-sm mb-1">
+        <label className="block text-sm mb-1 text-[var(--text-primary)]">
           {label}
-          {isInvalid && <span className="text-error ml-4">required</span>}
+          {isInvalid && <span className="error-text ml-4">required</span>}
         </label>
       )}
       <textarea

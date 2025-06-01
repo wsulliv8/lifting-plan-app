@@ -147,8 +147,10 @@ const PlanGrid = ({
   const renderedWeeks = weeks.map((week, weekIndex) => (
     <div key={`week-${weekIndex}`} className="contents">
       <div
-        className={`bg-gray-50 p-2 font-medium cursor-pointer hover:bg-gray-200 flex items-center justify-center writing-vertical-rl rotate-180 h-full whitespace-nowrap rounded relative group ${
-          collapsedWeeks.has(weekIndex) ? "text-gray-400" : "text-gray-800"
+        className={`bg-[var(--background-alt)] p-2 font-medium cursor-pointer hover:bg-[var(--background-dark)] flex items-center justify-center writing-vertical-rl rotate-180 h-full whitespace-nowrap rounded relative group ${
+          collapsedWeeks.has(weekIndex)
+            ? "text-[var(--text-secondary)]"
+            : "text-[var(--text-primary)]"
         }`}
         onClick={() => {
           toggleWeekCollapse(weekIndex);
@@ -157,7 +159,7 @@ const PlanGrid = ({
         {!collapsedWeeks.has(weekIndex) ? "Week" : ""} {weekIndex + 1}
         <span>
           <TrashIcon
-            className={`absolute bottom-1 left-1/2 transform -translate-x-1/2 h-4 w-4 text-red-400 hover:text-red-600 rotate-90 opacity-0 ${
+            className={`absolute bottom-1 left-1/2 transform -translate-x-1/2 h-4 w-4 text-[var(--danger)] hover:text-[var(--danger-dark)] rotate-90 opacity-0 ${
               collapsedWeeks.has(weekIndex)
                 ? "opacity-0"
                 : "group-hover:opacity-100"
@@ -221,12 +223,12 @@ const PlanGrid = ({
         {/* Sticky horizontal scrollbar at bottom of screen */}
         {showStickyScrollbar && (
           <div
-            className="fixed bottom-0 z-50 backdrop-blur-sm bg-white/90 border-t border-gray-200/50 shadow-lg"
+            className="fixed bottom-0 z-50 backdrop-blur-sm bg-[var(--surface)] bg-opacity-90 border-t border-[var(--border)] shadow-lg"
             style={{ left: "4rem", right: "0" }}
           >
             <div
               ref={stickyScrollRef}
-              className="overflow-x-scroll overflow-y-hidden scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-400 hover:scrollbar-thumb-gray-500"
+              className="overflow-x-scroll overflow-y-hidden scrollbar-thin scrollbar-track-[var(--background-alt)] scrollbar-thumb-[var(--border)] hover:scrollbar-thumb-[var(--text-secondary)]"
               onScroll={handleStickyScroll}
               style={{ height: "16px" }}
             >
@@ -243,7 +245,7 @@ const PlanGrid = ({
 
       <div className="mt-4 flex justify-center pb-6">
         <PlusCircleIcon
-          className="h-8 w-8 text-green-500 hover:text-green-600 cursor-pointer"
+          className="h-8 w-8 text-[var(--primary)] hover:text-[var(--primary-dark)] cursor-pointer"
           onClick={() => setTotalDays((prev) => prev + 7)}
         />
       </div>

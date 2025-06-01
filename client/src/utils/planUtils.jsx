@@ -101,8 +101,10 @@ export const generateHeaderDays = (collapsedDays, toggleDayCollapse) =>
     .map((_, dayIndex) => (
       <div
         key={`header-day-${dayIndex}`}
-        className={`bg-gray-50 p-1 font-medium cursor-pointer hover:bg-gray-200 place-self-center w-full rounded text-center sticky -top-2 z-10 ${
-          collapsedDays[dayIndex] ? "text-gray-400" : "text-gray-800"
+        className={`bg-[var(--background-alt)] p-1 font-medium cursor-pointer hover:bg-[var(--background-dark)] place-self-center w-full rounded text-center sticky -top-2 z-10 ${
+          collapsedDays[dayIndex]
+            ? "text-[var(--text-secondary)]"
+            : "text-[var(--text-primary)]"
         }`}
         onClick={() => toggleDayCollapse(dayIndex)}
       >

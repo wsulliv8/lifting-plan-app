@@ -30,7 +30,7 @@ const Workout = memo(({ id, workout, handleClick }) => {
 
   const liftsContent = useMemo(() => {
     if (!workout.lifts || workout.lifts.length === 0) {
-      return <div className="text-gray-500">No lifts</div>;
+      return <div className="text-[var(--text-secondary)]">No lifts</div>;
     }
     const getRepsString = (lift) => {
       if (!lift.reps || lift.reps.length === 0) return "";
@@ -57,8 +57,12 @@ const Workout = memo(({ id, workout, handleClick }) => {
         {workout.lifts.map((lift, index) => (
           <li key={`${lift.id || index}-${index}`}>
             <span className="flex flex-wrap">
-              <span className="mr-2">{lift.name}</span>
-              <span>{getRepsString(lift)}</span>
+              <span className="mr-2 text-[var(--text-primary)]">
+                {lift.name}
+              </span>
+              <span className="text-[var(--text-secondary)]">
+                {getRepsString(lift)}
+              </span>
             </span>
           </li>
         ))}
@@ -72,8 +76,8 @@ const Workout = memo(({ id, workout, handleClick }) => {
       style={style}
       {...attributes}
       {...listeners}
-      className={`w-full p-1 mb-2 bg-gray-100 rounded hover:bg-gray-200 first:mt-4 ${
-        isDragging ? "opacity-50 border border-blue-500" : ""
+      className={`w-full p-1 mb-2 bg-[var(--background-alt)] border border-[var(--border)] rounded hover:border-[var(--primary-light)] first:mt-4 ${
+        isDragging ? "opacity-50 border border-[var(--primary-light)]" : ""
       }`}
       onClick={(e) => {
         e.stopPropagation();
@@ -81,7 +85,7 @@ const Workout = memo(({ id, workout, handleClick }) => {
       }}
     >
       <div className="w-full text-xs">
-        <div className="font-medium text-center">
+        <div className="font-medium text-center text-[var(--text-primary)]">
           {workout.name || "Workout"}
         </div>
         {liftsContent}

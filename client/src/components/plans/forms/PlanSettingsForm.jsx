@@ -2,6 +2,7 @@ import Input from "../../common/Input";
 import Select from "../../common/Select";
 import MultiSelect from "../../common/MultiSelect";
 import TextArea from "../../common/TextArea";
+import Button from "../../common/Button";
 
 // Memoized form component
 const PlanSettingsForm = ({
@@ -11,7 +12,7 @@ const PlanSettingsForm = ({
   handleCategoriesChange,
 }) => {
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col items-center">
+    <form onSubmit={handleSubmit} className="flex flex-col items-center gap-4">
       <Input
         label="Name"
         name="name"
@@ -28,7 +29,7 @@ const PlanSettingsForm = ({
         placeholder="e.g., Strength, Hypertrophy"
       />
       <div className="w-3/4">
-        <label className="block text-sm font-normal text-gray-700 mb-1">
+        <label className="block text-sm font-normal text-[var(--text-secondary)] mb-1">
           Categories
         </label>
         <MultiSelect
@@ -62,12 +63,9 @@ const PlanSettingsForm = ({
         onChange={handleInputChange}
         containerClass="w-3/4"
       />
-      <button
-        type="submit"
-        className="px-4 py-2 w-1/2 text-white bg-green-500 rounded hover:bg-green-600 m-auto"
-      >
+      <Button type="submit" variant="primary" size="md" className="w-1/2">
         Save
-      </button>
+      </Button>
     </form>
   );
 };

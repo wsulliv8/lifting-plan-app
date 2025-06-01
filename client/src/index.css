@@ -3,9 +3,9 @@
 
 @layer base {
   :root {
-    --primary: theme("colors.light.primary.500");
-    --primary-dark: theme("colors.light.primary.600");
-    --primary-light: theme("colors.light.primary.400");
+    --primary: theme("colors.light.primary.600");
+    --primary-dark: theme("colors.light.primary.700");
+    --primary-light: theme("colors.light.primary.300");
 
     --secondary: theme("colors.light.secondary.500");
     --secondary-dark: theme("colors.light.secondary.600");
@@ -20,14 +20,14 @@
     --danger-light: theme("colors.light.danger.400");
 
     --background: theme("colors.light.background.100");
-    --background-alt: theme("colors.light.background.200");
+    --background-alt: theme("colors.light.background.300");
     --background-dark: theme("colors.light.background.300");
 
     --text-primary: theme("colors.light.text.primary.500");
     --text-primary-light: theme("colors.light.text.primary.300");
     --text-secondary: theme("colors.light.text.secondary.400");
 
-    --surface: theme("colors.light.background.50");
+    --surface: theme("colors.light.background.200");
     --border: theme("colors.light.background.300");
   }
 
@@ -50,7 +50,7 @@
 
     --background: theme("colors.dark.background.200");
     --background-alt: theme("colors.dark.background.100");
-    --background-dark: theme("colors.dark.background.300");
+    --background-dark: theme("colors.dark.background.200");
 
     --text-primary: theme("colors.dark.text.primary.100");
     --text-primary-light: theme("colors.dark.text.primary.300");
@@ -78,6 +78,10 @@
     background-color: var(--primary);
     color: var(--text-primary);
 
+    :root & {
+      color: theme("colors.dark.text.primary.100");
+    }
+
     &:hover {
       background-color: var(--primary-dark);
     }
@@ -92,11 +96,15 @@
 
   .btn-secondary {
     @apply w-auto py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed;
-    background-color: var(--secondary);
+    background-color: var(--secondary-light);
     color: var(--text-primary);
 
+    :root & {
+      color: theme("colors.dark.text.primary.100");
+    }
+
     &:hover {
-      background-color: var(--secondary-dark);
+      background-color: var(--secondary);
     }
 
     &:focus {
@@ -115,7 +123,7 @@
 
     &:hover {
       background-color: var(--background-alt);
-      border-color: var(--text-secondary);
+      border-color: var(--primary-light);
     }
 
     &:focus {
@@ -202,8 +210,14 @@
   }
 
   .toggle-slider {
-    @apply absolute top-1 bottom-1 w-1/2 rounded-full transition-transform duration-300 ease-in-out;
+    @apply absolute top-1 bottom-1 rounded-full transition-transform duration-300 ease-in-out;
     background-color: var(--primary);
+    width: calc(50% - 4px);
+    left: 4px;
+  }
+
+  .toggle-slider.right {
+    transform: translateX(calc(100% + 8px));
   }
 
   .toggle-button {

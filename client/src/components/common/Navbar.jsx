@@ -77,8 +77,8 @@ const Navbar = () => {
               className={({ isActive }) =>
                 `nav-item ${
                   isActive
-                    ? "bg-[var(--primary)] text-[var(--text-primary-light)] "
-                    : "text-[var(--text-primary)] hover:bg-[var(--background)] "
+                    ? "bg-[var(--primary)] text-[var(--text-primary-light)]"
+                    : "text-[var(--text-primary)] hover:bg-[var(--background-dark)]"
                 }`
               }
               onClick={() => setIsOpen(false)}
@@ -117,7 +117,7 @@ const Navbar = () => {
             className={`nav-item ${
               isProfileOpen
                 ? "bg-[var(--primary)] text-[var(--text-primary-light)]"
-                : "text-[var(--text-primary)] hover:bg-[var(--background)]"
+                : "text-[var(--text-primary)] hover:bg-[var(--background-dark)]"
             }`}
             onClick={() => setIsProfileOpen(!isProfileOpen)}
           >

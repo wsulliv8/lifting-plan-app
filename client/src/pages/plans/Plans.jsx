@@ -179,11 +179,14 @@ const FormContent = memo(
         />
 
         <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={handleCloseModal}>
-            Cancel
-          </Button>
-          <Button variant="primary" type="submit">
+        <Button variant="primary" type="submit">
             Create
+          </Button>
+          <Button
+            variant="danger"
+            onClick={handleCloseModal}
+          >
+            Cancel
           </Button>
         </div>
       </form>

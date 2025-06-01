@@ -31,6 +31,8 @@ model Plans {
   goal           String
   current_workout_id Int?  
   created_at     DateTime   @default(now())
+  started_at     DateTime?
+  completed_at   DateTime?
   user           Users?     @relation(fields: [user_id], references: [id], onDelete: SetNull)
   workouts       Workouts[] // Relation to Workouts (one-to-many)
   weeks          Week[]     // Relation to Week model
@@ -72,7 +74,9 @@ model Workouts {
   day_of_week  String
   iteration    Int?
   total_volume Int?
+  success      Boolean?     // If all sets, reps, and weight are achieved
   created_at   DateTime     @default(now())
+  completed_at DateTime?
   user         Users?       @relation(fields: [user_id], references: [id], onDelete: SetNull)
   plan         Plans?       @relation(fields: [plan_id], references: [id], onDelete: SetNull)
   lifts        Lifts[]      // Relation to Lifts (one-to-many)

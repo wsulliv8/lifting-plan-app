@@ -22,6 +22,23 @@ const planController = {
     }
   },
 
+  async startPlan(req, res, next) {
+    const planId = parseInt(req.params.id);
+    try {
+      const plan = await prisma.plans.update({
+        where: { id: planId },
+        data: { started_at: new Date() },
+        select: { id: true, started_at: true },
+      });
+      if (!plan) {
+        return res.status(404).json({ error: "Plan not found" });
+      }
+      res.json(plan);
+    } catch (error) {
+      next(error);
+    }
+  },
+
   async createPlan(req, res, next) {
     try {
       const { name, duration_weeks } = req.body;

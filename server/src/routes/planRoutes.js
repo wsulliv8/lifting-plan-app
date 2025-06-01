@@ -17,4 +17,6 @@ router.put("/:id", authMiddleware, planController.updatePlan);
 
 router.delete("/:id", authMiddleware, planController.deletePlan);
 
+router.patch("/:id/start", authMiddleware, planController.startPlan);
+
 module.exports = router;

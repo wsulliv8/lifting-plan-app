@@ -1,13 +1,13 @@
 import { useState, useMemo } from "react";
-import { useLoaderData } from "react-router-dom";
-import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/20/solid";
+import { useLoaderData, useNavigate } from "react-router-dom";
+import { ChevronLeftIcon, ChevronRightIcon, ArrowLeftIcon } from "@heroicons/react/20/solid";
 import Button from "../../components/common/Button";
 
 const PlanProgress = () => {
   const { plan } = useLoaderData();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(false);
-
+  const navigate = useNavigate();
   // Process plan data to create calendar structure
   const calendarData = useMemo(() => {
     if (!plan || !plan.started_at) return [];
@@ -266,6 +266,13 @@ const PlanProgress = () => {
       >
         {/* Calendar Header */}
         <div className="flex items-center justify-between mb-6 flex-shrink-0">
+        <span
+          className="flex items-center gap-2 cursor-pointer text-[var(--text-primary)]"
+          onClick={() => navigate("/plans/")}
+        >
+          <ArrowLeftIcon className="w-6 h-6" />
+          <span>(To Plans)</span>
+        </span>
           <h1 className="text-2xl font-bold text-[var(--text-primary)]">
             {plan.name} - Progress
           </h1>

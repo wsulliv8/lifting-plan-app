@@ -157,36 +157,8 @@ const workoutController = {
         },
       });
 
-      // Find the next workout in the plan
-      if (refreshedWorkout.plan) {
-        const allWorkouts = refreshedWorkout.plan.weeks
-          .flatMap((week) =>
-            week.days.flatMap((day) =>
-              day.workoutDays.map((wd) => ({
-                ...wd.workout,
-                week_number: week.week_number,
-                day_of_week: day.day_of_week,
-              }))
-            )
-          )
-          .sort((a, b) => {
-            if (a.week_number !== b.week_number) {
-              return a.week_number - b.week_number;
-            }
-            return parseInt(a.day_of_week) - parseInt(b.day_of_week);
-          });
-
-        const currentIndex = allWorkouts.findIndex((w) => w.id === workoutId);
-        const nextWorkout = allWorkouts[currentIndex + 1];
-
-        // Update the plan's current_workout_id
-        await prisma.plans.update({
-          where: { id: refreshedWorkout.plan.id },
-          data: {
-            current_workout_id: nextWorkout ? nextWorkout.id : null,
-          },
-        });
-      }
+      // Calculate workout success based on lift performance
+      let workoutSuccess = true; // Assume success unless we find failed lifts
 
       // Process progression for completed lifts using refreshed data
       for (const lift of refreshedWorkout.lifts) {
@@ -210,6 +182,11 @@ const workoutController = {
             name: lift.name,
             weightAdjustment,
           });
+
+          // Check if this lift failed (negative adjustment = failed)
+          if (weightAdjustment < 0) {
+            workoutSuccess = false;
+          }
 
           // If there's an adjustment needed, update future lifts in the plan
           if (weightAdjustment !== 0 && refreshedWorkout.plan) {
@@ -306,6 +283,46 @@ const workoutController = {
             });
           }
         }
+      }
+
+      // Update workout with success status and completion time
+      await prisma.workouts.update({
+        where: { id: workoutId },
+        data: {
+          success: workoutSuccess,
+          completed_at: new Date(),
+        },
+      });
+
+      // Find the next workout in the plan
+      if (refreshedWorkout.plan) {
+        const allWorkouts = refreshedWorkout.plan.weeks
+          .flatMap((week) =>
+            week.days.flatMap((day) =>
+              day.workoutDays.map((wd) => ({
+                ...wd.workout,
+                week_number: week.week_number,
+                day_of_week: day.day_of_week,
+              }))
+            )
+          )
+          .sort((a, b) => {
+            if (a.week_number !== b.week_number) {
+              return a.week_number - b.week_number;
+            }
+            return parseInt(a.day_of_week) - parseInt(b.day_of_week);
+          });
+
+        const currentIndex = allWorkouts.findIndex((w) => w.id === workoutId);
+        const nextWorkout = allWorkouts[currentIndex + 1];
+
+        // Update the plan's current_workout_id
+        await prisma.plans.update({
+          where: { id: refreshedWorkout.plan.id },
+          data: {
+            current_workout_id: nextWorkout ? nextWorkout.id : null,
+          },
+        });
       }
 
       res.json({ message: "Workout completed", workoutId });

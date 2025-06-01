@@ -17,6 +17,7 @@ import Button from "../../components/common/Button.jsx";
 import Input from "../../components/common/Input.jsx";
 import Select from "../../components/common/Select.jsx";
 import { updateWorkout } from "../../services/workouts.js";
+import { startPlan } from "../../services/plans.js";
 
 const formatTime = (seconds) => {
   const hrs = Math.floor(seconds / 3600);
@@ -162,6 +163,7 @@ const ActiveWorkout = () => {
     );
 
     await updateWorkout(workout.id, updatedLifts);
+    await startPlan(workout.plan.id);
     navigate("/plans");
   };
 

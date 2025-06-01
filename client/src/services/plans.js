@@ -17,6 +17,11 @@ const getPlans = async () => {
   return response.data;
 };
 
+const startPlan = async (planId) => {
+  const response = await api.patch(`/plans/${planId}/start`);
+  return response.data;
+};
+
 const getPlanById = async (planId) => {
   try {
     const response = await api.get(`/plans/${planId}`, {
@@ -111,4 +116,5 @@ export {
   savePlan,
   deletePlan,
   downloadPlan,
+  startPlan,
 };

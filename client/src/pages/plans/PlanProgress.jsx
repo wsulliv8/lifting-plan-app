@@ -1,29 +1,68 @@
 import { useState, useMemo } from "react";
 import { useLoaderData, useNavigate } from "react-router-dom";
-import { ChevronLeftIcon, ChevronRightIcon, ArrowLeftIcon } from "@heroicons/react/20/solid";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ArrowLeftIcon,
+} from "@heroicons/react/20/solid";
 import Button from "../../components/common/Button";
 
 const PlanProgress = () => {
   const { plan } = useLoaderData();
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(false);
   const navigate = useNavigate();
+  console.log(plan);
+
+  // Calculate plan date range
+  const planDateRange = useMemo(() => {
+    if (!plan) return null;
+
+    const startDate = plan.started_at ? new Date(plan.started_at) : new Date();
+    const planDurationDays = (plan.duration_weeks || 12) * 7; // Default to 12 weeks if not specified
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + planDurationDays - 1); // -1 because we include the start date
+
+    return {
+      startDate,
+      endDate,
+      startMonth: new Date(startDate.getFullYear(), startDate.getMonth(), 1),
+      endMonth: new Date(endDate.getFullYear(), endDate.getMonth(), 1),
+    };
+  }, [plan]);
+
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    return planDateRange ? planDateRange.startMonth : new Date();
+  });
+
+  const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(false);
+
+  const canNavigatePrevious = useMemo(() => {
+    if (!planDateRange) return false;
+    return currentMonth > planDateRange.startMonth;
+  }, [currentMonth, planDateRange]);
+
+  const canNavigateNext = useMemo(() => {
+    if (!planDateRange) return false;
+    return currentMonth < planDateRange.endMonth;
+  }, [currentMonth, planDateRange]);
+
   // Process plan data to create calendar structure
   const calendarData = useMemo(() => {
-    if (!plan || !plan.started_at) return [];
+    if (!plan || !planDateRange) return [];
 
-    const startDate = new Date(plan.started_at);
-    const currentDate = new Date();
+    const { startDate, endDate } = planDateRange;
     const days = [];
-    let shiftForward = 0;
 
-    // Flatten all workouts from the plan
-    const allWorkouts = [];
+    // Flatten all workouts from the plan by plan_day
+    const workoutsByPlanDay = new Map();
     plan.weeks?.forEach((week) => {
       week.days?.forEach((day) => {
         day.workoutDays?.forEach((workoutDay) => {
           if (workoutDay.workout) {
-            allWorkouts.push({
+            const planDay = workoutDay.workout.plan_day;
+            if (!workoutsByPlanDay.has(planDay)) {
+              workoutsByPlanDay.set(planDay, []);
+            }
+            workoutsByPlanDay.get(planDay).push({
               ...workoutDay.workout,
               dayOfWeek: day.day_of_week,
               weekNumber: week.week_number,
@@ -33,109 +72,67 @@ const PlanProgress = () => {
       });
     });
 
-    // Sort workouts by plan_day
-    allWorkouts.sort((a, b) => a.plan_day - b.plan_day);
+    // Calculate each day from start to end
+    const currentDate = new Date(startDate);
+    let planDay = 1;
 
-    // Loop from start date to current date
-    const daysDiff = Math.floor(
-      (currentDate - startDate) / (1000 * 60 * 60 * 24)
-    );
+    while (currentDate <= endDate) {
+      const dayWorkouts = workoutsByPlanDay.get(planDay) || [];
 
-    for (let dayIndex = 0; dayIndex <= daysDiff; dayIndex++) {
-      const currentDay = new Date(startDate);
-      currentDay.setDate(startDate.getDate() + dayIndex);
-
-      // Find workouts for this day
-      const dayWorkouts = allWorkouts.filter(
-        (workout) => workout.plan_day === dayIndex + 1 - shiftForward
-      );
+      let dayType = "rest";
 
       if (dayWorkouts.length > 0) {
-        // Check if all workouts are completed on time
-        const allCompleted = dayWorkouts.every((workout) => {
-          if (!workout.completed_at) return false;
-          const completedDate = new Date(workout.completed_at);
-          const expectedDate = new Date(startDate);
-          expectedDate.setDate(
-            startDate.getDate() + workout.plan_day - 1 + shiftForward
-          );
-          return (
-            Math.floor(
-              (completedDate - expectedDate) / (1000 * 60 * 60 * 24)
-            ) === 0
-          );
-        });
+        // Check if workouts are completed
+        const completedWorkouts = dayWorkouts.filter((w) => w.completed_at);
+        const allCompleted = completedWorkouts.length === dayWorkouts.length;
 
-        if (!allCompleted) {
-          // Add missed days until requirement is met
-          let missedDays = 0;
-          while (!allCompleted && dayIndex + missedDays <= daysDiff) {
-            days.push({
-              date: new Date(
-                currentDay.getTime() + missedDays * 24 * 60 * 60 * 1000
-              ),
-              type: "missed",
-              workouts: [],
-            });
-            missedDays++;
+        if (plan.started_at && currentDate < new Date()) {
+          // Past day
+          if (allCompleted) {
+            const allSuccessful = completedWorkouts.every((w) => w.success);
+            dayType = allSuccessful ? "success" : "completed";
+          } else {
+            dayType = "missed";
           }
-          shiftForward += missedDays;
-        }
-
-        // Add the actual day
-        const allSuccessful = dayWorkouts.every((workout) => workout.success);
-        days.push({
-          date: currentDay,
-          type: dayWorkouts.every((w) => w.completed_at)
-            ? allSuccessful
-              ? "success"
-              : "completed"
-            : "scheduled",
-          workouts: dayWorkouts,
-        });
-      } else {
-        // Rest day
-        days.push({
-          date: currentDay,
-          type: "rest",
-          workouts: [],
-        });
-      }
-    }
-
-    // Handle future days based on current_workout_id
-    if (plan.current_workout_id) {
-      const nextWorkout = allWorkouts.find(
-        (w) => w.id === plan.current_workout_id
-      );
-      if (nextWorkout) {
-        const expectedDay = nextWorkout.plan_day + shiftForward;
-        const daysSinceStart = Math.floor(
-          (currentDate - startDate) / (1000 * 60 * 60 * 24)
-        );
-
-        if (expectedDay > daysSinceStart + 1) {
-          // Add missed days until we reach the expected day
-          for (let i = daysSinceStart + 1; i < expectedDay; i++) {
-            const missedDate = new Date(startDate);
-            missedDate.setDate(startDate.getDate() + i);
-            days.push({
-              date: missedDate,
-              type: "missed",
-              workouts: [],
-            });
-          }
+        } else {
+          // Future day or not started
+          dayType = "scheduled";
         }
       }
+
+      days.push({
+        date: new Date(currentDate),
+        planDay,
+        type: dayType,
+        workouts: dayWorkouts,
+      });
+
+      currentDate.setDate(currentDate.getDate() + 1);
+      planDay++;
     }
 
     return days;
-  }, [plan]);
+  }, [plan, planDateRange]);
 
   // Generate calendar grid for current month
   const calendarGrid = useMemo(() => {
+    if (!planDateRange) return [];
+
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
+
+    // Check if this month is within the plan range
+    const monthStart = new Date(year, month, 1);
+    const monthEnd = new Date(year, month + 1, 0); // Last day of month
+
+    // If the month is completely outside the plan range, don't show anything
+    if (
+      monthEnd < planDateRange.startDate ||
+      monthStart > planDateRange.endDate
+    ) {
+      return [];
+    }
+
     const firstDay = new Date(year, month, 1);
     const startDate = new Date(firstDay);
     startDate.setDate(startDate.getDate() - firstDay.getDay());
@@ -165,12 +162,23 @@ const PlanProgress = () => {
     }
 
     return grid;
-  }, [currentMonth, calendarData]);
+  }, [currentMonth, calendarData, planDateRange]);
 
   const navigateMonth = (direction) => {
+    if (!planDateRange) return;
+
     setCurrentMonth((prev) => {
       const newDate = new Date(prev);
       newDate.setMonth(newDate.getMonth() + direction);
+
+      // Constrain to plan date range
+      if (newDate < planDateRange.startMonth) {
+        return planDateRange.startMonth;
+      }
+      if (newDate > planDateRange.endMonth) {
+        return planDateRange.endMonth;
+      }
+
       return newDate;
     });
   };
@@ -187,8 +195,7 @@ const PlanProgress = () => {
         return "border-t-4 border-red-500";
       case "scheduled":
         return "border-t-4 border-blue-500 opacity-60";
-      case "rest":
-        return "border-t-4 border-gray-400";
+
       default:
         return "";
     }
@@ -266,13 +273,13 @@ const PlanProgress = () => {
       >
         {/* Calendar Header */}
         <div className="flex items-center justify-between mb-6 flex-shrink-0">
-        <span
-          className="flex items-center gap-2 cursor-pointer text-[var(--text-primary)]"
-          onClick={() => navigate("/plans/")}
-        >
-          <ArrowLeftIcon className="w-6 h-6" />
-          <span>(To Plans)</span>
-        </span>
+          <span
+            className="flex items-center gap-2 cursor-pointer text-[var(--text-primary)]"
+            onClick={() => navigate("/plans/")}
+          >
+            <ArrowLeftIcon className="w-6 h-6" />
+            <span>(To Plans)</span>
+          </span>
           <h1 className="text-2xl font-bold text-[var(--text-primary)]">
             {plan.name} - Progress
           </h1>
@@ -281,6 +288,7 @@ const PlanProgress = () => {
               variant="tertiary"
               onClick={() => navigateMonth(-1)}
               className="p-2"
+              disabled={!canNavigatePrevious}
             >
               <ChevronLeftIcon className="w-5 h-5" />
             </Button>
@@ -291,6 +299,7 @@ const PlanProgress = () => {
               variant="tertiary"
               onClick={() => navigateMonth(1)}
               className="p-2"
+              disabled={!canNavigateNext}
             >
               <ChevronRightIcon className="w-5 h-5" />
             </Button>
@@ -328,19 +337,43 @@ const PlanProgress = () => {
                       {getDisplayedDay(day)}
                     </div>
                     {day.data && (
-                      <div className="mt-1">
+                      <div className="mt-1 flex-1 overflow-hidden">
                         {day.data.type === "missed" ? (
                           <div className="text-xs text-red-500 font-medium">
                             Missed
                           </div>
-                        ) : day.data.workouts.length > 0 ? (
-                          <div className="text-xs text-[var(--text-secondary)]">
-                            {day.data.workouts.length} workout
-                            {day.data.workouts.length > 1 ? "s" : ""}
-                          </div>
                         ) : day.data.type === "rest" ? (
                           <div className="text-xs text-[var(--text-secondary)]">
-                            Rest
+                            Rest Day
+                          </div>
+                        ) : day.data.workouts.length > 0 ? (
+                          <div className="space-y-1 overflow-hidden">
+                            {day.data.workouts.map((workout) => (
+                              <div key={workout.id} className="text-xs">
+                                <div className="font-medium text-[var(--text-primary)] truncate">
+                                  {workout.name}
+                                </div>
+                                <div className="space-y-0.5 max-h-16 overflow-hidden">
+                                  {workout.lifts?.slice(0, 3).map((lift) => (
+                                    <div
+                                      key={lift.id}
+                                      className="text-[var(--text-secondary)] truncate"
+                                    >
+                                      {lift.name}: {lift.sets}x
+                                      {lift.reps?.[0] || "?"}
+                                      {lift.weight?.[0]
+                                        ? ` @ ${lift.weight[0]}kg`
+                                        : ""}
+                                    </div>
+                                  ))}
+                                  {workout.lifts?.length > 3 && (
+                                    <div className="text-[var(--text-secondary)]">
+                                      +{workout.lifts.length - 3} more
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         ) : null}
                       </div>

@@ -38,6 +38,10 @@ const getPlanById = async (planId) => {
       categories: data.categories,
       difficulty: data.difficulty,
       description: data.description,
+      duration_weeks: data.duration_weeks,
+      started_at: data.started_at,
+      completed_at: data.completed_at,
+      current_workout_id: data.current_workout_id,
       dayGroups: data.dayGroups,
       weeks: data.weeks.map((week) => ({
         id: week.id,
@@ -50,6 +54,9 @@ const getPlanById = async (planId) => {
             .map((wd) => ({
               id: wd.workout.id,
               name: wd.workout.name,
+              plan_day: wd.workout.plan_day,
+              completed_at: wd.workout.completed_at,
+              success: wd.workout.success,
               lifts: wd.workout.lifts.map((lift) => ({
                 id: lift.id,
                 name: lift.name,

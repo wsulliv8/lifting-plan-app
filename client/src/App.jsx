@@ -9,6 +9,7 @@ import RegisterForm from "./components/auth/RegisterForm";
 import Welcome from "./pages/Welcome";
 import Plans from "./pages/plans/Plans";
 import PlanEditor from "./pages/plans/PlanEditor";
+import PlanProgress from "./pages/plans/PlanProgress";
 import ActiveWorkout from "./pages/plans/ActiveWorkout";
 import Workouts from "./pages/workouts/Workouts";
 import Lifts from "./pages/lifts/Lifts";
@@ -62,6 +63,21 @@ const editPlanLoader = async ({ params }) => {
   }
 };
 
+const planProgressLoader = async ({ params }) => {
+  try {
+    const plan = await getPlanById(params.planId);
+    return { plan };
+  } catch (err) {
+    if (err.response?.status === 401) {
+      localStorage.removeItem("token");
+      return redirect("/login");
+    }
+    throw new Response("Failed to load plan progress", {
+      status: err.response?.status || 500,
+    });
+  }
+};
+
 const activeWorkoutLoader = async ({ params }) => {
   try {
     const workout = await getWorkoutById(params.id);
@@ -109,6 +125,12 @@ const router = createBrowserRouter([
         path: "plans/:planId/edit",
         element: <PlanEditor />,
         loader: editPlanLoader,
+        errorElement: <ErrorPage />,
+      },
+      {
+        path: "plans/:planId/progress",
+        element: <PlanProgress />,
+        loader: planProgressLoader,
         errorElement: <ErrorPage />,
       },
       {

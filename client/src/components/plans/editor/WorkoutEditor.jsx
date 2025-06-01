@@ -157,10 +157,18 @@ const WorkoutEditor = ({
       const userLift = userLiftsMap.get(baseLiftId);
       lift.reps[setIndex] = parseInt(value) || 0;
 
-      let closestIndex = -1;
-      let smallestDiff = Infinity;
+      // Always cascade rep changes first
+      for (let i = setIndex + 1; i < lift.reps.length; i++) {
+        if (lift.reps[i] === oldValue) {
+          lift.reps[i] = parseInt(value) || 0;
+        }
+      }
 
+      // Then handle weight calculations if userLift data exists
       if (userLift && value) {
+        let closestIndex = -1;
+        let smallestDiff = Infinity;
+
         userLift.rep_ranges.forEach((rep, idx) => {
           const diff = Math.abs(rep - value);
           if (diff < smallestDiff) {
@@ -169,16 +177,22 @@ const WorkoutEditor = ({
           }
         });
 
-        lift.weight[setIndex] =
-          smallestDiff <= 1 ? userLift.max_weights[closestIndex] : 0;
+        if (smallestDiff <= 1) {
+          const newWeight = userLift.max_weights[closestIndex];
+          lift.weight[setIndex] = newWeight;
 
-        // Cascade weight changes
-        for (let i = setIndex + 1; i < lift.weight.length; i++) {
-          if (lift.reps[i] === oldValue) {
-            lift.reps[i] = parseInt(value) || 0;
-            if (closestIndex !== -1) {
-              lift.weight[i] =
-                smallestDiff <= 1 ? userLift.max_weights[closestIndex] : 0;
+          // Cascade weight changes to sets that were updated with the same rep value
+          for (let i = setIndex + 1; i < lift.weight.length; i++) {
+            if (lift.reps[i] === parseInt(value)) {
+              lift.weight[i] = newWeight;
+            }
+          }
+        } else {
+          lift.weight[setIndex] = 0;
+          // Cascade zero weight to sets with the same rep value
+          for (let i = setIndex + 1; i < lift.weight.length; i++) {
+            if (lift.reps[i] === parseInt(value)) {
+              lift.weight[i] = 0;
             }
           }
         }

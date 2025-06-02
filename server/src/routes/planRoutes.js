@@ -19,4 +19,7 @@ router.delete("/:id", authMiddleware, planController.deletePlan);
 
 router.patch("/:id/start", authMiddleware, planController.startPlan);
 
+// POST /api/plans/:id/copy
+router.post("/:id/copy", authMiddleware, planController.copyPlan);
+
 module.exports = router;

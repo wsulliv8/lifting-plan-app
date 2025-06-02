@@ -541,6 +541,187 @@ const planController = {
       res.status(500).json({ error: "Failed to update plan" });
     }
   },
+
+  async copyPlan(req, res) {
+    try {
+      const { id } = req.params;
+      const userId = req.user.userId;
+
+      // Get the original plan with all related data
+      const originalPlan = await prisma.plans.findUnique({
+        where: { id: parseInt(id) },
+        include: {
+          weeks: {
+            include: {
+              days: {
+                include: {
+                  workoutDays: {
+                    include: {
+                      workout: {
+                        include: {
+                          lifts: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!originalPlan) {
+        return res.status(404).json({ error: "Plan not found" });
+      }
+
+      // Destructure the original plan, omitting fields we don't want to copy
+      const {
+        id: _id,
+        user_id: _userId,
+        created_at: _created,
+        started_at: _started,
+        completed_at: _completed,
+        current_workout_id: _current,
+        weeks,
+        ...planBase
+      } = originalPlan;
+
+      // Create a new plan with the user's ID
+      const newPlan = await prisma.plans.create({
+        data: {
+          ...planBase,
+          user_id: userId,
+          source_plan_id: parseInt(id),
+          name: `${planBase.name} (Copy)`,
+          weeks: {
+            create: weeks.map(
+              ({ id: _weekId, plan_id: _planId, days, ...week }) => ({
+                ...week,
+                days: {
+                  create: days.map(
+                    ({
+                      id: _dayId,
+                      week_id: _weekId,
+                      workoutDays,
+                      ...day
+                    }) => ({
+                      ...day,
+                      workoutDays: {
+                        create: workoutDays.map(
+                          ({
+                            id: _wdId,
+                            day_id: _dayId,
+                            workout_id: _workoutId,
+                            workout,
+                            ...wd
+                          }) => {
+                            const {
+                              id: _wid,
+                              created_at: _wcreated,
+                              plan_id: _wplanId,
+                              user_id: _wuserId,
+                              ...workoutData
+                            } = workout;
+
+                            return {
+                              ...wd,
+                              workout: {
+                                create: {
+                                  ...workoutData,
+                                  user_id: userId, // Set the user_id for the workout
+                                  lifts: {
+                                    create: workout.lifts.map(
+                                      ({
+                                        id: _liftId,
+                                        workout_id: _wid,
+                                        created_at: _lcreated,
+                                        completed,
+                                        ...lift
+                                      }) => ({
+                                        ...lift,
+                                        completed: false,
+                                      })
+                                    ),
+                                  },
+                                },
+                              },
+                            };
+                          }
+                        ),
+                      },
+                    })
+                  ),
+                },
+              })
+            ),
+          },
+        },
+        include: {
+          weeks: {
+            include: {
+              days: {
+                include: {
+                  workoutDays: {
+                    include: {
+                      workout: {
+                        include: {
+                          lifts: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      // Update all workouts to set their plan_id
+      await Promise.all(
+        newPlan.weeks.flatMap((week) =>
+          week.days.flatMap((day) =>
+            day.workoutDays.map(async (workoutDay) => {
+              await prisma.workouts.update({
+                where: { id: workoutDay.workout.id },
+                data: { plan_id: newPlan.id },
+              });
+            })
+          )
+        )
+      );
+
+      // Fetch the updated plan with all relationships
+      const updatedPlan = await prisma.plans.findUnique({
+        where: { id: newPlan.id },
+        include: {
+          weeks: {
+            include: {
+              days: {
+                include: {
+                  workoutDays: {
+                    include: {
+                      workout: {
+                        include: {
+                          lifts: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      res.json(updatedPlan);
+    } catch (error) {
+      console.error("Failed to copy plan:", error);
+      res.status(500).json({ error: "Failed to copy plan" });
+    }
+  },
 };
 
 module.exports = planController;

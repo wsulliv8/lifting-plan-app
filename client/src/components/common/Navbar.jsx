@@ -11,6 +11,8 @@ import {
   Bars3Icon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
+import { CiDumbbell, CiCalendar } from "react-icons/ci";
+
 import { logout } from "../../services/auth";
 import ThemeToggle from "./ThemeToggle";
 
@@ -39,17 +41,17 @@ const Navbar = () => {
   };
 
   const navItems = [
-    { to: "/profile", label: "Home", icon: HomeIcon },
-    { to: "/plans", label: "Plans", icon: DocumentTextIcon },
-    { to: "/workouts", label: "Workouts", icon: PlayIcon },
-    { to: "/lifts", label: "Lifts", icon: PlusCircleIcon },
+    //{ to: "/profile", label: "Home", icon: HomeIcon },
+    { to: "/plans", label: "Plans", icon: CiCalendar },
+    //{ to: "/workouts", label: "Workouts", icon: CiDumbbell },
+    { to: "/lifts", label: "Lifts", icon: CiDumbbell },
   ];
 
   return (
     <nav className="h-screen md:w-16 flex flex-col fixed z-50 shadow-md bg-[var(--surface)]">
       {/* Logo */}
       <div className="p-3 border-[var(--border)] border-b">
-        <h2 className="font-bold text-[var(--text-primary)]">Hevy</h2>
+        <h2 className="font-bold text-[var(--text-primary)] cursor-pointer" onClick={() => navigate('/plans')}>Hevy</h2>
       </div>
 
       {/* Hamburger Toggle (Mobile) */}
@@ -66,7 +68,7 @@ const Navbar = () => {
 
       {/* Nav Items */}
       <div
-        className={`flex flex-col items-center space-y-4 p-2 mt-4 ${
+        className={`flex flex-col items-center space-y-8 p-2 mt-10 ${
           isOpen ? "block" : "hidden"
         } md:block flex-1`}
       >

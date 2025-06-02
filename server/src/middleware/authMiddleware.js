@@ -11,6 +11,7 @@ const authMiddleware = (req, res, next) => {
     req.user = decoded; // Attach user ID to request
     next();
   } catch (error) {
+    console.log("Auth error:", error);
     return res.status(401).json({ error: "Invalid token" });
   }
 };

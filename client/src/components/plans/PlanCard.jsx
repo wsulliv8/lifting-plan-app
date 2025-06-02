@@ -8,8 +8,8 @@ const PlanCard = ({ plan, planType, onDelete }) => {
 
   const handleDownload = async () => {
     try {
-      await downloadPlan(plan.id);
-      window.location.reload();
+      const newPlan = await downloadPlan(plan.id);
+      navigate(`/plans/${newPlan.id}/edit`);
     } catch (error) {
       console.error("Failed to download plan:", error);
     }

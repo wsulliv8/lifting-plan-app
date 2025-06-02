@@ -115,8 +115,31 @@ const deletePlan = async (planId) => {
   }
 };
 
-const downloadPlan = async (plan) => {
-  return;
+const downloadPlan = async (planId) => {
+  try {
+    if (!Number.isInteger(Number(planId)) || Number(planId) <= 0) {
+      throw new Error("Invalid plan ID");
+    }
+
+    // Get the full plan with all nested data
+    const response = await api.post(`/plans/${planId}/copy`);
+
+    if (!response.data) {
+      throw new Error("No data received from server");
+    }
+
+    return response.data;
+  } catch (error) {
+    console.error("Failed to copy plan:", error);
+    if (error.response) {
+      console.error(
+        "Response error:",
+        error.response.status,
+        error.response.data
+      );
+    }
+    throw error.response?.data?.error || error.message || "Failed to copy plan";
+  }
 };
 
 export {

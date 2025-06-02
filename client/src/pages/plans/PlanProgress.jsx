@@ -7,12 +7,28 @@ import {
 } from "@heroicons/react/20/solid";
 import Button from "../../components/common/Button";
 import DayModal from "../../components/plans/modals/DayModal";
-import { getCurrentDate } from "../../utils/dateUtils";
+import {
+  getCurrentDate,
+  setMockDate,
+  clearMockDate,
+} from "../../utils/dateUtils";
 
 const PlanProgress = () => {
   const { plan } = useLoaderData();
   const navigate = useNavigate();
   const [selectedDay, setSelectedDay] = useState(null);
+
+  // For testing: add state to track mock days
+  const [mockDays, setMockDays] = useState(() => {
+    const storedDate = localStorage.getItem("mockDate");
+    if (!storedDate) return 0;
+
+    const mockDate = new Date(storedDate);
+    const today = new Date();
+    const diffTime = mockDate.getTime() - today.getTime();
+    return Math.round(diffTime / (1000 * 60 * 60 * 24)); // Convert ms to days
+  });
+
   console.log(plan);
 
   // Calculate plan date range
@@ -308,6 +324,149 @@ const PlanProgress = () => {
     });
   };
 
+  // Calculate progress statistics
+  const progressStats = useMemo(() => {
+    if (!plan || !planDateRange) return null;
+
+    const originalTotalDays = (plan.duration_weeks || 12) * 7;
+    let completedDays = 0;
+    let missedDays = 0;
+    let totalSets = 0;
+    let failedSets = 0;
+    let totalPlannedVolume = 0;
+    let totalAchievedVolume = 0;
+    let currentStreak = 0;
+    let maxStreak = 0;
+
+    // Track performance by lift
+    const liftPerformance = new Map(); // { liftName: { exceeded: number, failed: number, total: number } }
+
+    // Process each day's data
+    calendarData.forEach((day) => {
+      if (day.type === "success" || day.type === "failed") {
+        completedDays++;
+        currentStreak++;
+        maxStreak = Math.max(maxStreak, currentStreak);
+
+        // Process workouts
+        day.workouts.forEach((workout) => {
+          workout.lifts.forEach((lift) => {
+            // Initialize lift performance tracking if not exists
+            if (!liftPerformance.has(lift.name)) {
+              liftPerformance.set(lift.name, {
+                exceeded: 0,
+                failed: 0,
+                total: 0,
+                name: lift.name,
+              });
+            }
+            const performance = liftPerformance.get(lift.name);
+
+            for (let i = 0; i < lift.sets; i++) {
+              totalSets++;
+
+              // Calculate planned volume
+              const plannedVolume = lift.reps[i] * lift.weight[i];
+              totalPlannedVolume += plannedVolume;
+
+              // Calculate achieved volume and check for failed sets
+              const achievedReps = lift.reps_achieved?.[i] || 0;
+              const achievedWeight = lift.weight_achieved?.[i] || 0;
+              const achievedVolume = achievedReps * achievedWeight;
+              totalAchievedVolume += achievedVolume;
+
+              // Track performance for this set
+              performance.total++;
+
+              // Check if set exceeded expectations (more reps or weight than planned)
+              if (
+                achievedReps > lift.reps[i] ||
+                achievedWeight > lift.weight[i]
+              ) {
+                performance.exceeded++;
+              }
+
+              // Check if set failed (missed reps, weight, or RPE)
+              const repsOK = achievedReps >= lift.reps[i];
+              const weightOK = achievedWeight >= lift.weight[i];
+              const rpeOK =
+                !lift.rpe?.[i] ||
+                !lift.rpe_achieved?.[i] ||
+                lift.rpe_achieved[i] <= lift.rpe[i];
+
+              if (!repsOK || !weightOK || !rpeOK) {
+                failedSets++;
+                performance.failed++;
+              }
+            }
+          });
+        });
+      } else if (day.type === "missed") {
+        missedDays++;
+        currentStreak = 0;
+      }
+    });
+
+    // Calculate lift performance metrics
+    const liftMetrics = Array.from(liftPerformance.values())
+      .filter((perf) => perf.total >= 5) // Only consider lifts with at least 5 sets
+      .map((perf) => ({
+        ...perf,
+        successRate: ((perf.total - perf.failed) / perf.total) * 100,
+        exceedRate: (perf.exceeded / perf.total) * 100,
+        failRate: (perf.failed / perf.total) * 100,
+      }));
+
+    // Find the lift with the most exceeded sets (only consider lifts that have exceeded sets)
+    const mostImproved = liftMetrics
+      .filter((lift) => lift.exceeded > 0)
+      .reduce((best, current) => {
+        if (!best || current.exceeded > best.exceeded) {
+          return current;
+        }
+        return best;
+      }, null);
+
+    // Find the lift with the most failed sets (only consider lifts that have failed sets)
+    const leastImproved = liftMetrics
+      .filter((lift) => lift.failed > 0)
+      .reduce((worst, current) => {
+        if (!worst || current.failed > worst.failed) {
+          return current;
+        }
+        return worst;
+      }, null);
+
+    const adjustedTotalDays = originalTotalDays + missedDays;
+    const successfulSetsPercentage =
+      totalSets > 0
+        ? Math.round(((totalSets - failedSets) / totalSets) * 100)
+        : 0;
+    const volumeCompletionPercentage =
+      totalPlannedVolume > 0
+        ? Math.round((totalAchievedVolume / totalPlannedVolume) * 100)
+        : 0;
+
+    return {
+      originalProgress: Math.round((completedDays / originalTotalDays) * 100),
+      adjustedProgress: Math.round((completedDays / adjustedTotalDays) * 100),
+      originalTotalDays,
+      adjustedTotalDays,
+      completedDays,
+      missedDays,
+      failedSets,
+      totalSets,
+      successfulSetsPercentage,
+      volumeCompletionPercentage,
+      totalPlannedVolume,
+      totalAchievedVolume,
+      maxStreak,
+      currentStreak,
+      mostImproved,
+      leastImproved,
+    };
+  }, [plan, planDateRange, calendarData]);
+
   return (
     <div className="flex h-full bg-[var(--background)]">
       {/* Calendar Section - Expands when right panel collapses */}
@@ -368,6 +527,83 @@ const PlanProgress = () => {
                 <ChevronRightIcon className="w-5 h-5" />
               </Button>
             </div>
+          </span>
+        </div>
+
+        {/* Testing Controls */}
+        <div className="mb-4 flex items-center gap-4 p-2 bg-[var(--surface)] rounded-lg">
+          <span className="text-sm text-[var(--text-secondary)]">
+            Testing Controls:
+          </span>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              const newMockDays = mockDays - 7;
+              setMockDays(newMockDays);
+              if (newMockDays === 0) {
+                clearMockDate();
+              } else {
+                const mockDate = new Date();
+                mockDate.setDate(mockDate.getDate() + newMockDays);
+                setMockDate(mockDate);
+              }
+            }}
+          >
+            -7 Days
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              const newMockDays = mockDays - 1;
+              setMockDays(newMockDays);
+              if (newMockDays === 0) {
+                clearMockDate();
+              } else {
+                const mockDate = new Date();
+                mockDate.setDate(mockDate.getDate() + newMockDays);
+                setMockDate(mockDate);
+              }
+            }}
+          >
+            -1 Day
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => {
+              setMockDays(0);
+              clearMockDate();
+            }}
+          >
+            Reset
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              const newMockDays = mockDays + 1;
+              setMockDays(newMockDays);
+              const mockDate = new Date();
+              mockDate.setDate(mockDate.getDate() + newMockDays);
+              setMockDate(mockDate);
+            }}
+          >
+            +1 Day
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              const newMockDays = mockDays + 7;
+              setMockDays(newMockDays);
+              const mockDate = new Date();
+              mockDate.setDate(mockDate.getDate() + newMockDays);
+              setMockDate(mockDate);
+            }}
+          >
+            +7 Days
+          </Button>
+          <span className="text-sm text-[var(--text-secondary)]">
+            {mockDays !== 0
+              ? `Mock Date: ${getCurrentDate().toLocaleDateString()}`
+              : "Using Real Date"}
           </span>
         </div>
 
@@ -489,12 +725,183 @@ const PlanProgress = () => {
         </div>
 
         {/* Content - only visible when not collapsed */}
-        {!isRightPanelCollapsed && (
+        {!isRightPanelCollapsed && progressStats && (
           <div className="flex-1 px-4 pb-4 overflow-y-auto">
-            <div className="space-y-4">
-              <div className="text-sm text-[var(--text-secondary)]">
-                Data overview coming soon...
+            <div className="h-full space-y-10">
+              {/* Progress Bars Section */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-[var(--text-primary)]">
+                  Progress
+                </h4>
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-sm font-medium text-[var(--text-primary)]">
+                      Original Progress
+                    </span>
+                    <span className="text-sm text-[var(--text-secondary)]">
+                      {progressStats.completedDays} /{" "}
+                      {progressStats.originalTotalDays} days
+                    </span>
+                  </div>
+                  <div className="w-full bg-[var(--background-alt)] rounded-full h-2.5">
+                    <div
+                      className="bg-[var(--primary)] h-2.5 rounded-full transition-all duration-300"
+                      style={{ width: `${progressStats.originalProgress}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-sm font-medium text-[var(--text-primary)]">
+                      Adjusted Progress
+                    </span>
+                    <span className="text-sm text-[var(--text-secondary)]">
+                      {progressStats.completedDays} /{" "}
+                      {progressStats.adjustedTotalDays} days
+                    </span>
+                  </div>
+                  <div className="w-full bg-[var(--background-alt)] rounded-full h-2.5">
+                    <div
+                      className="bg-[var(--primary)] h-2.5 rounded-full transition-all duration-300"
+                      style={{ width: `${progressStats.adjustedProgress}%` }}
+                    ></div>
+                  </div>
+                  <div className="mt-1 text-xs text-[var(--text-secondary)] italic">
+                    Includes {progressStats.missedDays} missed{" "}
+                    {progressStats.missedDays === 1 ? "day" : "days"}
+                  </div>
+                </div>
               </div>
+
+              {/* Stats Section */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-[var(--text-primary)]">
+                  Statistics
+                </h4>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-[var(--background)] p-3 rounded-lg">
+                    <div className="text-2xl font-bold text-[var(--text-primary)]">
+                      {progressStats.successfulSetsPercentage}%
+                    </div>
+                    <div className="text-sm text-[var(--text-secondary)]">
+                      Sets Successful
+                    </div>
+                    <div className="text-xs text-[var(--text-secondary)] mt-1">
+                      {progressStats.failedSets} failed sets
+                    </div>
+                  </div>
+
+                  <div className="bg-[var(--background)] p-3 rounded-lg">
+                    <div className="text-2xl font-bold text-[var(--text-primary)]">
+                      {progressStats.volumeCompletionPercentage}%
+                    </div>
+                    <div className="text-sm text-[var(--text-secondary)]">
+                      Volume Completed
+                    </div>
+                    <div className="text-xs text-[var(--text-secondary)] mt-1">
+                      {Math.round(
+                        progressStats.totalAchievedVolume
+                      ).toLocaleString()}{" "}
+                      /{" "}
+                      {Math.round(
+                        progressStats.totalPlannedVolume
+                      ).toLocaleString()}{" "}
+                      kg
+                    </div>
+                  </div>
+
+                  <div className="bg-[var(--background)] p-3 rounded-lg">
+                    <div className="text-2xl font-bold text-[var(--text-primary)]">
+                      {progressStats.maxStreak}
+                    </div>
+                    <div className="text-sm text-[var(--text-secondary)]">
+                      Longest Streak
+                    </div>
+                    <div className="text-xs text-[var(--text-secondary)] mt-1">
+                      Days without missing
+                    </div>
+                  </div>
+
+                  <div className="bg-[var(--background)] p-3 rounded-lg">
+                    <div className="text-2xl font-bold text-[var(--text-primary)]">
+                      {progressStats.currentStreak}
+                    </div>
+                    <div className="text-sm text-[var(--text-secondary)]">
+                      Current Streak
+                    </div>
+                    <div className="text-xs text-[var(--text-secondary)] mt-1">
+                      Days in a row
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Lift Performance Section */}
+              {(progressStats.mostImproved || progressStats.leastImproved) && (
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-[var(--text-primary)]">
+                    Lift Performance
+                  </h4>
+
+                  <div className="space-y-3">
+                    {progressStats.mostImproved && (
+                      <div className="bg-[var(--background)] p-3 rounded-lg">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="text-sm font-medium text-[var(--text-primary)]">
+                              Most Improved
+                            </div>
+                            <div className="text-lg font-bold text-[var(--primary)] mt-1 capitalize">
+                              {progressStats.mostImproved.name}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-2xl font-bold text-[var(--primary)]">
+                              {progressStats.mostImproved.exceeded}
+                            </div>
+                            <div className="text-xs text-[var(--text-secondary)]">
+                              sets exceeded
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-xs text-[var(--text-secondary)] mt-2">
+                          Out of {progressStats.mostImproved.total} total sets (
+                          {Math.round(progressStats.mostImproved.exceedRate)}%)
+                        </div>
+                      </div>
+                    )}
+
+                    {progressStats.leastImproved && (
+                      <div className="bg-[var(--background)] p-3 rounded-lg">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="text-sm font-medium text-[var(--text-primary)]">
+                              Needs Improvement
+                            </div>
+                            <div className="text-lg font-bold text-[var(--danger)] mt-1 capitalize">
+                              {progressStats.leastImproved.name}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-2xl font-bold text-[var(--danger)]">
+                              {progressStats.leastImproved.failed}
+                            </div>
+                            <div className="text-xs text-[var(--text-secondary)]">
+                              sets failed
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-xs text-[var(--text-secondary)] mt-2">
+                          Out of {progressStats.leastImproved.total} total sets
+                          ({Math.round(progressStats.leastImproved.failRate)}%)
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

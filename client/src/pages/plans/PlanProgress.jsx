@@ -6,20 +6,66 @@ import {
   ArrowLeftIcon,
 } from "@heroicons/react/20/solid";
 import Button from "../../components/common/Button";
+import {
+  getCurrentDate,
+  setMockDate,
+  clearMockDate,
+} from "../../utils/dateUtils";
 
 const PlanProgress = () => {
   const { plan } = useLoaderData();
   const navigate = useNavigate();
   console.log(plan);
 
+  // For testing: add state to track mock days
+  const [mockDays, setMockDays] = useState(() => {
+    const storedDate = localStorage.getItem("mockDate");
+    if (!storedDate) return 0;
+
+    const mockDate = new Date(storedDate);
+    const today = new Date();
+    const diffTime = mockDate.getTime() - today.getTime();
+    return Math.round(diffTime / (1000 * 60 * 60 * 24)); // Convert ms to days
+  });
+
   // Calculate plan date range
   const planDateRange = useMemo(() => {
     if (!plan) return null;
 
-    const startDate = plan.started_at ? new Date(plan.started_at) : new Date();
+    const startDate = plan.started_at
+      ? new Date(plan.started_at)
+      : getCurrentDate();
     const planDurationDays = (plan.duration_weeks || 12) * 7; // Default to 12 weeks if not specified
+
+    // Count missed days up to current date to extend plan duration
+    let missedDaysCount = 0;
+    if (plan.started_at) {
+      const today = getCurrentDate();
+      const currentDate = new Date(startDate);
+      let planDay = 1;
+
+      while (currentDate <= today && planDay <= planDurationDays) {
+        const weekIndex = Math.floor((planDay - 1) / 7);
+        const dayIndex = (planDay - 1) % 7;
+
+        if (plan.weeks?.[weekIndex]?.days?.[dayIndex]) {
+          const dayWorkouts = plan.weeks[weekIndex].days[dayIndex].workouts;
+          if (dayWorkouts.length > 0) {
+            const completedWorkouts = dayWorkouts.filter((w) => w.completed_at);
+            if (completedWorkouts.length < dayWorkouts.length) {
+              missedDaysCount++;
+            }
+          }
+        }
+        currentDate.setDate(currentDate.getDate() + 1);
+        planDay++;
+      }
+    }
+
     const endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + planDurationDays - 1); // -1 because we include the start date
+    endDate.setDate(
+      startDate.getDate() + planDurationDays + missedDaysCount - 1
+    ); // -1 because we include the start date
 
     return {
       startDate,
@@ -51,33 +97,26 @@ const PlanProgress = () => {
 
     const { startDate, endDate } = planDateRange;
     const days = [];
-
-    // Flatten all workouts from the plan by plan_day
-    const workoutsByPlanDay = new Map();
-    plan.weeks?.forEach((week) => {
-      week.days?.forEach((day) => {
-        day.workoutDays?.forEach((workoutDay) => {
-          if (workoutDay.workout) {
-            const planDay = workoutDay.workout.plan_day;
-            if (!workoutsByPlanDay.has(planDay)) {
-              workoutsByPlanDay.set(planDay, []);
-            }
-            workoutsByPlanDay.get(planDay).push({
-              ...workoutDay.workout,
-              dayOfWeek: day.day_of_week,
-              weekNumber: week.week_number,
-            });
-          }
-        });
-      });
-    });
+    let missedDays = 0;
 
     // Calculate each day from start to end
     const currentDate = new Date(startDate);
     let planDay = 1;
 
     while (currentDate <= endDate) {
-      const dayWorkouts = workoutsByPlanDay.get(planDay) || [];
+      // Find workouts for this day
+      let dayWorkouts = [];
+      const adjustedPlanDay = planDay - missedDays; // Adjust for missed days
+      const weekIndex = Math.floor((adjustedPlanDay - 1) / 7);
+      const dayIndex = (adjustedPlanDay - 1) % 7;
+
+      // Get workouts from the correct week and day if within original plan duration
+      if (
+        weekIndex < plan.weeks?.length &&
+        plan.weeks[weekIndex]?.days?.[dayIndex]
+      ) {
+        dayWorkouts = plan.weeks[weekIndex].days[dayIndex].workouts;
+      }
 
       let dayType = "rest";
 
@@ -86,13 +125,23 @@ const PlanProgress = () => {
         const completedWorkouts = dayWorkouts.filter((w) => w.completed_at);
         const allCompleted = completedWorkouts.length === dayWorkouts.length;
 
-        if (plan.started_at && currentDate < new Date()) {
+        if (plan.started_at && currentDate < getCurrentDate()) {
           // Past day
           if (allCompleted) {
             const allSuccessful = completedWorkouts.every((w) => w.success);
-            dayType = allSuccessful ? "success" : "completed";
+            dayType = allSuccessful ? "success" : "failed";
           } else {
-            dayType = "missed";
+            // Instead of marking as missed, increment missedDays and add a missed day
+            missedDays++;
+            days.push({
+              date: new Date(currentDate),
+              planDay,
+              type: "missed",
+              workouts: [],
+            });
+            currentDate.setDate(currentDate.getDate() + 1);
+            planDay++;
+            continue; // Skip to next day
           }
         } else {
           // Future day or not started
@@ -188,14 +237,13 @@ const PlanProgress = () => {
 
     switch (dayData.type) {
       case "success":
-        return "border-t-4 border-green-500";
-      case "completed":
-        return "border-t-4 border-yellow-500";
-      case "missed":
-        return "border-t-4 border-red-500";
+        return "bg-[var(--secondary-light)]";
+      case "failed":
+        return "bg-[var(--danger-dark)]";
+      /*       case "missed":
+        return "bg-red-500"; */
       case "scheduled":
-        return "border-t-4 border-blue-500 opacity-60";
-
+        return "border border-[var(--border)] border-dashed";
       default:
         return "";
     }
@@ -263,6 +311,19 @@ const PlanProgress = () => {
     return day.date.getDate();
   };
 
+  // Add testing controls
+  const adjustTestDate = (days) => {
+    const newMockDays = mockDays + days;
+    setMockDays(newMockDays);
+    if (newMockDays === 0) {
+      clearMockDate();
+    } else {
+      const mockDate = new Date();
+      mockDate.setDate(mockDate.getDate() + newMockDays);
+      setMockDate(mockDate);
+    }
+  };
+
   return (
     <div className="flex h-full bg-[var(--background)]">
       {/* Calendar Section - Expands when right panel collapses */}
@@ -283,37 +344,83 @@ const PlanProgress = () => {
           <h1 className="text-2xl font-bold text-[var(--text-primary)]">
             {plan.name} - Progress
           </h1>
-          <div className="flex items-center gap-4">
-            <Button
-              variant="tertiary"
-              onClick={() => navigateMonth(-1)}
-              className="p-2"
-              disabled={!canNavigatePrevious}
-            >
-              <ChevronLeftIcon className="w-5 h-5" />
-            </Button>
-            <h2 className="text-xl font-semibold text-[var(--text-primary)] min-w-[200px] text-center">
-              {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
-            </h2>
-            <Button
-              variant="tertiary"
-              onClick={() => navigateMonth(1)}
-              className="p-2"
-              disabled={!canNavigateNext}
-            >
-              <ChevronRightIcon className="w-5 h-5" />
-            </Button>
-          </div>
+          <span className="flex items-center gap-6">
+            <div className="space-y-2">
+              <h4 className="font-medium text-center text-[var(--text-primary)]">
+                Legend
+              </h4>
+              <div className="space-y-1 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-1 bg-[var(--secondary-light)]"></div>
+                  <span className="text-[var(--text-secondary)]">
+                    Successful
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-1 bg-[var(--danger-dark)]"></div>
+                  <span className="text-[var(--text-secondary)]">Failed</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <Button
+                variant="tertiary"
+                onClick={() => navigateMonth(-1)}
+                className="p-2"
+                disabled={!canNavigatePrevious}
+              >
+                <ChevronLeftIcon className="w-5 h-5" />
+              </Button>
+              <h2 className="text-xl font-semibold text-[var(--text-primary)] min-w-[200px] text-center">
+                {monthNames[currentMonth.getMonth()]}{" "}
+                {currentMonth.getFullYear()}
+              </h2>
+              <Button
+                variant="tertiary"
+                onClick={() => navigateMonth(1)}
+                className="p-2"
+                disabled={!canNavigateNext}
+              >
+                <ChevronRightIcon className="w-5 h-5" />
+              </Button>
+            </div>
+          </span>
         </div>
+        {/* 
+        <div className="mb-4 flex items-center gap-4 p-2 bg-[var(--surface)] rounded-lg">
+          <span className="text-sm text-[var(--text-secondary)]">
+            Testing Controls:
+          </span>
+          <Button variant="secondary" onClick={() => adjustTestDate(-7)}>
+            -7 Days
+          </Button>
+          <Button variant="secondary" onClick={() => adjustTestDate(-1)}>
+            -1 Day
+          </Button>
+          <Button variant="primary" onClick={() => adjustTestDate(0)}>
+            Reset
+          </Button>
+          <Button variant="secondary" onClick={() => adjustTestDate(1)}>
+            +1 Day
+          </Button>
+          <Button variant="secondary" onClick={() => adjustTestDate(7)}>
+            +7 Days
+          </Button>
+          <span className="text-sm text-[var(--text-secondary)]">
+            {mockDays !== 0
+              ? `Mock Date: ${getCurrentDate().toLocaleDateString()}`
+              : "Using Real Date"}
+          </span>
+        </div> */}
 
         {/* Calendar Grid */}
-        <div className="flex-1 bg-[var(--surface)] rounded-lg border border-[var(--border)] p-4 flex flex-col min-h-0">
+        <div className="flex-1 rounded-lg p-4 flex flex-col min-h-0">
           {/* Day Headers */}
           <div className="grid grid-cols-7 gap-1 mb-2 flex-shrink-0">
             {dayNames.map((dayName) => (
               <div
                 key={dayName}
-                className="p-2 text-center text-sm font-medium text-[var(--text-secondary)]"
+                className="p-2 text-center text-sm font-medium text-[var(--text-primary)]"
               >
                 {dayName}
               </div>
@@ -321,65 +428,75 @@ const PlanProgress = () => {
           </div>
 
           {/* Calendar Days */}
-          <div className="flex-1 grid grid-rows-5 gap-1">
-            {calendarGrid.map((week, weekIndex) => (
-              <div key={weekIndex} className="grid grid-cols-7 gap-1">
-                {week.map((day, dayIndex) => (
+          <div className="flex-1 grid grid-cols-7 grid-rows-5 gap-2">
+            {calendarGrid.flat().map((day, index) => (
+              <div
+                key={index}
+                className={`
+                  relative p-2 rounded-lg flex flex-col
+                  ${
+                    !day.isCurrentMonth || !day.data
+                      ? "border border-[var(--border)] border-dashed opacity-50"
+                      : "bg-[var(--surface)]  cursor-pointer"
+                  }
+                 ${
+                   day.data && day.data.type === "missed"
+                     ? "border border-[var(--danger)] border-dashed bg-opacity-50"
+                     : ""
+                 }`}
+              >
+                {day.data?.type !== "rest" && (
                   <div
-                    key={`${weekIndex}-${dayIndex}`}
-                    className={`
-                      relative p-2 bg-[var(--background)] rounded border border-[var(--border)]
-                      ${!day.isCurrentMonth ? "opacity-30" : ""}
-                      ${getDayColor(day.data)}
-                    `}
-                  >
-                    <div className="text-sm text-[var(--text-primary)]">
-                      {getDisplayedDay(day)}
-                    </div>
-                    {day.data && (
-                      <div className="mt-1 flex-1 overflow-hidden">
-                        {day.data.type === "missed" ? (
-                          <div className="text-xs text-red-500 font-medium">
-                            Missed
-                          </div>
-                        ) : day.data.type === "rest" ? (
-                          <div className="text-xs text-[var(--text-secondary)]">
-                            Rest Day
-                          </div>
-                        ) : day.data.workouts.length > 0 ? (
-                          <div className="space-y-1 overflow-hidden">
-                            {day.data.workouts.map((workout) => (
-                              <div key={workout.id} className="text-xs">
-                                <div className="font-medium text-[var(--text-primary)] truncate">
-                                  {workout.name}
-                                </div>
-                                <div className="space-y-0.5 max-h-16 overflow-hidden">
-                                  {workout.lifts?.slice(0, 3).map((lift) => (
-                                    <div
-                                      key={lift.id}
-                                      className="text-[var(--text-secondary)] truncate"
-                                    >
-                                      {lift.name}: {lift.sets}x
-                                      {lift.reps?.[0] || "?"}
-                                      {lift.weight?.[0]
-                                        ? ` @ ${lift.weight[0]}kg`
-                                        : ""}
-                                    </div>
-                                  ))}
-                                  {workout.lifts?.length > 3 && (
-                                    <div className="text-[var(--text-secondary)]">
-                                      +{workout.lifts.length - 3} more
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : null}
+                    className={`w-full h-2 absolute top-0 left-0 rounded-t-lg ${getDayColor(
+                      day.data
+                    )}`}
+                  />
+                )}
+                <div className="text-sm text-[var(--text-primary)]">
+                  {getDisplayedDay(day)}
+                </div>
+                {day.data && (
+                  <div className="flex-1 flex flex-col">
+                    {day.data.type === "missed" ? (
+                      <div className="flex-1 flex items-center justify-center text-xs text-red-500 font-medium">
+                        Missed
                       </div>
-                    )}
+                    ) : day.data.type === "rest" ? (
+                      <div className="flex-1 flex items-center justify-center text-xs text-[var(--text-secondary)]">
+                        Rest Day
+                      </div>
+                    ) : day.data.workouts.length > 0 ? (
+                      <div className="mt-1 space-y-1 overflow-hidden">
+                        {day.data.workouts.map((workout) => (
+                          <div key={workout.id} className="text-xs">
+                            <div className="font-medium text-[var(--text-primary)] truncate">
+                              {workout.name}
+                            </div>
+                            <div className="space-y-0.5 max-h-16 overflow-hidden">
+                              {workout.lifts?.slice(0, 3).map((lift) => (
+                                <div
+                                  key={lift.id}
+                                  className="text-[var(--text-secondary)] truncate"
+                                >
+                                  {lift.name}: {lift.sets}x
+                                  {lift.reps?.[0] || "?"}
+                                  {lift.weight?.[0]
+                                    ? ` @ ${lift.weight[0]}kg`
+                                    : ""}
+                                </div>
+                              ))}
+                              {workout.lifts?.length > 3 && (
+                                <div className="text-[var(--text-secondary)]">
+                                  +{workout.lifts.length - 3} more
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
-                ))}
+                )}
               </div>
             ))}
           </div>
@@ -418,41 +535,6 @@ const PlanProgress = () => {
             <div className="space-y-4">
               <div className="text-sm text-[var(--text-secondary)]">
                 Data overview coming soon...
-              </div>
-
-              {/* Legend */}
-              <div className="space-y-2">
-                <h4 className="font-medium text-[var(--text-primary)]">
-                  Legend
-                </h4>
-                <div className="space-y-1 text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-1 bg-green-500"></div>
-                    <span className="text-[var(--text-secondary)]">
-                      Successful
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-1 bg-yellow-500"></div>
-                    <span className="text-[var(--text-secondary)]">
-                      Completed
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-1 bg-blue-500"></div>
-                    <span className="text-[var(--text-secondary)]">
-                      Scheduled
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-1 bg-red-500"></div>
-                    <span className="text-[var(--text-secondary)]">Missed</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-1 bg-gray-400"></div>
-                    <span className="text-[var(--text-secondary)]">Rest</span>
-                  </div>
-                </div>
               </div>
             </div>
           </div>

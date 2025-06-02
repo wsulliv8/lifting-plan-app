@@ -6,27 +6,14 @@ import {
   ArrowLeftIcon,
 } from "@heroicons/react/20/solid";
 import Button from "../../components/common/Button";
-import {
-  getCurrentDate,
-  setMockDate,
-  clearMockDate,
-} from "../../utils/dateUtils";
+import DayModal from "../../components/plans/modals/DayModal";
+import { getCurrentDate } from "../../utils/dateUtils";
 
 const PlanProgress = () => {
   const { plan } = useLoaderData();
   const navigate = useNavigate();
+  const [selectedDay, setSelectedDay] = useState(null);
   console.log(plan);
-
-  // For testing: add state to track mock days
-  const [mockDays, setMockDays] = useState(() => {
-    const storedDate = localStorage.getItem("mockDate");
-    if (!storedDate) return 0;
-
-    const mockDate = new Date(storedDate);
-    const today = new Date();
-    const diffTime = mockDate.getTime() - today.getTime();
-    return Math.round(diffTime / (1000 * 60 * 60 * 24)); // Convert ms to days
-  });
 
   // Calculate plan date range
   const planDateRange = useMemo(() => {
@@ -311,17 +298,14 @@ const PlanProgress = () => {
     return day.date.getDate();
   };
 
-  // Add testing controls
-  const adjustTestDate = (days) => {
-    const newMockDays = mockDays + days;
-    setMockDays(newMockDays);
-    if (newMockDays === 0) {
-      clearMockDate();
-    } else {
-      const mockDate = new Date();
-      mockDate.setDate(mockDate.getDate() + newMockDays);
-      setMockDate(mockDate);
-    }
+  const handleDayClick = (day) => {
+    if (!day.data || day.data.type === "rest") return;
+
+    setSelectedDay({
+      planDay: day.data.planDay,
+      workouts: day.data.workouts,
+      date: day.date,
+    });
   };
 
   return (
@@ -386,32 +370,6 @@ const PlanProgress = () => {
             </div>
           </span>
         </div>
-        {/* 
-        <div className="mb-4 flex items-center gap-4 p-2 bg-[var(--surface)] rounded-lg">
-          <span className="text-sm text-[var(--text-secondary)]">
-            Testing Controls:
-          </span>
-          <Button variant="secondary" onClick={() => adjustTestDate(-7)}>
-            -7 Days
-          </Button>
-          <Button variant="secondary" onClick={() => adjustTestDate(-1)}>
-            -1 Day
-          </Button>
-          <Button variant="primary" onClick={() => adjustTestDate(0)}>
-            Reset
-          </Button>
-          <Button variant="secondary" onClick={() => adjustTestDate(1)}>
-            +1 Day
-          </Button>
-          <Button variant="secondary" onClick={() => adjustTestDate(7)}>
-            +7 Days
-          </Button>
-          <span className="text-sm text-[var(--text-secondary)]">
-            {mockDays !== 0
-              ? `Mock Date: ${getCurrentDate().toLocaleDateString()}`
-              : "Using Real Date"}
-          </span>
-        </div> */}
 
         {/* Calendar Grid */}
         <div className="flex-1 rounded-lg p-4 flex flex-col min-h-0">
@@ -437,13 +395,14 @@ const PlanProgress = () => {
                   ${
                     !day.isCurrentMonth || !day.data
                       ? "border border-[var(--border)] border-dashed opacity-50"
-                      : "bg-[var(--surface)]  cursor-pointer"
+                      : "bg-[var(--surface)] cursor-pointer hover:border-2 hover:border-[var(--primary)]"
                   }
                  ${
                    day.data && day.data.type === "missed"
                      ? "border border-[var(--danger)] border-dashed bg-opacity-50"
                      : ""
                  }`}
+                onClick={() => handleDayClick(day)}
               >
                 {day.data?.type !== "rest" && (
                   <div
@@ -540,6 +499,13 @@ const PlanProgress = () => {
           </div>
         )}
       </div>
+
+      {/* Day Modal */}
+      <DayModal
+        isOpen={selectedDay !== null}
+        onClose={() => setSelectedDay(null)}
+        day={selectedDay}
+      />
     </div>
   );
 };

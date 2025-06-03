@@ -7,7 +7,10 @@
     "start:server": "cd server && npm run dev",
     "start:dev": "concurrently \"npm run start:client\" \"npm run start:server\"",
     "prisma:push": "cd server && npx prisma db push",
-    "prisma:seed": "cd server && node prisma/seed.js"
+    "prisma:seed": "cd server && node prisma/seed.js",
+    "backup:plans": "cd server && node prisma/backupPlans.js",
+    "restore:plans": "cd server && node prisma/restorePlans.js",
+    "reset:db": "npm run backup:plans && cd server && npx prisma migrate reset --force && cd .. && npm run prisma:seed && npm run restore:plans"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

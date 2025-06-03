@@ -3,17 +3,174 @@
     "id": 1,
     "user_id": null,
     "source_plan_id": null,
-    "name": "Generic Plan",
+    "name": "Test",
     "categories": [],
     "description": null,
     "duration_weeks": 2,
     "difficulty": "Beginner",
     "goal": "Strength",
-    "current_workout_id": null,
-    "created_at": "2025-06-03T01:43:02.908Z",
+    "current_workout_id": 1,
+    "created_at": "2025-06-03T02:26:04.581Z",
     "started_at": null,
     "completed_at": null,
     "dayGroups": [],
-    "weeks": []
+    "weeks": [
+      {
+        "id": 1,
+        "plan_id": 1,
+        "week_number": 1,
+        "days": [
+          {
+            "id": 1,
+            "week_id": 1,
+            "day_of_week": 0,
+            "workoutDays": [
+              {
+                "id": 1,
+                "day_id": 1,
+                "workout_id": 1,
+                "order": 0,
+                "workout": {
+                  "id": 1,
+                  "user_id": 1,
+                  "plan_id": 1,
+                  "name": "Workout 1",
+                  "week_number": 1,
+                  "plan_day": 0,
+                  "day_of_week": "0",
+                  "iteration": null,
+                  "total_volume": null,
+                  "success": null,
+                  "created_at": "2025-06-03T02:26:08.121Z",
+                  "completed_at": null,
+                  "lifts": [
+                    {
+                      "id": 1,
+                      "workout_id": 1,
+                      "base_lift_id": 66,
+                      "name": "back extensions",
+                      "completed": false,
+                      "sets": 3,
+                      "reps": [
+                        "8",
+                        "8",
+                        "8"
+                      ],
+                      "reps_achieved": [],
+                      "weight": [
+                        35,
+                        35,
+                        35
+                      ],
+                      "weight_achieved": [],
+                      "rpe": [],
+                      "rpe_achieved": [],
+                      "rest_time": [
+                        120,
+                        120,
+                        120
+                      ],
+                      "volume": null,
+                      "progression_rule": {
+                        "regressionOnFailure": 5,
+                        "progressionFrequency": 3,
+                        "progressionIncrement": 5
+                      },
+                      "notes": null,
+                      "created_at": "2025-06-03T02:26:08.125Z"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "week_id": 1,
+            "day_of_week": 1,
+            "workoutDays": []
+          },
+          {
+            "id": 3,
+            "week_id": 1,
+            "day_of_week": 2,
+            "workoutDays": []
+          },
+          {
+            "id": 4,
+            "week_id": 1,
+            "day_of_week": 3,
+            "workoutDays": []
+          },
+          {
+            "id": 5,
+            "week_id": 1,
+            "day_of_week": 4,
+            "workoutDays": []
+          },
+          {
+            "id": 6,
+            "week_id": 1,
+            "day_of_week": 5,
+            "workoutDays": []
+          },
+          {
+            "id": 7,
+            "week_id": 1,
+            "day_of_week": 6,
+            "workoutDays": []
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "plan_id": 1,
+        "week_number": 2,
+        "days": [
+          {
+            "id": 8,
+            "week_id": 2,
+            "day_of_week": 0,
+            "workoutDays": []
+          },
+          {
+            "id": 9,
+            "week_id": 2,
+            "day_of_week": 1,
+            "workoutDays": []
+          },
+          {
+            "id": 10,
+            "week_id": 2,
+            "day_of_week": 2,
+            "workoutDays": []
+          },
+          {
+            "id": 11,
+            "week_id": 2,
+            "day_of_week": 3,
+            "workoutDays": []
+          },
+          {
+            "id": 12,
+            "week_id": 2,
+            "day_of_week": 4,
+            "workoutDays": []
+          },
+          {
+            "id": 13,
+            "week_id": 2,
+            "day_of_week": 5,
+            "workoutDays": []
+          },
+          {
+            "id": 14,
+            "week_id": 2,
+            "day_of_week": 6,
+            "workoutDays": []
+          }
+        ]
+      }
+    ]
   }
 ]

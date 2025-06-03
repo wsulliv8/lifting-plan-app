@@ -1,7 +1,6 @@
 // server/src/utils/restorePlans.js
 const { PrismaClient } = require("@prisma/client");
 const fs = require("fs").promises;
-const planController = require("../src/controllers/planController");
 
 const prisma = new PrismaClient();
 
@@ -21,59 +20,96 @@ async function restoreGenericPlans() {
 
     // Restore each plan
     for (const plan of plans) {
-      // First create a basic plan
-      const basicPlan = await prisma.plans.create({
-        data: {
-          name: plan.name,
-          categories: plan.categories || [],
-          description: plan.description,
-          duration_weeks: plan.duration_weeks,
-          difficulty: plan.difficulty,
-          goal: plan.goal,
-          dayGroups: plan.dayGroups || "[]",
-          user_id: null, // Ensure it's a generic plan
-          created_at: plan.created_at || new Date(),
-        },
-      });
-
-      // Create a mock request object with the plan data for updating
-      const req = {
-        params: {
-          id: basicPlan.id.toString(),
-        },
-        body: {
-          ...plan,
-          // Ensure these fields are present even if they're null/empty
-          categories: plan.categories || [],
-          dayGroups: plan.dayGroups || "[]",
-        },
-        user: {
-          userId: null, // This ensures it's updated as a generic plan
-        },
-      };
-
-      // Create a mock response object
-      const res = {
-        status: (code) => ({
-          json: (data) => {
-            if (code >= 400) {
-              console.error(`Error restoring plan ${plan.name}:`, data);
-            } else {
-              console.log(`Successfully restored plan ${plan.name}`);
-            }
+      try {
+        // Create the plan
+        const createdPlan = await prisma.plans.create({
+          data: {
+            name: plan.name,
+            categories: plan.categories || [],
+            description: plan.description,
+            duration_weeks: plan.duration_weeks,
+            difficulty: plan.difficulty,
+            goal: plan.goal,
+            dayGroups: plan.dayGroups || "[]",
+            user_id: null,
+            created_at: plan.created_at || new Date(),
+            // Create weeks and their relationships
+            weeks: {
+              create: plan.weeks.map((week) => ({
+                week_number: week.week_number,
+                // Create days and their relationships
+                days: {
+                  create: week.days.map((day) => ({
+                    day_of_week: day.day_of_week,
+                    // Create workoutDays and their relationships
+                    workoutDays: {
+                      create: day.workoutDays.map((workoutDay) => ({
+                        order: workoutDay.order,
+                        // Create workout and its relationships
+                        workout: {
+                          create: {
+                            name: workoutDay.workout.name,
+                            week_number: workoutDay.workout.week_number,
+                            plan_day: workoutDay.workout.plan_day,
+                            day_of_week: workoutDay.workout.day_of_week,
+                            iteration: workoutDay.workout.iteration,
+                            user_id: null,
+                            created_at:
+                              workoutDay.workout.created_at || new Date(),
+                            // Create lifts
+                            lifts: {
+                              create: workoutDay.workout.lifts.map((lift) => ({
+                                name: lift.name,
+                                sets: lift.sets,
+                                reps: lift.reps,
+                                weight: lift.weight,
+                                rpe: lift.rpe,
+                                rest_time: lift.rest_time,
+                                progression_rule: lift.progression_rule,
+                                created_at: lift.created_at || new Date(),
+                                base_lift_id: lift.base_lift_id,
+                                completed: lift.completed || false,
+                                reps_achieved: lift.reps_achieved || [],
+                                weight_achieved: lift.weight_achieved || [],
+                                rpe_achieved: lift.rpe_achieved || [],
+                                volume: lift.volume || 0,
+                              })),
+                            },
+                          },
+                        },
+                      })),
+                    },
+                  })),
+                },
+              })),
+            },
           },
-        }),
-        json: (data) => {
-          console.log(`Successfully restored plan ${plan.name}`);
-        },
-      };
+          // Include all relationships in the response
+          include: {
+            weeks: {
+              include: {
+                days: {
+                  include: {
+                    workoutDays: {
+                      include: {
+                        workout: {
+                          include: {
+                            lifts: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        });
 
-      // Use the controller's updatePlan function to restore all relationships
-      await planController.updatePlan(req, res, (error) => {
-        if (error) {
-          console.error(`Error restoring plan ${plan.name}:`, error);
-        }
-      });
+        console.log(`Successfully restored plan ${plan.name}`);
+      } catch (error) {
+        console.error(`Error restoring plan ${plan.name}:`, error);
+      }
     }
 
     console.log("Restore completed successfully");

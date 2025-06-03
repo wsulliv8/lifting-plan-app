@@ -43,3 +43,6 @@ server/localhost.pem
 
 # Postman
 *.postman_environment.json
+
+# Generic plans backup
+prisma/data/backup_generic_plans.json

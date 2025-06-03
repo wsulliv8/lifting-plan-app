@@ -34,6 +34,7 @@ const PlanGrid = ({
   handleDragEnd,
   onContextMenu,
   setTotalDays,
+  isReadOnly = false,
 }) => {
   const weeks = computeWeeks(totalDays);
   const headerDays = generateHeaderDays(collapsedDays, toggleDayCollapse);
@@ -157,19 +158,21 @@ const PlanGrid = ({
         }}
       >
         {!collapsedWeeks.has(weekIndex) ? "Week" : ""} {weekIndex + 1}
-        <span>
-          <TrashIcon
-            className={`absolute bottom-1 left-1/2 transform -translate-x-1/2 h-4 w-4 text-[var(--danger)] hover:text-[var(--danger-dark)] rotate-90 opacity-0 ${
-              collapsedWeeks.has(weekIndex)
-                ? "opacity-0"
-                : "group-hover:opacity-100"
-            }`}
-            onClick={(e) => {
-              if (!collapsedWeeks.has(weekIndex))
-                handleDeleteWeek(weekIndex, e);
-            }}
-          />
-        </span>
+        {!isReadOnly && (
+          <span>
+            <TrashIcon
+              className={`absolute bottom-1 left-1/2 transform -translate-x-1/2 h-4 w-4 text-[var(--danger)] hover:text-[var(--danger-dark)] rotate-90 opacity-0 ${
+                collapsedWeeks.has(weekIndex)
+                  ? "opacity-0"
+                  : "group-hover:opacity-100"
+              }`}
+              onClick={(e) => {
+                if (!collapsedWeeks.has(weekIndex))
+                  handleDeleteWeek(weekIndex, e);
+              }}
+            />
+          </span>
+        )}
       </div>
       {week.map((_, dayIndex) => {
         const actualDayId = weekIndex * 7 + dayIndex;
@@ -190,6 +193,7 @@ const PlanGrid = ({
               ) || null
             }
             onContextMenu={onContextMenu}
+            isReadOnly={isReadOnly}
           />
         );
       })}
@@ -202,6 +206,7 @@ const PlanGrid = ({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       sensors={sensors}
+      disabled={isReadOnly}
     >
       <div className="relative">
         <div
@@ -209,7 +214,7 @@ const PlanGrid = ({
           className="overflow-x-hidden overflow-y-visible"
           onScroll={handleMainScroll}
         >
-          <div className="grid gap-2" style={gridStyle}>
+          <div className="grid gap-2 pr-3" style={gridStyle}>
             <div></div>
             {headerDays.map((day, index) => (
               <div key={index} ref={dayHeaderRefs.current[index]}>
@@ -243,12 +248,15 @@ const PlanGrid = ({
         )}
       </div>
 
-      <div className="mt-4 flex justify-center pb-6">
-        <PlusCircleIcon
-          className="h-8 w-8 text-[var(--primary)] hover:text-[var(--primary-dark)] cursor-pointer"
-          onClick={() => setTotalDays((prev) => prev + 7)}
-        />
-      </div>
+      {!isReadOnly && (
+        <div className="mt-4 flex justify-center pb-6">
+          <PlusCircleIcon
+            className="h-8 w-8 text-[var(--primary)] hover:text-[var(--primary-dark)] cursor-pointer"
+            onClick={() => setTotalDays((prev) => prev + 7)}
+          />
+        </div>
+      )}
+
       {createPortal(
         <DragOverlay>
           {activeWorkout && (

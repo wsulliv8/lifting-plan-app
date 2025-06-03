@@ -25,13 +25,14 @@ const PlanToolbar = ({
   return (
     <>
       <div className="flex justify-between mb-4">
-        <span
-          className="flex items-center gap-2 cursor-pointer text-[var(--text-primary)]"
-          onClick={() => navigate("/plans/")}
+      <Button
+          variant="tertiary"
+          className="flex items-center gap-2"
+          onClick={() => navigate("/plans")}
         >
-          <ArrowLeftIcon className="w-6 h-6" />
-          <span>(To Plans)</span>
-        </span>
+          <ArrowLeftIcon className="h-5 w-5" />
+          Back to Plans
+        </Button>
         <span className="flex items-center gap-2">
           <h2 className="heading">{plan.name ? plan.name : "New Plan"}</h2>
           <AdjustmentsHorizontalIcon

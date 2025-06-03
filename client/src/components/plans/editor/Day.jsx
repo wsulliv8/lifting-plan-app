@@ -57,6 +57,7 @@ function areDayPropsEqual(prev, next) {
     prev.isDaySelected === next.isDaySelected &&
     prev.handleClick === next.handleClick &&
     prev.group === next.group &&
+    prev.isReadOnly === next.isReadOnly &&
     shallowEqualWorkouts(prev.workouts, next.workouts);
 
   return isEqual;
@@ -74,6 +75,7 @@ const Day = memo(
     group,
     isDragging,
     onContextMenu,
+    isReadOnly = false,
   }) => {
     const workoutItems = useMemo(
       () => workouts.map((w) => w.id.toString()),
@@ -89,11 +91,12 @@ const Day = memo(
     return (
       <DroppableContainer
         id={id}
-        disabled={isDayCollapsed || isWeekCollapsed}
+        disabled={isDayCollapsed || isWeekCollapsed || isReadOnly}
         isDaySelected={isDaySelected}
         isDragging={isDragging}
-        handleClick={handleClick}
-        onContextMenu={(e) => onContextMenu(e, id)}
+        handleClick={isReadOnly ? undefined : handleClick}
+        onContextMenu={isReadOnly ? undefined : onContextMenu}
+        isReadOnly={isReadOnly}
       >
         <DaySortableWrapper id={id} workoutItems={workoutItems}>
           <DayData
@@ -103,6 +106,7 @@ const Day = memo(
             handleClick={handleClick}
             group={group}
             isDragging={isDragging}
+            isReadOnly={isReadOnly}
           />
         </DaySortableWrapper>
       </DroppableContainer>
@@ -114,7 +118,7 @@ const Day = memo(
 Day.displayName = "Day";
 
 const DroppableContainer = memo(
-  ({ id, disabled, isDaySelected, onContextMenu, children }) => {
+  ({ id, disabled, isDaySelected, onContextMenu, isReadOnly, children }) => {
     const { setNodeRef, isOver } = useDroppable({
       id,
       data: { type: "Day" },
@@ -125,9 +129,8 @@ const DroppableContainer = memo(
         ref={setNodeRef}
         className={`group flex flex-col justify-between relative p-2 bg-[var(--surface)] shadow-sm rounded-lg text-xs border ${
           isDaySelected ? "border-[var(--primary)]" : "border-transparent"
-        } hover:border-[var(--primary-light)] hover:shadow-xl ${
-          isOver ? "bg-[var(--primary-light)] bg-opacity-10" : ""
-        }`}
+        } hover:border-[var(--primary-light)] hover:shadow-xl
+ ${isOver ? "bg-[var(--primary-light)] bg-opacity-10" : ""}`}
         onContextMenu={onContextMenu}
       >
         {children}
@@ -149,7 +152,15 @@ const DaySortableWrapper = memo(({ id, workoutItems, children }) => {
 });
 
 const DayData = memo(
-  ({ id, workouts, handleEditWorkout, handleClick, isDragging, group }) => {
+  ({
+    id,
+    workouts,
+    handleEditWorkout,
+    handleClick,
+    isDragging,
+    group,
+    isReadOnly,
+  }) => {
     const workoutComponents = useMemo(() => {
       if (!workouts.length) {
         return (
@@ -167,21 +178,29 @@ const DayData = memo(
             id={workout.id}
             workout={workout}
             isDragging={isDragging}
-            handleClick={handleClick}
+            handleClick={isReadOnly ? undefined : handleClick}
+            isReadOnly={isReadOnly}
           />
         ));
-    }, [workouts, handleClick, isDragging]);
+    }, [workouts, handleClick, isDragging, isReadOnly]);
 
     return (
       <>
         {group && (
           <div
-            className="w-full h-2 absolute top-0 left-0 rounded-t-lg hover:h-6 transition-all duration-200 cursor-pointer flex items-center justify-center overflow-hidden group/bar"
+            className={`w-full h-2 absolute top-0 left-0 rounded-t-lg hover:h-6
+             transition-all duration-200 ${
+               !isReadOnly ? "cursor-pointer" : ""
+             } flex items-center justify-center overflow-hidden group/bar`}
             style={{ backgroundColor: group.color }}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleClick([...group.dayIds]);
-            }}
+            onClick={
+              isReadOnly
+                ? undefined
+                : (e) => {
+                    e.stopPropagation();
+                    handleClick([...group.dayIds]);
+                  }
+            }
           >
             <span className="opacity-0 group-hover/bar:opacity-100 transition-opacity duration-200 text-[0.65rem] text-white font-medium">
               {group.name}
@@ -189,24 +208,29 @@ const DayData = memo(
           </div>
         )}
         <div
-          onClick={(e) => {
-            e.stopPropagation();
-            console.log(`adding day with id: ${id}`);
-            handleClick(id);
-          }}
+          onClick={
+            isReadOnly
+              ? undefined
+              : (e) => {
+                  e.stopPropagation();
+                  handleClick(id);
+                }
+          }
           className="w-full flex flex-col justify-start items-center self-center flex-grow"
         >
           {workoutComponents}
         </div>
-        <div className="flex flex-col gap-1 transition-opacity duration-300 opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto pointer-events-none">
-          <Button
-            variant="tertiary"
-            className="text-xs p-1 w-full"
-            onClick={() => handleEditWorkout(id)}
-          >
-            Edit
-          </Button>
-        </div>
+        {!isReadOnly && (
+          <div className="flex flex-col gap-1 transition-opacity duration-300 opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto pointer-events-none">
+            <Button
+              variant="tertiary"
+              className="text-xs p-1 w-full"
+              onClick={() => handleEditWorkout(id)}
+            >
+              Edit
+            </Button>
+          </div>
+        )}
       </>
     );
   }

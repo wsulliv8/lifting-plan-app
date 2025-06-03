@@ -9,6 +9,7 @@ import RegisterForm from "./components/auth/RegisterForm";
 import Welcome from "./pages/Welcome";
 import Plans from "./pages/plans/Plans";
 import PlanEditor from "./pages/plans/PlanEditor";
+import PlanViewer from "./pages/plans/PlanViewer";
 import PlanProgress from "./pages/plans/PlanProgress";
 import ActiveWorkout from "./pages/plans/ActiveWorkout";
 import Workouts from "./pages/workouts/Workouts";
@@ -108,6 +109,21 @@ const liftsLoader = async () => {
   }
 };
 
+const viewPlanLoader = async ({ params }) => {
+  try {
+    const plan = await getPlanById(params.planId);
+    return { plan };
+  } catch (err) {
+    if (err.response?.status === 401) {
+      localStorage.removeItem("token");
+      return redirect("/login");
+    }
+    throw new Response("Failed to load plan", {
+      status: err.response?.status || 500,
+    });
+  }
+};
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -119,6 +135,12 @@ const router = createBrowserRouter([
         path: "plans",
         element: <Plans />,
         loader: plansLoader,
+        errorElement: <ErrorPage />,
+      },
+      {
+        path: "plans/:planId",
+        element: <PlanViewer />,
+        loader: viewPlanLoader,
         errorElement: <ErrorPage />,
       },
       {

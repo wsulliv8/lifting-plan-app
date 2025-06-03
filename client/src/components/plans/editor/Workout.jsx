@@ -2,7 +2,7 @@ import { memo, useMemo } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-const Workout = memo(({ id, workout, handleClick }) => {
+const Workout = memo(({ id, workout, handleClick, isReadOnly = false }) => {
   const {
     attributes,
     listeners,
@@ -13,6 +13,7 @@ const Workout = memo(({ id, workout, handleClick }) => {
   } = useSortable({
     id,
     data: { type: "Workout", workout },
+    disabled: isReadOnly,
     measuring: {
       dragging: {
         containerScale: false,
@@ -79,10 +80,14 @@ const Workout = memo(({ id, workout, handleClick }) => {
       className={`w-full p-1 mb-2 bg-[var(--background-alt)] border border-[var(--border)] rounded hover:border-[var(--primary-light)] first:mt-4 ${
         isDragging ? "opacity-50 border border-[var(--primary-light)]" : ""
       }`}
-      onClick={(e) => {
-        e.stopPropagation();
-        handleClick(workout.dayId);
-      }}
+      onClick={
+        isReadOnly
+          ? undefined
+          : (e) => {
+              e.stopPropagation();
+              handleClick(workout.dayId);
+            }
+      }
     >
       <div className="w-full text-xs">
         <div className="font-medium text-center text-[var(--text-primary)]">

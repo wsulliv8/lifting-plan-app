@@ -137,6 +137,17 @@ async function seed() {
       where: { name: "Pull Day" },
     });
 
+    // Set current_workout_id for each plan to their first workout
+    await prisma.plans.update({
+      where: { id: strengthPlan.id },
+      data: { current_workout_id: pushDay.id },
+    });
+
+    await prisma.plans.update({
+      where: { id: userPlan.id },
+      data: { current_workout_id: pullDay.id },
+    });
+
     // Create Weeks and Days for each Plan
     for (const plan of [strengthPlan, userPlan]) {
       // Create weeks based on duration_weeks

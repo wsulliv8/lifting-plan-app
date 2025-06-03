@@ -477,13 +477,14 @@ const PlanProgress = () => {
       >
         {/* Calendar Header */}
         <div className="flex items-center justify-between mb-6 flex-shrink-0">
-          <span
-            className="flex items-center gap-2 cursor-pointer text-[var(--text-primary)]"
-            onClick={() => navigate("/plans/")}
-          >
-            <ArrowLeftIcon className="w-6 h-6" />
-            <span>(To Plans)</span>
-          </span>
+        <Button
+          variant="tertiary"
+          className="flex items-center gap-2"
+          onClick={() => navigate("/plans")}
+        >
+          <ArrowLeftIcon className="h-5 w-5" />
+          Back to Plans
+        </Button>
           <h1 className="text-2xl font-bold text-[var(--text-primary)]">
             {plan.name} - Progress
           </h1>

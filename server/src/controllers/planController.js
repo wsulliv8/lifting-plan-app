@@ -44,7 +44,7 @@ const planController = {
       const { name, duration_weeks } = req.body;
 
       const duration = duration_weeks ? duration_weeks : 3;
-
+      console.log("req.user.userId:", req.user.userId);
       const plan = await prisma.plans.create({
         data: {
           name: name ? name : "New Plan",

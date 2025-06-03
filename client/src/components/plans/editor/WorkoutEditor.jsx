@@ -208,7 +208,6 @@ const WorkoutEditor = ({
       }
     }
 
-    console.log(`Updated ${field} for lift ${liftIndex}:`, lift[field]);
     setEditedWorkouts(updated);
   };
 

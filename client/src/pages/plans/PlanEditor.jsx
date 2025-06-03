@@ -146,6 +146,7 @@ const PlanEditor = () => {
         handleCopy={actions.handleCopy}
         handlePaste={actions.handlePaste}
         clipboard={uiState.clipboard}
+        selectedDays={uiState.selectedDays}
       />
       <Toast message="Copied!" visible={uiState.showCopiedMessage} />
       <WorkoutEditorModal

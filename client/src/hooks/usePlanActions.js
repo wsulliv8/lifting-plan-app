@@ -259,10 +259,17 @@ export const usePlanActions = ({
           (w) => w.dayId === dayId
         ),
       }));
-      setClipboard(copiedData);
-      setSelectedDays([]);
-      setShowCopiedMessage(true);
-      setTimeout(() => setShowCopiedMessage(false), 2000);
+      console.log("Copied data:", copiedData);
+
+      // Only set clipboard if we actually have workouts to copy
+      if (copiedData.some((data) => data.workouts.length > 0)) {
+        setClipboard(copiedData);
+        setSelectedDays([]);
+        setShowCopiedMessage(true);
+        setTimeout(() => setShowCopiedMessage(false), 2000);
+      } else {
+        console.warn("No workouts found for the selected days");
+      }
     },
     [workouts, setClipboard, setSelectedDays, setShowCopiedMessage]
   );

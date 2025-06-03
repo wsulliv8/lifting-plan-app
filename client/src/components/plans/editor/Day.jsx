@@ -118,7 +118,7 @@ const Day = memo(
 Day.displayName = "Day";
 
 const DroppableContainer = memo(
-  ({ id, disabled, isDaySelected, onContextMenu, isReadOnly, children }) => {
+  ({ id, disabled, isDaySelected, onContextMenu, children }) => {
     const { setNodeRef, isOver } = useDroppable({
       id,
       data: { type: "Day" },
@@ -131,7 +131,7 @@ const DroppableContainer = memo(
           isDaySelected ? "border-[var(--primary)]" : "border-transparent"
         } hover:border-[var(--primary-light)] hover:shadow-xl
  ${isOver ? "bg-[var(--primary-light)] bg-opacity-10" : ""}`}
-        onContextMenu={onContextMenu}
+        onContextMenu={(e) => onContextMenu(e, id)}
       >
         {children}
       </div>

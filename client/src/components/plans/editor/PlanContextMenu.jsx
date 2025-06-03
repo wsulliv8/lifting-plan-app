@@ -7,6 +7,7 @@ const PlanContextMenu = ({
   handleCopy,
   handlePaste,
   clipboard,
+  selectedDays,
 }) => {
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -27,6 +28,12 @@ const PlanContextMenu = ({
 
   if (!contextMenu) return null;
 
+  // If the right-clicked day is part of the selection, copy all selected days
+  // Otherwise, just copy the right-clicked day
+  const daysToHandle = selectedDays.includes(contextMenu.dayId)
+    ? selectedDays
+    : [contextMenu.dayId];
+
   return (
     <div
       ref={contextMenuRef}
@@ -37,11 +44,11 @@ const PlanContextMenu = ({
       <div
         className="px-2 py-1 hover:bg-[var(--background-alt)] cursor-pointer text-[var(--text-primary)]"
         onClick={() => {
-          handleCopy(contextMenu.dayId);
+          handleCopy(daysToHandle);
           closeContextMenu();
         }}
       >
-        Copy
+        Copy {daysToHandle.length > 1 ? `(${daysToHandle.length} days)` : ""}
       </div>
       {clipboard.length > 0 && (
         <div

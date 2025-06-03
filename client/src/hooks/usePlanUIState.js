@@ -81,8 +81,12 @@ export const usePlanUIState = (weeksLength) => {
   }, []);
 
   const handleContextMenu = useCallback(
-    (e, dayId) => {
+    (e, id) => {
       e.preventDefault();
+      if (id === undefined) {
+        console.warn("No day ID provided for context menu");
+        return;
+      }
       const { clientX, clientY } = e;
       const menuWidth = 120;
       const menuHeight = clipboard.length > 0 ? 80 : 40;
@@ -92,7 +96,8 @@ export const usePlanUIState = (weeksLength) => {
         clientY + menuHeight > window.innerHeight
           ? clientY - menuHeight
           : clientY;
-      setContextMenu({ x, y, dayId });
+      console.log("Setting context menu for dayId:", id);
+      setContextMenu({ x, y, dayId: id });
     },
     [clipboard, setContextMenu]
   );

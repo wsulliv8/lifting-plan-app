@@ -5,7 +5,7 @@ import { TrashIcon } from "@heroicons/react/24/outline";
 
 const PlanCard = ({ plan, planType, onDelete }) => {
   const navigate = useNavigate();
-
+  console.log("plan", plan);
   const handleDownload = async () => {
     try {
       const newPlan = await downloadPlan(plan.id);
@@ -15,7 +15,7 @@ const PlanCard = ({ plan, planType, onDelete }) => {
     }
   };
 
-  // Calculate progress
+  // Calculate progress using passed in values
   const progressPercentage = plan.totalWorkouts
     ? Math.round((plan.completedWorkouts / plan.totalWorkouts) * 100)
     : 0;
@@ -27,17 +27,26 @@ const PlanCard = ({ plan, planType, onDelete }) => {
         {/* Top-Right: Plan Details */}
         <div className="flex-1 text-center">
           <h3 className="heading mb-2">{plan.name}</h3>
-          <p className="text-sm text-[var(--text-secondary)]">
-            <span className="font-medium">Goal:</span> {plan.goal || "Strength"}
-          </p>
-          <p className="text-sm text-[var(--text-secondary)]">
-            <span className="font-medium">Duration:</span> {plan.duration_weeks}{" "}
-            weeks
-          </p>
-          <p className="text-sm text-[var(--text-secondary)]">
-            <span className="font-medium">Difficulty:</span>{" "}
-            {plan.difficulty || "Intermediate"}
-          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div>
+              <p className="text-sm text-[var(--text-secondary)]">Goal</p>
+              <p className="text-sm text-[var(--text-primary)]">
+                {plan.goal || "Not specified"}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-[var(--text-secondary)]">Duration</p>
+              <p className="text-sm text-[var(--text-primary)]">
+                {plan.duration_weeks} weeks
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-[var(--text-secondary)]">Difficulty</p>
+              <p className="text-sm text-[var(--text-primary)]">
+                {plan.difficulty || "Not specified"}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -46,30 +55,35 @@ const PlanCard = ({ plan, planType, onDelete }) => {
         <>
           <div className="w-full mb-2">
             <div className="text-sm text-[var(--text-secondary)] mb-1">
-              Progress: {progressPercentage}%
+              Progress: {progressPercentage}% ({plan.completedWorkouts}/
+              {plan.totalWorkouts} workouts)
             </div>
-            <div className="w-full bg-[var(--background-alt)] rounded-full h-2.5">
+            <div className="w-full bg-[var(--background)] rounded-full h-2.5">
               <div
-                className="bg-[var(--primary)] h-2.5 rounded-full transition-all duration-300"
-                style={{ width: `${progressPercentage}%` }}
+                className="h-2.5 rounded-full transition-all duration-300"
+                style={{
+                  width: `${progressPercentage}%`,
+                  background:
+                    "linear-gradient(90deg, #99F6E4 0%, #134E4A 100%)",
+                }}
               ></div>
             </div>
           </div>
           <Button
             variant="primary"
             onClick={() => navigate(`/workouts/${plan.current_workout_id}`)}
-            className="text-sm w-10/12 m-auto"
+            className="text-sm w-10/12 mx-auto"
           >
             Start Workout
           </Button>
           <Button
             variant="secondary"
             onClick={() => navigate(`/plans/${plan.id}/progress`)}
-            className="text-sm w-10/12 m-auto"
+            className="text-sm w-10/12 mx-auto"
           >
             View Progress
           </Button>
-          <div className="flex w-10/12 m-auto gap-2">
+          <div className="flex w-10/12 mx-auto gap-2">
             <Button
               variant="tertiary"
               onClick={() => navigate(`/plans/${plan.id}/edit`)}

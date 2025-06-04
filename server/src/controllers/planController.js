@@ -10,13 +10,108 @@ const planController = {
         where: {
           user_id: req.user.userId,
         },
+        include: {
+          weeks: {
+            include: {
+              days: {
+                include: {
+                  workoutDays: {
+                    include: {
+                      workout: {
+                        select: {
+                          id: true,
+                          completed_at: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       });
+
+      // Add workout counts to each plan
+      const userPlansWithCounts = userPlans.map((plan) => {
+        let totalWorkouts = 0;
+        let completedWorkouts = 0;
+
+        plan.weeks?.forEach((week) => {
+          week.days?.forEach((day) => {
+            day.workoutDays?.forEach((workoutDay) => {
+              totalWorkouts++;
+              if (workoutDay.workout.completed_at) {
+                completedWorkouts++;
+              }
+            });
+          });
+        });
+
+        // Remove the weeks data since we don't need it in the frontend
+        const { weeks, ...planWithoutWeeks } = plan;
+        return {
+          ...planWithoutWeeks,
+          totalWorkouts,
+          completedWorkouts,
+        };
+      });
+
       const genericPlans = await prisma.plans.findMany({
         where: {
           user_id: null,
         },
+        include: {
+          weeks: {
+            include: {
+              days: {
+                include: {
+                  workoutDays: {
+                    include: {
+                      workout: {
+                        select: {
+                          id: true,
+                          completed_at: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       });
-      res.json({ userPlans, genericPlans });
+
+      // Add workout counts to each generic plan
+      const genericPlansWithCounts = genericPlans.map((plan) => {
+        let totalWorkouts = 0;
+        let completedWorkouts = 0;
+
+        plan.weeks?.forEach((week) => {
+          week.days?.forEach((day) => {
+            day.workoutDays?.forEach((workoutDay) => {
+              totalWorkouts++;
+              if (workoutDay.workout.completed_at) {
+                completedWorkouts++;
+              }
+            });
+          });
+        });
+
+        // Remove the weeks data since we don't need it in the frontend
+        const { weeks, ...planWithoutWeeks } = plan;
+        return {
+          ...planWithoutWeeks,
+          totalWorkouts,
+          completedWorkouts,
+        };
+      });
+
+      res.json({
+        userPlans: userPlansWithCounts,
+        genericPlans: genericPlansWithCounts,
+      });
     } catch (error) {
       next(error);
     }

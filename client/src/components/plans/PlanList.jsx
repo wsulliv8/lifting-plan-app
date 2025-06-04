@@ -15,12 +15,7 @@ const PlanList = ({ plans, isLoading, planType, onDelete }) => {
         plans.map((plan) => (
           <PlanCard
             key={plan.id}
-            plan={{
-              ...plan,
-              completedWorkouts:
-                plan.workouts?.filter((w) => w.completed).length || 0,
-              totalWorkouts: plan.workouts?.length || 0,
-            }}
+            plan={plan}
             planType={planType}
             onDelete={onDelete}
           />

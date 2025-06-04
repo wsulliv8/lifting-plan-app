@@ -245,7 +245,6 @@ const workoutController = {
                       (1 + parseInt(lift.reps[0].split("-")[0]) / 30)
                   ),
                 ],
-                created_at: new Date(),
               },
             });
           } else {

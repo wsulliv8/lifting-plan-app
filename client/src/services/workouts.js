@@ -14,10 +14,11 @@ api.interceptors.request.use((config) => {
 
 const getWorkoutById = async (id) => {
   try {
+    console.log("id of workout", id);
+
     const response = await api.get(`/workouts/${id}`);
 
     const data = response.data;
-
     return {
       id: data.id,
       user_id: data.user_id,

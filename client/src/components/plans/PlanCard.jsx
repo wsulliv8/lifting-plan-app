@@ -24,14 +24,6 @@ const PlanCard = ({ plan, planType, onDelete }) => {
     <div className="card flex flex-col gap-2">
       {/* Top Section: Image (Left) + Details (Right) */}
       <div className="flex flex-col sm:flex-row gap-4">
-        {/* Top-Left: Image */}
-        <div className="w-full sm:w-24 h-24 flex-shrink-0">
-          <img
-            src={plan.image || "https://via.placeholder.com/128"}
-            alt={`${plan.name} thumbnail`}
-            className="w-full h-full object-cover rounded-lg"
-          />
-        </div>
         {/* Top-Right: Plan Details */}
         <div className="flex-1 text-center">
           <h3 className="heading mb-2">{plan.name}</h3>

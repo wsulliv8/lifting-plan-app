@@ -692,6 +692,28 @@ const planController = {
         )
       );
 
+      // Find the first workout for this plan and set it as current_workout_id
+      const firstWorkout = await prisma.workouts.findFirst({
+        where: {
+          plan_id: newPlan.id,
+          user_id: userId,
+        },
+        orderBy: [
+          { week_number: "asc" },
+          { plan_day: "asc" },
+          { id: "asc" }, // fallback
+        ],
+      });
+
+      if (firstWorkout) {
+        await prisma.plans.update({
+          where: { id: newPlan.id },
+          data: {
+            current_workout_id: firstWorkout.id,
+          },
+        });
+      }
+
       // Fetch the updated plan with all relationships
       const updatedPlan = await prisma.plans.findUnique({
         where: { id: newPlan.id },

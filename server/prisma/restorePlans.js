@@ -21,7 +21,7 @@ async function restoreGenericPlans() {
     // Restore each plan
     for (const plan of plans) {
       try {
-        // Create the plan
+        // Create the plan first
         const createdPlan = await prisma.plans.create({
           data: {
             name: plan.name,
@@ -33,78 +33,101 @@ async function restoreGenericPlans() {
             dayGroups: plan.dayGroups || "[]",
             user_id: null,
             created_at: plan.created_at || new Date(),
-            // Create weeks and their relationships
-            weeks: {
-              create: plan.weeks.map((week) => ({
-                week_number: week.week_number,
-                // Create days and their relationships
-                days: {
-                  create: week.days.map((day) => ({
-                    day_of_week: day.day_of_week,
-                    // Create workoutDays and their relationships
-                    workoutDays: {
-                      create: day.workoutDays.map((workoutDay) => ({
-                        order: workoutDay.order,
-                        // Create workout and its relationships
-                        workout: {
-                          create: {
-                            name: workoutDay.workout.name,
-                            week_number: workoutDay.workout.week_number,
-                            plan_day: workoutDay.workout.plan_day,
-                            day_of_week: workoutDay.workout.day_of_week,
-                            iteration: workoutDay.workout.iteration,
-                            user_id: null,
-                            created_at:
-                              workoutDay.workout.created_at || new Date(),
-                            // Create lifts
-                            lifts: {
-                              create: workoutDay.workout.lifts.map((lift) => ({
-                                name: lift.name,
-                                sets: lift.sets,
-                                reps: lift.reps,
-                                weight: lift.weight,
-                                rpe: lift.rpe,
-                                rest_time: lift.rest_time,
-                                progression_rule: lift.progression_rule,
-                                created_at: lift.created_at || new Date(),
-                                base_lift_id: lift.base_lift_id,
-                                completed: lift.completed || false,
-                                reps_achieved: lift.reps_achieved || [],
-                                weight_achieved: lift.weight_achieved || [],
-                                rpe_achieved: lift.rpe_achieved || [],
-                                volume: lift.volume || 0,
-                              })),
-                            },
-                          },
-                        },
-                      })),
-                    },
-                  })),
-                },
-              })),
-            },
-          },
-          // Include all relationships in the response
-          include: {
-            weeks: {
-              include: {
-                days: {
-                  include: {
-                    workoutDays: {
-                      include: {
-                        workout: {
-                          include: {
-                            lifts: true,
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
           },
         });
+
+        // Create weeks for the plan
+        for (const week of plan.weeks) {
+          const createdWeek = await prisma.week.create({
+            data: {
+              week_number: week.week_number,
+              plan_id: createdPlan.id,
+            },
+          });
+
+          // Create days for each week
+          for (const day of week.days) {
+            const createdDay = await prisma.day.create({
+              data: {
+                day_of_week: day.day_of_week,
+                week_id: createdWeek.id,
+              },
+            });
+
+            // Create workouts first
+            for (const workoutDay of day.workoutDays) {
+              const workout = workoutDay.workout;
+
+              // Create the workout with plan_id
+              const createdWorkout = await prisma.workouts.create({
+                data: {
+                  name: workout.name,
+                  week_number: workout.week_number,
+                  plan_day: workout.plan_day,
+                  day_of_week: workout.day_of_week,
+                  iteration: workout.iteration,
+                  user_id: null,
+                  created_at: workout.created_at || new Date(),
+                  plan_id: createdPlan.id,
+                },
+              });
+
+              // Create lifts for the workout
+              for (const lift of workout.lifts) {
+                await prisma.lifts.create({
+                  data: {
+                    workout_id: createdWorkout.id,
+                    name: lift.name,
+                    sets: lift.sets,
+                    reps: lift.reps,
+                    weight: lift.weight,
+                    rpe: lift.rpe,
+                    rest_time: lift.rest_time,
+                    progression_rule: lift.progression_rule,
+                    created_at: lift.created_at || new Date(),
+                    base_lift_id: lift.base_lift_id,
+                    completed: lift.completed || false,
+                    reps_achieved: lift.reps_achieved || [],
+                    weight_achieved: lift.weight_achieved || [],
+                    rpe_achieved: lift.rpe_achieved || [],
+                    volume: lift.volume || 0,
+                  },
+                });
+              }
+
+              // Create workoutDay to link the workout to the day
+              await prisma.workoutDay.create({
+                data: {
+                  day_id: createdDay.id,
+                  workout_id: createdWorkout.id,
+                  order: workoutDay.order,
+                },
+              });
+            }
+          }
+        }
+
+        // Find the first workout for this plan and set it as current_workout_id
+        const firstWorkout = await prisma.workouts.findFirst({
+          where: {
+            plan_id: createdPlan.id,
+            user_id: null,
+          },
+          orderBy: [
+            { week_number: "asc" },
+            { plan_day: "asc" },
+            { id: "asc" }, // fallback
+          ],
+        });
+
+        if (firstWorkout) {
+          await prisma.plans.update({
+            where: { id: createdPlan.id },
+            data: {
+              current_workout_id: firstWorkout.id,
+            },
+          });
+        }
 
         console.log(`Successfully restored plan ${plan.name}`);
       } catch (error) {

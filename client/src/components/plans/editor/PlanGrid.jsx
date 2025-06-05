@@ -192,24 +192,17 @@ const PlanGrid = ({
   }, [weeks.length, screenSize.isMobile]);
 
   // Sync scroll across all week rows and header
-  const handleMobileScroll = (scrollingElement, scrollingIndex) => {
+  const handleMobileScroll = (scrollingElement) => {
     const scrollLeft = scrollingElement.scrollLeft;
 
-    // Sync header scroll
-    if (
-      headerScrollRef.current &&
-      headerScrollRef.current !== scrollingElement
-    ) {
+    // Always sync header scroll
+    if (headerScrollRef.current) {
       headerScrollRef.current.scrollLeft = scrollLeft;
     }
 
-    // Sync all week rows
-    weekScrollRefs.current.forEach((ref, index) => {
-      if (
-        ref.current &&
-        ref.current !== scrollingElement &&
-        index !== scrollingIndex
-      ) {
+    // Sync all week rows regardless of which one triggered the scroll
+    weekScrollRefs.current.forEach((ref) => {
+      if (ref.current) {
         ref.current.scrollLeft = scrollLeft;
       }
     });
@@ -232,7 +225,7 @@ const PlanGrid = ({
               ref={headerScrollRef}
               className="overflow-x-auto scrollbar-none"
               style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-              onScroll={(e) => handleMobileScroll(e.target, -1)}
+              onScroll={(e) => handleMobileScroll(e.target)}
             >
               <div className="grid gap-2 min-w-max" style={gridStyle}>
                 <div></div>
@@ -247,13 +240,10 @@ const PlanGrid = ({
 
           {/* Weeks - each in its own scrollable container */}
           {weeks.map((week, weekIndex) => (
-            <div
-              key={`week-${weekIndex}`}
-              className=" pb-2 relative"
-            >
+            <div key={`week-${weekIndex}`} className=" pb-2 relative">
               {/* Sticky Week Label */}
               <div
-                className={`sticky left-1 top-1/2 -translate-y-4 z-10 bg-[var(--background-alt)] p-2 font-medium cursor-pointer hover:over:bg-[var(--background-dark)] flex items-center justify-center whitespace-nowrap rounded relative group min-h-[7rem] w-10 float-left ${
+                className={`sticky left-1 top-0 z-10 bg-[var(--background-alt)] p-2 font-medium cursor-pointer hover:over:bg-[var(--background-dark)] flex items-center justify-center whitespace-nowrap rounded relative group min-h-[7rem] w-10 float-left ${
                   collapsedWeeks.has(weekIndex)
                     ? "text-[var(--text-secondary)] min-h-[2rem]"
                     : "text-[var(--text-primary)]"
@@ -286,7 +276,7 @@ const PlanGrid = ({
                 ref={weekScrollRefs.current[weekIndex]}
                 className="overflow-x-auto scrollbar-none ml-14"
                 style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-                onScroll={(e) => handleMobileScroll(e.target, weekIndex)}
+                onScroll={(e) => handleMobileScroll(e.target)}
               >
                 <div
                   className="grid gap-2 min-w-max"
@@ -303,7 +293,7 @@ const PlanGrid = ({
                     return (
                       <div
                         key={actualDayId}
-                        className="bg-[var(--surface)] rounded border border-[var(--border)]"
+                        className="bg-[var(--surface)] rounded-lg border border-[var(--border)]"
                       >
                         <Day
                           id={actualDayId}
@@ -331,7 +321,7 @@ const PlanGrid = ({
         </div>
 
         {!isReadOnly && (
-          <div className="mt-4 flex justify-center pb-6">
+          <div className=" mt-1 md:mt-4 flex justify-center pb-14 md:pb-6">
             <PlusCircleIcon
               className="h-8 w-8 text-[var(--primary)] hover:text-[var(--primary-dark)] cursor-pointer"
               onClick={() => setTotalDays((prev) => prev + 7)}

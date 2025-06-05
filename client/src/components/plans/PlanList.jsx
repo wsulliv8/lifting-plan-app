@@ -8,7 +8,7 @@ const PlanList = ({ plans, isLoading, planType, onDelete }) => {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 place-items-center">
       {plans.length === 0 ? (
         <p className="text-[var(--text-secondary)]">No plans available.</p>
       ) : (

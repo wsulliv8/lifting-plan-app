@@ -21,7 +21,7 @@ const PlanCard = ({ plan, planType, onDelete }) => {
     : 0;
 
   return (
-    <div className="card flex flex-col gap-2">
+    <div className="card flex flex-col gap-2 w-full max-w-xl justify-self-center">
       {/* Top Section: Image (Left) + Details (Right) */}
       <div className="flex flex-col sm:flex-row gap-4">
         {/* Top-Right: Plan Details */}

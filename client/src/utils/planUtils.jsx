@@ -29,7 +29,8 @@ export const computeGridStyle = (
   weeks,
   collapsedWeeks,
   collapsedDays,
-  availableWidth
+  availableWidth,
+  isMobile
 ) => {
   const weekLabelWidth = "2rem";
   const minDayWidth = "10rem"; // Match minmax minimum
@@ -39,6 +40,7 @@ export const computeGridStyle = (
   const dayWidth = collapsedDays.map((collapsed) =>
     collapsed ? "2rem" : minDayWidth
   );
+
   const naturalWidth =
     parseFloat(weekLabelWidth) * 16 + // Convert rem to px (1rem = 16px)
     dayWidth.reduce((sum, w) => sum + parseFloat(w) * 16, 0);
@@ -54,13 +56,35 @@ export const computeGridStyle = (
   );
 
   return {
-    gridTemplateColumns: `${weekLabelWidth} ${dayColumnStyle.join(" ")}`,
+    gridTemplateColumns: `${weekLabelWidth} ${
+      dayColumnStyle.join(" ")
+    }`,
     gridTemplateRows: `2rem ${weeks
       .map((_, weekIndex) =>
         collapsedWeeks.has(weekIndex) ? "2rem" : "minmax(7rem, auto)"
       )
       .join(" ")}`,
     width: useFractional ? `${availableWidth}px` : "max-content",
+  };
+};
+
+// New mobile-specific grid style function
+export const computeMobileGridStyle = (collapsedDays, availableWidth, excludeWeekLabel = false) => {
+  const weekLabelWidth = "3rem"; // Slightly wider for mobile
+  const minDayWidth = "8rem"; // Smaller minimum for mobile
+  const maxDayWidth = "10rem"; // Smaller maximum for mobile
+
+  // Calculate day column styles
+  const dayColumnStyle = collapsedDays.map((collapsed) =>
+    collapsed ? "2rem" : `minmax(${minDayWidth}, ${maxDayWidth})`
+  );
+
+  return {
+    gridTemplateColumns: excludeWeekLabel 
+      ? dayColumnStyle.join(" ") 
+      : `${weekLabelWidth} ${dayColumnStyle.join(" ")}`,
+    gridTemplateRows: "auto", // Single row for mobile layout
+    minWidth: "max-content",
   };
 };
 

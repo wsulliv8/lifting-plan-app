@@ -6,6 +6,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { memo, useMemo } from "react";
 import Button from "../../common/Button";
 import Workout from "./Workout";
+import { useTheme } from "../../../context/ThemeContext";
 
 function shallowEqualWorkouts(arr1, arr2) {
   if (arr1 === arr2) {
@@ -77,6 +78,7 @@ const Day = memo(
     onContextMenu,
     isReadOnly = false,
   }) => {
+    const { screenSize } = useTheme();
     const workoutItems = useMemo(
       () => workouts.map((w) => w.id.toString()),
       [workouts]
@@ -97,6 +99,7 @@ const Day = memo(
         handleClick={isReadOnly ? undefined : handleClick}
         onContextMenu={isReadOnly ? undefined : onContextMenu}
         isReadOnly={isReadOnly}
+        isMobile={screenSize.isMobile}
       >
         <DaySortableWrapper id={id} workoutItems={workoutItems}>
           <DayData
@@ -107,6 +110,7 @@ const Day = memo(
             group={group}
             isDragging={isDragging}
             isReadOnly={isReadOnly}
+            isMobile={screenSize.isMobile}
           />
         </DaySortableWrapper>
       </DroppableContainer>
@@ -118,7 +122,7 @@ const Day = memo(
 Day.displayName = "Day";
 
 const DroppableContainer = memo(
-  ({ id, disabled, isDaySelected, onContextMenu, children }) => {
+  ({ id, disabled, isDaySelected, onContextMenu, children, isMobile }) => {
     const { setNodeRef, isOver } = useDroppable({
       id,
       data: { type: "Day" },
@@ -127,10 +131,12 @@ const DroppableContainer = memo(
     return (
       <div
         ref={setNodeRef}
-        className={`group flex flex-col justify-between relative p-2 bg-[var(--surface)] shadow-sm rounded-lg text-xs border ${
+        className={`group flex flex-col justify-between relative ${
+          isMobile ? "p-3" : "p-2"
+        } bg-[var(--surface)] shadow-sm rounded-lg text-xs border ${
           isDaySelected ? "border-[var(--primary)]" : "border-transparent"
-        } hover:border-[var(--primary-light)] hover:shadow-xl
- ${isOver ? "bg-[var(--primary-light)] bg-opacity-10" : ""}`}
+        } hover:border-[var(--primary-light)] hover:shadow-xl active:shadow-xl
+        ${isOver ? "bg-[var(--primary-light)] bg-opacity-10" : ""}`}
         onContextMenu={(e) => onContextMenu(e, id)}
       >
         {children}
@@ -160,6 +166,7 @@ const DayData = memo(
     isDragging,
     group,
     isReadOnly,
+    isMobile,
   }) => {
     const workoutComponents = useMemo(() => {
       if (!workouts.length) {
@@ -180,15 +187,18 @@ const DayData = memo(
             isDragging={isDragging}
             handleClick={isReadOnly ? undefined : handleClick}
             isReadOnly={isReadOnly}
+            isMobile={isMobile}
           />
         ));
-    }, [workouts, handleClick, isDragging, isReadOnly]);
+    }, [workouts, handleClick, isDragging, isReadOnly, isMobile]);
 
     return (
       <>
         {group && (
           <div
-            className={`w-full h-2 absolute top-0 left-0 rounded-t-lg hover:h-6
+            className={`w-full h-2 absolute top-0 left-0 rounded-t-lg ${
+              isMobile ? "hover:h-8" : "hover:h-6"
+            }
              transition-all duration-200 ${
                !isReadOnly ? "cursor-pointer" : ""
              } flex items-center justify-center overflow-hidden group/bar`}
@@ -216,15 +226,23 @@ const DayData = memo(
                   handleClick(id);
                 }
           }
-          className="w-full flex flex-col justify-start items-center self-center flex-grow"
+          className={`w-full flex flex-col justify-start items-center self-center flex-grow ${
+            isMobile ? "min-h-[80px]" : ""
+          }`}
         >
           {workoutComponents}
         </div>
         {!isReadOnly && (
-          <div className="flex flex-col gap-1 transition-opacity duration-300 opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto pointer-events-none">
+          <div
+            className={`flex flex-col gap-1 ${
+              isMobile
+                ? "opacity-100 pointer-events-auto"
+                : "transition-opacity duration-300 opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto pointer-events-none"
+            }`}
+          >
             <Button
               variant="tertiary"
-              className="text-xs p-1 w-full"
+              className={`text-xs ${isMobile ? "p-2" : "p-1"} w-full`}
               onClick={() => handleEditWorkout(id)}
             >
               Edit

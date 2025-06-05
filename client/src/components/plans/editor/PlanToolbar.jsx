@@ -5,6 +5,7 @@ import {
   AdjustmentsHorizontalIcon,
   PlusCircleIcon,
 } from "@heroicons/react/24/solid";
+import { useTheme } from "../../../context/ThemeContext";
 
 const PlanToolbar = ({
   plan,
@@ -21,71 +22,102 @@ const PlanToolbar = ({
   weeksLength,
 }) => {
   const navigate = useNavigate();
+  const { screenSize } = useTheme();
 
   return (
     <>
-      <div className="flex justify-between mb-4">
-      <Button
-          variant="tertiary"
-          className="flex items-center gap-2"
-          onClick={() => navigate("/plans")}
+      <div
+        className={`flex ${
+          screenSize.isMobile ? "flex-col gap-4" : "justify-between"
+        } mb-4 ${screenSize.isMobile ? "pr-0" : "pr-6"}`}
+      >
+        {!screenSize.isMobile && (
+          <Button
+            variant="tertiary"
+            className={`flex items-center gap-2 ${
+              screenSize.isMobile ? "w-full justify-center" : ""
+            }`}
+            onClick={() => navigate("/plans")}
+          >
+            <ArrowLeftIcon className="h-5 w-5" />
+            Back to Plans
+          </Button>
+        )}
+        <span
+          className={`flex items-center ${
+            screenSize.isMobile ? "justify-center gap-4 w-full" : "gap-2"
+          }`}
         >
-          <ArrowLeftIcon className="h-5 w-5" />
-          Back to Plans
-        </Button>
-        <span className="flex items-center gap-2">
           <h2 className="heading">{plan.name ? plan.name : "New Plan"}</h2>
           <AdjustmentsHorizontalIcon
             className="w-5 cursor-pointer text-[var(--text-primary)] hover:text-[var(--text-secondary)]"
             onClick={() => setIsModalOpen((prev) => !prev)}
           />
         </span>
-        <Button variant="primary" onClick={handleSave}>
+        <Button
+          variant="primary"
+          onClick={handleSave}
+          className={screenSize.isMobile ? "w-full " : ""}
+        >
           Save
         </Button>
       </div>
       {selectedDays.length > 0 && (
-        <div className="fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-[var(--surface)] shadow-md p-3 rounded flex gap-2 z-50 border border-[var(--border)]">
-          <Button
-            variant="primary"
-            onClick={() => setShowGroupForm((prev) => !prev)}
+        <div
+          className={`fixed ${
+            screenSize.isMobile
+              ? "bottom-20 left-4 right-4"
+              : "bottom-5 left-1/2 transform -translate-x-1/2"
+          } bg-[var(--surface)] shadow-md p-3 rounded z-50 border border-[var(--border)]`}
+        >
+          <div
+            className={`flex ${screenSize.isMobile ? "flex-col" : ""} gap-2`}
           >
-            Group
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => handleCopy(selectedDays)}
-            disabled={selectedDays.length === 0}
-          >
-            Copy
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setShowDuplicateForm(true);
-              setDuplicateFormData({
-                selectedWeekDays: [],
-                startWeek: 1,
-                endWeek: weeksLength,
-                repeatCount: 1,
-                overwriteExisting: false,
-                autoProgress: true,
-              });
-            }}
-          >
-            Duplicate
-          </Button>
-          <Button
-            variant="tertiary"
-            onClick={() => {
-              setSelectedDays([]);
-              setShowDuplicateForm(false);
-              setClipboard([]);
-              setContextMenu(null);
-            }}
-          >
-            Cancel
-          </Button>
+            <Button
+              variant="primary"
+              onClick={() => setShowGroupForm((prev) => !prev)}
+              className={screenSize.isMobile ? "w-full" : ""}
+            >
+              Group
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => handleCopy(selectedDays)}
+              disabled={selectedDays.length === 0}
+              className={screenSize.isMobile ? "w-full" : ""}
+            >
+              Copy
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setShowDuplicateForm(true);
+                setDuplicateFormData({
+                  selectedWeekDays: [],
+                  startWeek: 1,
+                  endWeek: weeksLength,
+                  repeatCount: 1,
+                  overwriteExisting: false,
+                  autoProgress: true,
+                });
+              }}
+              className={screenSize.isMobile ? "w-full" : ""}
+            >
+              Duplicate
+            </Button>
+            <Button
+              variant="tertiary"
+              onClick={() => {
+                setSelectedDays([]);
+                setShowDuplicateForm(false);
+                setClipboard([]);
+                setContextMenu(null);
+              }}
+              className={screenSize.isMobile ? "w-full" : ""}
+            >
+              Cancel
+            </Button>
+          </div>
         </div>
       )}
     </>

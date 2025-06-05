@@ -5,6 +5,7 @@ import Modal from "../../components/common/Modal";
 import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
 import { createPlan, deletePlan } from "../../services/plans";
+import { useTheme } from "../../context/ThemeContext";
 
 const Plans = () => {
   const [view, setView] = useState("your");
@@ -17,6 +18,7 @@ const Plans = () => {
   const displayedPlans = view === "your" ? plans.userPlans : plans.genericPlans;
   const navigate = useNavigate();
   const navigation = useNavigation();
+  const { screenSize } = useTheme();
 
   // State only for controlled inputs
   const [formInputs, setFormInputs] = useState({
@@ -91,13 +93,25 @@ const Plans = () => {
 
   return (
     <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="heading w-[200px]">
-          {view === "your" ? "Your Plans" : "Pre-Made Plans"}
-        </h2>
+      <div
+        className={`flex ${
+          screenSize.isMobile
+            ? "flex-col gap-4"
+            : "justify-between items-center"
+        } mb-4`}
+      >
+        {!screenSize.isMobile && <div className="w-[200px]"></div>}
         {/* Toggle Button */}
-        <div className="flex justify-center">
-          <div className="toggle-container">
+        <div
+          className={`flex justify-center ${
+            screenSize.isMobile ? "order-1" : ""
+          }`}
+        >
+          <div
+            className={`toggle-container ${
+              screenSize.isMobile ? "w-full max-w-md" : ""
+            }`}
+          >
             {/* Toggle Background Slider */}
             <div
               className={`toggle-slider ${
@@ -128,9 +142,15 @@ const Plans = () => {
             </button>
           </div>
         </div>
-        <Button onClick={handleOpenModal} variant="primary">
-          Create Plan
-        </Button>
+        <div className={`${screenSize.isMobile ? "order-2 w-full" : ""}`}>
+          <Button
+            onClick={handleOpenModal}
+            variant="primary"
+            className={`${screenSize.isMobile ? "w-full" : ""}`}
+          >
+            Create Plan
+          </Button>
+        </div>
       </div>
       <PlanList
         plans={displayedPlans}
@@ -143,13 +163,14 @@ const Plans = () => {
           isOpen={isModalOpen}
           onClose={handleCloseModal}
           title="Create New Plan"
-          className="w-1/2"
+          className={screenSize.isMobile ? "w-[95%]" : "w-1/2"}
         >
           <FormContent
             formData={formInputs}
             handleInputChange={handleInputChange}
             handleSubmit={handleSubmit}
             handleCloseModal={handleCloseModal}
+            isMobile={screenSize.isMobile}
           />
         </Modal>
       )}
@@ -158,7 +179,13 @@ const Plans = () => {
 };
 
 const FormContent = memo(
-  ({ formData, handleInputChange, handleSubmit, handleCloseModal }) => {
+  ({
+    formData,
+    handleInputChange,
+    handleSubmit,
+    handleCloseModal,
+    isMobile,
+  }) => {
     return (
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
@@ -178,13 +205,18 @@ const FormContent = memo(
           required
         />
 
-        <div className="flex justify-end gap-2">
-        <Button variant="primary" type="submit">
+        <div className={`flex ${isMobile ? "flex-col" : "justify-end"} gap-2`}>
+          <Button
+            variant="primary"
+            type="submit"
+            className={isMobile ? "w-full" : ""}
+          >
             Create
           </Button>
           <Button
             variant="danger"
             onClick={handleCloseModal}
+            className={isMobile ? "w-full" : ""}
           >
             Cancel
           </Button>

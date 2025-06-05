@@ -7,15 +7,15 @@ const ThemeToggle = () => {
   return (
     <button
       onClick={toggleTheme}
-      className={`nav-item text-[var(--text-primary)] hover:bg-[var(--background-dark)]`}
+      className={`nav-item text-[var(--text-primary)] `}
       aria-label={
         theme === "light" ? "Switch to Dark Mode" : "Switch to Light Mode"
       }
     >
       {theme === "light" ? (
-        <MoonIcon className="h-6 w-6" />
+        <MoonIcon className="h-8 w-8" />
       ) : (
-        <SunIcon className="h-6 w-6" />
+        <SunIcon className="h-8 w-8" />
       )}
     </button>
   );

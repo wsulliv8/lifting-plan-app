@@ -17,6 +17,7 @@ import { usePlanData } from "../../hooks/usePlanData";
 import { usePlanUIState } from "../../hooks/usePlanUIState";
 import { usePlanDragAndDrop } from "../../hooks/usePlanDragAndDrop";
 import { usePlanActions } from "../../hooks/usePlanActions";
+import { useTheme } from "../../context/ThemeContext";
 
 const PlanEditor = () => {
   const {
@@ -32,6 +33,7 @@ const PlanEditor = () => {
     currentUser,
   } = usePlanData(useLoaderData());
 
+  const { screenSize } = useTheme();
   const weeks = useMemo(() => computeWeeks(totalDays), [totalDays]);
 
   const uiState = usePlanUIState(weeks.length, plan);
@@ -72,8 +74,9 @@ const PlanEditor = () => {
     () => computeWorkoutsByDay(workouts),
     [workouts]
   );
+
   return (
-    <div className="w-full h-full">
+    <div className={`w-full h-full ${screenSize.isMobile ? "pb-24" : ""}`}>
       <PlanToolbar
         plan={plan}
         setIsModalOpen={uiState.setIsModalOpen}

@@ -6,7 +6,7 @@ const Layout = () => {
   return (
     <div className="min-h-screen flex overflow-x-hidden bg-[var(--background)]">
       <Navbar />
-      <main className="p-4 pr-3 ml-16 flex-1 w-full overflow-y-scroll overflow-x-hidden max-h-screen">
+      <main className="p-2 md:p-4 md:pr-1 md:ml-16 flex-1 w-full overflow-y-auto overflow-x-hidden max-h-screen pb-20 md:pb-4">
         <Outlet />
       </main>
     </div>

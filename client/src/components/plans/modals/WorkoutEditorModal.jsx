@@ -2,6 +2,7 @@ import Modal from "../../common/Modal";
 import WorkoutEditor from "../editor/WorkoutEditor";
 import Button from "../../common/Button";
 import { useState } from "react";
+import { useTheme } from "../../../context/ThemeContext";
 
 const WorkoutEditorModal = ({
   editingDay,
@@ -14,6 +15,7 @@ const WorkoutEditorModal = ({
   experience,
 }) => {
   const [currentWorkouts, setCurrentWorkouts] = useState(workouts);
+  const { screenSize } = useTheme();
 
   return (
     <Modal
@@ -23,7 +25,9 @@ const WorkoutEditorModal = ({
         editingDay ? Math.floor(editingDay.dayId / 7) + 1 : ""
       } Day ${editingDay ? (editingDay.dayId % 7) + 1 : ""}`}
       titleClassName="text-[var(--text-primary)] font-medium"
-      className="w-[95vw] h-[95vh]"
+      className={
+        screenSize.isMobile ? "w-[95vw] h-[95vh] p-2" : "w-[95vw] h-[95vh] p-6"
+      }
       headerContent={
         <Button
           variant="primary"

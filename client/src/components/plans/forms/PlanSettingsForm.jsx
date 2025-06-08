@@ -3,6 +3,7 @@ import Select from "../../common/Select";
 import MultiSelect from "../../common/MultiSelect";
 import TextArea from "../../common/TextArea";
 import Button from "../../common/Button";
+import { useTheme } from "../../../context/ThemeContext";
 
 // Memoized form component
 const PlanSettingsForm = ({
@@ -11,24 +12,31 @@ const PlanSettingsForm = ({
   handleSubmit,
   handleCategoriesChange,
 }) => {
+  const { screenSize } = useTheme();
+  const containerClass = screenSize.isMobile ? "w-full" : "w-3/4";
+  const buttonClass = screenSize.isMobile ? "w-full" : "w-1/2";
+
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col items-center gap-4">
+    <form
+      onSubmit={handleSubmit}
+      className="flex flex-col items-center gap-4 w-full px-4"
+    >
       <Input
         label="Name"
         name="name"
         value={formData.name}
         onChange={handleInputChange}
-        containerClass="w-3/4"
+        containerClass={containerClass}
       />
       <Input
         label="Goal"
         name="goal"
         value={formData.goal}
         onChange={handleInputChange}
-        containerClass="w-3/4"
+        containerClass={containerClass}
         placeholder="e.g., Strength, Hypertrophy"
       />
-      <div className="w-3/4">
+      <div className={containerClass}>
         <label className="block text-sm font-normal text-[var(--text-secondary)] mb-1">
           Categories
         </label>
@@ -49,7 +57,7 @@ const PlanSettingsForm = ({
         name="difficulty"
         value={formData.difficulty}
         onChange={handleInputChange}
-        containerClass="w-3/4"
+        containerClass={containerClass}
         options={[
           { value: "Beginner", label: "Beginner" },
           { value: "Intermediate", label: "Intermediate" },
@@ -61,9 +69,9 @@ const PlanSettingsForm = ({
         name="description"
         value={formData.description}
         onChange={handleInputChange}
-        containerClass="w-3/4"
+        containerClass={containerClass}
       />
-      <Button type="submit" variant="primary" size="md" className="w-1/2">
+      <Button type="submit" variant="primary" size="md" className={buttonClass}>
         Save
       </Button>
     </form>

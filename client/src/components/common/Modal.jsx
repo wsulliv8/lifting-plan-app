@@ -87,7 +87,7 @@ const Modal = ({
     >
       <div
         ref={modalRef}
-        className={`flex flex-col rounded-lg shadow-md p-6 max-w-[95vw] max-h-[95vh] overflow-hidden bg-[var(--surface)] border border-[var(--border)] ${className}`}
+        className={`flex flex-col rounded-lg shadow-md max-w-[95vw] max-h-[95vh] overflow-hidden bg-[var(--surface)] border border-[var(--border)] ${className}`}
         tabIndex={-1}
       >
         <div className="h-8 flex justify-between items-center mb-4">

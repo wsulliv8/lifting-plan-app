@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import Modal from "../../common/Modal";
 import PlanSettingsForm from "../forms/PlanSettingsForm";
+import { useTheme } from "../../../context/ThemeContext";
 
 const PlanSettingsModal = ({ isOpen, onClose, plan, handleSubmit }) => {
+  const { screenSize } = useTheme();
   const [formInputs, setFormInputs] = useState({
     name: plan.name || "New Plan",
     goal: plan.goal || "",
@@ -41,7 +43,7 @@ const PlanSettingsModal = ({ isOpen, onClose, plan, handleSubmit }) => {
       isOpen={isOpen}
       onClose={onClose}
       title="Plan Settings"
-      className="w-3/4"
+      className={screenSize.isMobile ? "w-[95%] mx-auto p-4" : "w-3/4 p-6"}
     >
       <PlanSettingsForm
         formData={formInputs}

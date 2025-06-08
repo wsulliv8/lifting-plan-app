@@ -22,7 +22,7 @@ export const usePlanDragAndDrop = (workoutsRef, setWorkouts) => {
   const sensors = useSensors(pointerSensor, touchSensor);
 
   const handleDragStart = useCallback((event) => {
-bbb    if (event.active.data.current?.workout) {
+    if (event.active.data.current?.workout) {
       setActiveWorkout(event.active.data.current.workout);
     }
   }, []);

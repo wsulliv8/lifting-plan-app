@@ -13,6 +13,7 @@
     "reset:db": "npm run backup:plans && cd server && npx prisma migrate reset --force && cd .. && npm run prisma:seed && npm run restore:plans"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "prettier": "^3.5.3"
   }
 }

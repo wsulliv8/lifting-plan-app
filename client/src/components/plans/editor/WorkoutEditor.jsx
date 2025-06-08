@@ -18,11 +18,19 @@ import {
   Bars4Icon,
   TrashIcon,
   ArrowRightIcon,
+  ArrowUpIcon,
+  PlusIcon,
 } from "@heroicons/react/24/solid";
-import { PlusCircleIcon, MinusCircleIcon } from "@heroicons/react/24/outline";
+import {
+  PlusCircleIcon,
+  MinusCircleIcon,
+  Bars3Icon,
+} from "@heroicons/react/24/outline";
 import Button from "../../common/Button";
 import LiftSearch from "../../lifts/LiftSearch";
+import LiftSearchModal from "../../lifts/LiftSearchModal";
 import progressionRules from "../../../utils/progressionRules";
+import { useTheme } from "../../../context/ThemeContext";
 
 // Simple arrayMove function for reordering
 const arrayMove = (array, from, to) => {
@@ -40,11 +48,13 @@ const WorkoutEditor = ({
   experience,
   onWorkoutsChange,
 }) => {
+  const { screenSize } = useTheme();
   const [editedWorkouts, setEditedWorkouts] = useState(
     initialWorkouts && initialWorkouts.length > 0
       ? initialWorkouts
       : [{ id: `temp_${Date.now()}`, dayId, name: "", lifts: [] }]
   );
+  const [isLiftSearchOpen, setIsLiftSearchOpen] = useState(false);
 
   // Add effect to notify parent of workouts changes
   useEffect(() => {
@@ -297,11 +307,19 @@ const WorkoutEditor = ({
   };
 
   return (
-    <div className="w-full h-full rounded-lg flex gap-4">
-      {/* Workouts and Lifts Section (2/3) */}
+    <div
+      className={`w-full h-full rounded-lg ${
+        screenSize.isMobile ? "flex flex-col gap-4" : "flex gap-4"
+      }`}
+    >
+      {/* Workouts and Lifts Section */}
       <div
         ref={scrollContainerRef}
-        className="flex flex-col h-full items-center w-2/3 overflow-y-auto pr-2"
+        className={`flex flex-col h-full items-center ${
+          screenSize.isMobile
+            ? "w-full order-2 overflow-y-auto scrollbar-none"
+            : "w-2/3 overflow-y-auto pr-2"
+        } scrollbar-none`}
       >
         <DndContext
           collisionDetection={closestCenter}
@@ -312,7 +330,9 @@ const WorkoutEditor = ({
               <div
                 key={workout.id}
                 ref={(el) => (workoutRefs.current[workoutIndex] = el)}
-                className="w-full flex flex-col gap-4 p-5 border border-[var(--border)] rounded-lg mb-4 shadow-inner relative"
+                className={`w-full flex flex-col gap-4 p-5 border border-[var(--border)] rounded-lg mb-4 shadow-inner relative ${
+                  screenSize.isMobile ? "overflow-x-hidden" : ""
+                }`}
               >
                 <TrashIcon
                   onClick={() => removeWorkout(workoutIndex)}
@@ -344,15 +364,33 @@ const WorkoutEditor = ({
                         removeSet={removeSet}
                         removeLift={removeLift}
                         setEditedWorkouts={updateEditedWorkouts}
+                        isMobile={screenSize.isMobile}
+                        isDesktop={screenSize.isDesktop}
                       />
                     ))
                   ) : (
-                    <span className="flex gap-2 justify-center text-[var(--text-secondary)] ">
-                      Add lifts from the lift library!{" "}
-                      <ArrowRightIcon className="w-6 h-6" />{" "}
+                    <span className="flex gap-2 justify-center text-[var(--text-secondary)]">
+                      {screenSize.isMobile ? (
+                        "Click the button below to add lifts!"
+                      ) : (
+                        <>
+                          Add lifts from the lift library!{" "}
+                          <ArrowRightIcon className="w-6 h-6" />
+                        </>
+                      )}
                     </span>
                   )}
                 </SortableContext>
+                {screenSize.isMobile && (
+                  <Button
+                    variant="primary"
+                    onClick={() => setIsLiftSearchOpen(true)}
+                    className="w-full flex items-center justify-center gap-2"
+                  >
+                    <PlusIcon className="w-5 h-5" />
+                    Add Lift
+                  </Button>
+                )}
               </div>
             ) : (
               <div
@@ -367,21 +405,33 @@ const WorkoutEditor = ({
           <Button
             onClick={() => addWorkout()}
             variant="primary"
-            className="w-1/3"
+            className={screenSize.isMobile ? "w-full" : "w-1/3"}
           >
             Add Workout
           </Button>
         </DndContext>
       </div>
 
-      {/* Searchable Lift List (1/3) */}
-      <div className="w-1/3 h-full flex justify-center items-center">
-        <LiftSearch
+      {/* Desktop Lift Search */}
+      {!screenSize.isMobile && (
+        <div className="w-1/3 h-full flex justify-center items-center">
+          <LiftSearch
+            lifts={baseLifts}
+            onSelectLift={addLift}
+            className="w-[100%] h-[100%] shadow-md border border-[var(--border)] rounded-lg"
+          />
+        </div>
+      )}
+
+      {/* Mobile Lift Search Modal */}
+      {screenSize.isMobile && (
+        <LiftSearchModal
+          isOpen={isLiftSearchOpen}
+          onClose={() => setIsLiftSearchOpen(false)}
           lifts={baseLifts}
           onSelectLift={addLift}
-          className="w-[100%] h-[100%] shadow-md border border-[var(--border)] rounded-lg"
         />
-      </div>
+      )}
     </div>
   );
 };
@@ -395,6 +445,8 @@ const SortableLift = ({
   removeSet,
   removeLift,
   setEditedWorkouts,
+  isMobile,
+  isDesktop,
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id: lift.id });
@@ -440,35 +492,75 @@ const SortableLift = ({
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center p-2 bg-[var(--surface)] rounded-lg space-y-2 relative border border-[var(--border)]"
+      className="flex flex-col p-2 bg-[var(--surface)] rounded-lg space-y-2 relative border border-[var(--border)]"
     >
-      <TrashIcon
-        onClick={() => removeLift(workoutIndex, liftIndex)}
-        className="w-4 h-4 absolute top-1 right-1 text-[var(--danger)] hover:text-[var(--danger-dark)] cursor-pointer"
-      />
-
-      <h2
-        className="w-1/5 p-2 rounded cursor-grab font-semibold text-center capitalize text-[var(--text-primary)]"
-        {...attributes}
-        {...listeners}
+      <div
+        className={`flex items-center ${
+          !isDesktop ? "justify-between mx-2" : "justify-between"
+        }`}
       >
-        {lift.name
-          .split(" ")
-          .map(
-            (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-          )
-          .join(" ")}
-      </h2>
+        {!isDesktop ? (
+          <>
+            <div {...attributes} {...listeners} className="touch-none">
+              <Bars3Icon className="w-6 h-6 text-[var(--text-secondary)] cursor-grab active:cursor-grabbing" />
+            </div>
+            <h2 className="p-2 rounded font-semibold text-center capitalize text-[var(--text-primary)]">
+              {lift.name
+                .split(" ")
+                .map(
+                  (word) =>
+                    word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                )
+                .join(" ")}
+            </h2>
+          </>
+        ) : (
+          <h2
+            className="w-full p-2 rounded cursor-grab font-semibold text-center capitalize text-[var(--text-primary)]"
+            {...attributes}
+            {...listeners}
+          >
+            {lift.name
+              .split(" ")
+              .map(
+                (word) =>
+                  word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+              )
+              .join(" ")}
+          </h2>
+        )}
+        <TrashIcon
+          onClick={() => removeLift(workoutIndex, liftIndex)}
+          className="w-4 h-4 text-[var(--danger)] hover:text-[var(--danger-dark)] cursor-pointer"
+        />
+      </div>
 
-      <div className="flex justify-center flex-1 w-4/5">
+      <div className="flex justify-center flex-1 w-full">
+        {isDesktop && (
+          <div className="flex items-center mr-8 ">
+            <div {...attributes} {...listeners} className="touch-none">
+              <Bars3Icon className="w-6 h-6 text-[var(--text-secondary)] cursor-grab active:cursor-grabbing" />
+            </div>
+          </div>
+        )}
         <div
           className={`grid flex-0 ${
-            showRPE && showRest
-              ? "grid-cols-[40px_minmax(60px,_120px)_minmax(60px,_120px)_minmax(60px,_120px)_minmax(60px,_120px)]"
-              : showRPE || showRest
-              ? "grid-cols-[40px_minmax(70px,_120px)_minmax(70px,_120px)_minmax(70px,_120px)]"
-              : "grid-cols-[40px_minmax(80px,_120px)_minmax(80px,_120px)]"
-          } grid-rows-[auto_1fr] auto-rows-auto gap-y-2 gap-x-2 sm:gap-x-1 md:gap-x-3 lg:gap-x-8 xl:gap-x-10 place-items-center`}
+            isMobile
+              ? showRPE && showRest
+                ? "grid-cols-[30px_1fr_1fr_1fr_1fr] gap-x-1"
+                : showRPE || showRest
+                  ? "grid-cols-[30px_1fr_1fr_1fr] gap-x-2"
+                  : "grid-cols-[30px_1fr_1fr] gap-x-3"
+              : showRPE && showRest
+                ? "grid-cols-[40px_minmax(60px,_120px)_minmax(60px,_120px)_minmax(60px,_120px)_minmax(60px,_120px)]"
+                : showRPE || showRest
+                  ? "grid-cols-[40px_minmax(70px,_120px)_minmax(70px,_120px)_minmax(70px,_120px)]"
+                  : "grid-cols-[40px_minmax(80px,_120px)_minmax(80px,_120px)]"
+          } grid-rows-[auto_1fr] auto-rows-auto gap-y-2 ${
+            isMobile
+              ? ""
+              : "gap-x-2 sm:gap-x-1 md:gap-x-3 lg:gap-x-8 xl:gap-x-10"
+          } place-items-center`}
         >
           <h3 className="text-sm font-medium text-[var(--text-primary)]">
             Sets
@@ -492,7 +584,11 @@ const SortableLift = ({
 
           {lift.reps.map((repsValue, setIndex) => (
             <React.Fragment key={`${lift.id}-set-${setIndex}`}>
-              <span className="h-8 w-8 flex items-center justify-center text-[var(--text-secondary)]">
+              <span
+                className={`${
+                  isMobile ? "h-8 w-6" : "h-8 w-8"
+                } flex items-center justify-center text-[var(--text-secondary)]`}
+              >
                 {setIndex + 1}
               </span>
               <input
@@ -583,7 +679,11 @@ const SortableLift = ({
 
         {/* Vertical Controls */}
         {lift.sets > 0 && (
-          <div className="flex gap-2 ml-2 items-center">
+          <div
+            className={`flex ${
+              !isMobile ? "flex-row" : "flex-col"
+            } gap-2 ml-2 items-center`}
+          >
             <div className="flex flex-col items-center gap-1 group">
               <span className="writing-vertical-rl rotate-180 text-xs cursor-default text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]">
                 Add RPE

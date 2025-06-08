@@ -1,16 +1,28 @@
 import { useState, useCallback } from "react";
-import { PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import {
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
 
 export const usePlanDragAndDrop = (workoutsRef, setWorkouts) => {
   const [activeWorkout, setActiveWorkout] = useState(null);
 
   const pointerSensor = useSensor(PointerSensor, {
-    activationConstraint: { distance: 1 },
+    activationConstraint: { distance: 5 },
   });
-  const sensors = useSensors(pointerSensor);
+  const touchSensor = useSensor(TouchSensor, {
+    activationConstraint: {
+      delay: 50,
+      tolerance: 0,
+      distance: 5,
+    },
+  });
+  const sensors = useSensors(pointerSensor, touchSensor);
 
   const handleDragStart = useCallback((event) => {
-    if (event.active.data.current?.workout) {
+bbb    if (event.active.data.current?.workout) {
       setActiveWorkout(event.active.data.current.workout);
     }
   }, []);

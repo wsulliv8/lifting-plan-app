@@ -1,8 +1,11 @@
 import { memo, useMemo } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Bars3Icon } from "@heroicons/react/24/solid";
+import { useTheme } from "../../../context/ThemeContext";
 
 const Workout = memo(({ id, workout, handleClick, isReadOnly = false }) => {
+  const { screenSize } = useTheme();
   const {
     attributes,
     listeners,
@@ -25,6 +28,8 @@ const Workout = memo(({ id, workout, handleClick, isReadOnly = false }) => {
     () => ({
       transform: CSS.Transform.toString(transform),
       transition,
+      WebkitUserSelect: "none",
+      userSelect: "none",
     }),
     [transform, transition]
   );
@@ -75,11 +80,10 @@ const Workout = memo(({ id, workout, handleClick, isReadOnly = false }) => {
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes}
-      {...listeners}
-      className={`w-full p-1 mb-2 bg-[var(--background-alt)] border border-[var(--border)] rounded hover:border-[var(--primary-light)] first:mt-4 ${
+      {...(!screenSize.isMobile ? { ...attributes, ...listeners } : {})}
+      className={`w-full p-1 mb-2 bg-[var(--background-alt)] border border-[var(--border)] rounded md:hover:border-[var(--primary-light)] first:mt-4 select-none ${
         isDragging ? "opacity-50 border border-[var(--primary-light)]" : ""
-      }`}
+      } ${!screenSize.isMobile ? "cursor-grab" : ""}`}
       onClick={
         isReadOnly
           ? undefined
@@ -90,8 +94,32 @@ const Workout = memo(({ id, workout, handleClick, isReadOnly = false }) => {
       }
     >
       <div className="w-full text-xs">
-        <div className="font-medium text-center text-[var(--text-primary)]">
-          {workout.name || "Workout"}
+        <div className="font-medium text-center text-[var(--text-primary)] flex items-center justify-between">
+          {screenSize.isMobile ? (
+            <div
+              {...attributes}
+              {...listeners}
+              className="p-1 cursor-grab touch-none"
+              style={{ touchAction: "none" }}
+            >
+              <Bars3Icon className="h-4 w-4 text-[var(--text-secondary)]" />
+            </div>
+          ) : (
+            <div className="w-4" />
+          )}
+          <div className="flex-1">{workout.name || "Workout"}</div>
+          {screenSize.isMobile ? (
+            <div
+              {...attributes}
+              {...listeners}
+              className="p-1 cursor-grab touch-none"
+              style={{ touchAction: "none" }}
+            >
+              <Bars3Icon className="h-4 w-4 text-[var(--text-secondary)]" />
+            </div>
+          ) : (
+            <div className="w-4" />
+          )}
         </div>
         {liftsContent}
       </div>

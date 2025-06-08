@@ -135,7 +135,7 @@ const DroppableContainer = memo(
           isMobile ? "p-3" : "p-2"
         } bg-[var(--surface)] shadow-sm rounded-lg text-xs border ${
           isDaySelected ? "border-[var(--primary)]" : "border-transparent"
-        } hover:border-[var(--primary-light)] hover:shadow-xl active:shadow-xl
+        } md:hover:border-[var(--primary-light)] hover:shadow-xl active:shadow-xl
         ${isOver ? "bg-[var(--primary-light)] bg-opacity-10" : ""}`}
         onContextMenu={(e) => onContextMenu(e, id)}
       >

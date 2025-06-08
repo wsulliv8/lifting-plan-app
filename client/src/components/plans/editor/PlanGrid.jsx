@@ -240,12 +240,12 @@ const PlanGrid = ({
 
           {/* Weeks - each in its own scrollable container */}
           {weeks.map((week, weekIndex) => (
-            <div key={`week-${weekIndex}`} className=" pb-2 relative">
+            <div key={`week-${weekIndex}`} className="pb-2 relative flex">
               {/* Sticky Week Label */}
               <div
-                className={`sticky left-1 top-0 z-10 bg-[var(--background-alt)] p-2 font-medium cursor-pointer hover:over:bg-[var(--background-dark)] flex items-center justify-center whitespace-nowrap rounded relative group min-h-[7rem] w-10 float-left ${
+                className={`sticky left-1 top-0 z-10 bg-[var(--background-alt)] p-1 font-medium cursor-pointer flex items-center justify-center whitespace-nowrap rounded group w-10 ${
                   collapsedWeeks.has(weekIndex)
-                    ? "text-[var(--text-secondary)] min-h-[2rem]"
+                    ? "text-[var(--text-secondary)]"
                     : "text-[var(--text-primary)]"
                 }`}
                 onClick={() => {
@@ -258,10 +258,10 @@ const PlanGrid = ({
                 {!isReadOnly && (
                   <span>
                     <TrashIcon
-                      className={`absolute bottom-1 left-1/2 transform -translate-x-1/2 h-4 w-4 text-[var(--danger)] hover:text-[var(--danger-dark)] opacity-0 ${
+                      className={`absolute top-1 left-1/2 transform -translate-x-1/2 rotate-[-90deg] h-4 w-4 text-[var(--danger)] hover:text-[var(--danger-dark)] md:opacity-0 ${
                         collapsedWeeks.has(weekIndex)
                           ? "opacity-0"
-                          : "group-hover:opacity-100"
+                          : "md:group-hover:opacity-100"
                       }`}
                       onClick={(e) => {
                         if (!collapsedWeeks.has(weekIndex))
@@ -274,9 +274,16 @@ const PlanGrid = ({
 
               <div
                 ref={weekScrollRefs.current[weekIndex]}
-                className="overflow-x-auto scrollbar-none ml-14"
-                style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-                onScroll={(e) => handleMobileScroll(e.target)}
+                className={`overflow-x-auto scrollbar-none flex-1 ml-4`}
+                style={{
+                  scrollbarWidth: "none",
+                  msOverflowStyle: "none",
+                }}
+                onScroll={(e) => {
+                  if (!activeWorkout) {
+                    handleMobileScroll(e.target);
+                  }
+                }}
               >
                 <div
                   className="grid gap-2 min-w-max"
@@ -291,27 +298,23 @@ const PlanGrid = ({
                     const actualDayId = weekIndex * 7 + dayIndex;
                     const isSelected = selectedDays.includes(actualDayId);
                     return (
-                      <div
+                      <Day
+                        id={actualDayId}
                         key={actualDayId}
-                        className="bg-[var(--surface)] rounded-lg border border-[var(--border)]"
-                      >
-                        <Day
-                          id={actualDayId}
-                          isDayCollapsed={collapsedDays[dayIndex]}
-                          isWeekCollapsed={collapsedWeeks.has(weekIndex)}
-                          isDaySelected={isSelected}
-                          handleEditWorkout={handleEditWorkout}
-                          workouts={workouts.get(actualDayId) || []}
-                          handleClick={handleClick}
-                          group={
-                            plan.dayGroups?.find((group) =>
-                              group.dayIds.includes(actualDayId)
-                            ) || null
-                          }
-                          onContextMenu={onContextMenu}
-                          isReadOnly={isReadOnly}
-                        />
-                      </div>
+                        isDayCollapsed={collapsedDays[dayIndex]}
+                        isWeekCollapsed={collapsedWeeks.has(weekIndex)}
+                        isDaySelected={isSelected}
+                        handleEditWorkout={handleEditWorkout}
+                        workouts={workouts.get(actualDayId) || []}
+                        handleClick={handleClick}
+                        group={
+                          plan.dayGroups?.find((group) =>
+                            group.dayIds.includes(actualDayId)
+                          ) || null
+                        }
+                        onContextMenu={onContextMenu}
+                        isReadOnly={isReadOnly}
+                      />
                     );
                   })}
                 </div>
@@ -345,7 +348,7 @@ const PlanGrid = ({
   const renderedWeeks = weeks.map((week, weekIndex) => (
     <div key={`week-${weekIndex}`} className="contents ">
       <div
-        className={`bg-[var(--background-alt)] p-2 font-medium cursor-pointer hover:bg-[var(--background-dark)] flex items-center justify-center writing-vertical-rl rotate-180 h-full whitespace-nowrap rounded relative group ${
+        className={`bg-[var(--background-alt)] p-2 font-medium cursor-pointer md:hover:border hover:border-[var(--primary-light)] flex items-center justify-center writing-vertical-rl rotate-180 h-full whitespace-nowrap rounded relative group ${
           collapsedWeeks.has(weekIndex)
             ? "text-[var(--text-secondary)]"
             : "text-[var(--text-primary)]"
@@ -358,10 +361,10 @@ const PlanGrid = ({
         {!isReadOnly && (
           <span>
             <TrashIcon
-              className={`absolute bottom-1 left-1/2 transform -translate-x-1/2 h-4 w-4 text-[var(--danger)] hover:text-[var(--danger-dark)] rotate-90 opacity-0 ${
+              className={`absolute bottom-1 left-1/2 transform -translate-x-1/2 h-4 w-4 text-[var(--danger)] hover:text-[var(--danger-dark)] rotate-90 md:opacity-0 ${
                 collapsedWeeks.has(weekIndex)
                   ? "opacity-0"
-                  : "group-hover:opacity-100"
+                  : "md:group-hover:opacity-100"
               }`}
               onClick={(e) => {
                 if (!collapsedWeeks.has(weekIndex))

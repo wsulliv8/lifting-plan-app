@@ -56,9 +56,7 @@ export const computeGridStyle = (
   );
 
   return {
-    gridTemplateColumns: `${weekLabelWidth} ${
-      dayColumnStyle.join(" ")
-    }`,
+    gridTemplateColumns: `${weekLabelWidth} ${dayColumnStyle.join(" ")}`,
     gridTemplateRows: `2rem ${weeks
       .map((_, weekIndex) =>
         collapsedWeeks.has(weekIndex) ? "2rem" : "minmax(7rem, auto)"
@@ -69,22 +67,27 @@ export const computeGridStyle = (
 };
 
 // New mobile-specific grid style function
-export const computeMobileGridStyle = (collapsedDays, availableWidth, excludeWeekLabel = false) => {
+export const computeMobileGridStyle = (
+  collapsedDays,
+  availableWidth,
+  excludeWeekLabel = false
+) => {
   const weekLabelWidth = "3rem"; // Slightly wider for mobile
   const minDayWidth = "8rem"; // Smaller minimum for mobile
   const maxDayWidth = "10rem"; // Smaller maximum for mobile
 
   // Calculate day column styles
   const dayColumnStyle = collapsedDays.map((collapsed) =>
-    collapsed ? "2rem" : `minmax(${minDayWidth}, ${maxDayWidth})`
+    collapsed ? `2rem` : `minmax(${minDayWidth}, ${maxDayWidth})`
   );
 
   return {
-    gridTemplateColumns: excludeWeekLabel 
-      ? dayColumnStyle.join(" ") 
+    gridTemplateColumns: excludeWeekLabel
+      ? dayColumnStyle.join(" ")
       : `${weekLabelWidth} ${dayColumnStyle.join(" ")}`,
     gridTemplateRows: "auto", // Single row for mobile layout
     minWidth: "max-content",
+    minHeight: "2rem",
   };
 };
 
@@ -125,7 +128,7 @@ export const generateHeaderDays = (collapsedDays, toggleDayCollapse) =>
     .map((_, dayIndex) => (
       <div
         key={`header-day-${dayIndex}`}
-        className={`bg-[var(--background-alt)] p-1 font-medium cursor-pointer hover:bg-[var(--background-dark)] place-self-center w-full rounded text-center sticky -top-2 z-10 ${
+        className={`bg-[var(--background-alt)] p-1 font-medium cursor-pointer md:hover:border hover:border-[var(--primary-light)] place-self-center w-full rounded text-center sticky -top-2 z-10 ${
           collapsedDays[dayIndex]
             ? "text-[var(--text-secondary)]"
             : "text-[var(--text-primary)]"

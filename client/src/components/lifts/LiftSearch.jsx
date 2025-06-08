@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-const LiftSearch = ({ lifts, onSelectLift, className }) => {
+const LiftSearch = ({ lifts, onSelectLift, selectedLifts = [], className }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMuscleGroup, setSelectedMuscleGroup] = useState("");
   const [selectedEquipment, setSelectedEquipment] = useState("");
@@ -31,6 +31,8 @@ const LiftSearch = ({ lifts, onSelectLift, className }) => {
       !selectedEquipment || lift.equipment.includes(selectedEquipment);
     return matchesSearch && matchesMuscleGroup && matchesEquipment;
   });
+
+  const isSelected = (lift) => selectedLifts.some((l) => l.id === lift.id);
 
   return (
     <div className={`flex flex-col p-4 bg-[var(--surface)] ${className}`}>
@@ -72,10 +74,18 @@ const LiftSearch = ({ lifts, onSelectLift, className }) => {
           filteredLifts.map((lift) => (
             <div
               key={lift.id}
-              className="flex items-center p-2 hover:bg-[var(--background)] cursor-pointer rounded"
+              className={`flex items-center p-2 md:hover:bg-[var(--background)] cursor-pointer rounded ${
+                isSelected(lift) ? "" : ""
+              }`}
               onClick={() => onSelectLift(lift)}
             >
-              <div className="w-8 h-8 rounded-full bg-[var(--background)] mr-2 overflow-hidden">
+              <div
+                className={`w-8 h-8 rounded-full mr-2 overflow-hidden ${
+                  isSelected(lift)
+                    ? "bg-[var(--primary-light)]"
+                    : "bg-[var(--background)]"
+                }`}
+              >
                 {lift.video_url ? (
                   <img
                     src={lift.video_url}
@@ -83,13 +93,25 @@ const LiftSearch = ({ lifts, onSelectLift, className }) => {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <span className="flex items-center justify-center h-full text-[var(--text-secondary)] text-xs">
+                  <span
+                    className={`flex items-center justify-center h-full text-xs ${
+                      isSelected(lift)
+                        ? "text-[var(--background)]"
+                        : "text-[var(--text-secondary)]"
+                    }`}
+                  >
                     {lift.name[0]}
                   </span>
                 )}
               </div>
               <div>
-                <p className="font-semibold text-[var(--text-primary)]">
+                <p
+                  className={`font-semibold ${
+                    isSelected(lift)
+                      ? "text-[var(--primary-light)]"
+                      : "text-[var(--text-primary)]"
+                  }`}
+                >
                   {lift.name}
                 </p>
                 <p className="text-sm text-[var(--text-secondary)]">

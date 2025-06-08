@@ -131,7 +131,7 @@ const WorkoutEditor = ({
       weight = Array(3).fill(userLift.max_weights[index]);
     }
     const newLift = {
-      id: `temp_${Date.now()}`,
+      id: `temp_${Date.now()}_${Math.random()}`,
       name: baseLift.name,
       base_lift_id: baseLift.id,
       reps,
@@ -144,6 +144,56 @@ const WorkoutEditor = ({
       showRest: true,
     };
     updated[activeWorkoutIndex].lifts.push(newLift);
+    setEditedWorkouts(updated);
+    setScrollTrigger(activeWorkoutIndex);
+  };
+
+  const addMultipleLifts = (baseLifts) => {
+    let updated = [...editedWorkouts];
+    if (!updated[activeWorkoutIndex]) {
+      updated = addWorkout();
+    }
+
+    baseLifts.forEach((baseLift) => {
+      const userLift = userLiftsMap.get(baseLift.id);
+      const progressionRule = progressionRules.computeProgressionRule(
+        baseLift.lift_type === "Main" ? "primary" : "supplementary",
+        experience
+      );
+      let reps = [8, 8, 8];
+      let weight = [0, 0, 0];
+      let rpe = ["8", "8", "8"];
+      let rest = ["120", "120", "120"];
+
+      if (userLift) {
+        const index =
+          userLift.rep_ranges.indexOf(8) !== -1
+            ? userLift.rep_ranges.indexOf(8)
+            : userLift.rep_ranges.reduce((closestIndex, curr, i, arr) => {
+                const currDiff = Math.abs(curr - 8);
+                const closestDiff = Math.abs(arr[closestIndex] - 8);
+                return currDiff < closestDiff ? i : closestIndex;
+              }, 0);
+        reps = Array(3).fill(userLift.rep_ranges[index]);
+        weight = Array(3).fill(userLift.max_weights[index]);
+      }
+
+      const newLift = {
+        id: `temp_${Date.now()}_${Math.random()}`,
+        name: baseLift.name,
+        base_lift_id: baseLift.id,
+        reps,
+        weight,
+        sets: 3,
+        progressionRule,
+        rpe,
+        rest,
+        showRPE: baseLift.lift_type === "Main",
+        showRest: true,
+      };
+      updated[activeWorkoutIndex].lifts.push(newLift);
+    });
+
     setEditedWorkouts(updated);
     setScrollTrigger(activeWorkoutIndex);
   };
@@ -330,23 +380,27 @@ const WorkoutEditor = ({
               <div
                 key={workout.id}
                 ref={(el) => (workoutRefs.current[workoutIndex] = el)}
-                className={`w-full flex flex-col gap-4 p-5 border border-[var(--border)] rounded-lg mb-4 shadow-inner relative ${
-                  screenSize.isMobile ? "overflow-x-hidden" : ""
+                className={`w-full flex flex-col gap-4 border border-[var(--border)] rounded-lg mb-4 shadow-inner relative ${
+                  screenSize.isMobile ? "overflow-x-hidden p-3" : "p-5"
                 }`}
               >
                 <TrashIcon
                   onClick={() => removeWorkout(workoutIndex)}
                   className="w-4 h-4 absolute top-1 right-1 text-[var(--danger)] hover:text-[var(--danger-dark)] cursor-pointer"
                 />
-                <input
-                  type="text"
-                  placeholder="Workout Name"
-                  value={workout.name}
-                  onChange={(e) =>
-                    updateWorkoutName(workoutIndex, e.target.value)
-                  }
-                  className="input-field"
-                />
+                <div className="flex justify-center">
+                  <input
+                    type="text"
+                    placeholder="Workout Name"
+                    value={workout.name}
+                    onChange={(e) =>
+                      updateWorkoutName(workoutIndex, e.target.value)
+                    }
+                    className={`input-field ${
+                      screenSize.isMobile ? "w-4/5" : ""
+                    }`}
+                  />
+                </div>
                 <SortableContext
                   id={`workout-${workoutIndex}`}
                   items={workout.lifts.map((l) => l.id)}
@@ -429,7 +483,7 @@ const WorkoutEditor = ({
           isOpen={isLiftSearchOpen}
           onClose={() => setIsLiftSearchOpen(false)}
           lifts={baseLifts}
-          onSelectLift={addLift}
+          onSelectLift={addMultipleLifts}
         />
       )}
     </div>
@@ -492,7 +546,11 @@ const SortableLift = ({
     <div
       ref={setNodeRef}
       style={style}
-      className="flex flex-col p-2 bg-[var(--surface)] rounded-lg space-y-2 relative border border-[var(--border)]"
+      className={`flex flex-col bg-[var(--surface)] space-y-2 relative ${
+        isMobile
+          ? "border-b border-[var(--border)] rounded-b-none pb-3"
+          : "border border-[var(--border)] p-2 rounded-lg"
+      }`}
     >
       <div
         className={`flex items-center ${

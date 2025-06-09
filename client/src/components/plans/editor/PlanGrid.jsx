@@ -323,14 +323,14 @@ const PlanGrid = ({
           ))}
         </div>
 
-        {!isReadOnly && (
-          <div className=" mt-1 md:mt-4 flex justify-center pb-14 md:pb-6">
+        <div className="mt-1 md:mt-4 flex justify-center pb-14 md:pb-6">
+          {!isReadOnly && (
             <PlusCircleIcon
               className="h-8 w-8 text-[var(--primary)] hover:text-[var(--primary-dark)] cursor-pointer"
               onClick={() => setTotalDays((prev) => prev + 7)}
             />
-          </div>
-        )}
+          )}
+        </div>
 
         {createPortal(
           <DragOverlay>
@@ -448,14 +448,14 @@ const PlanGrid = ({
         )}
       </div>
 
-      {!isReadOnly && (
-        <div className="mt-4 flex justify-center pb-6">
+      <div className="mt-4 flex justify-center pb-6">
+        {!isReadOnly && (
           <PlusCircleIcon
             className="h-8 w-8 text-[var(--primary)] hover:text-[var(--primary-dark)] cursor-pointer"
             onClick={() => setTotalDays((prev) => prev + 7)}
           />
-        </div>
-      )}
+        )}
+      </div>
 
       {createPortal(
         <DragOverlay>

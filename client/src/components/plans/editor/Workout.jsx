@@ -95,7 +95,7 @@ const Workout = memo(({ id, workout, handleClick, isReadOnly = false }) => {
     >
       <div className="w-full text-xs">
         <div className="font-medium text-center text-[var(--text-primary)] flex items-center justify-between">
-          {screenSize.isMobile ? (
+          {screenSize.isMobile && !isReadOnly ? (
             <div
               {...attributes}
               {...listeners}
@@ -108,7 +108,7 @@ const Workout = memo(({ id, workout, handleClick, isReadOnly = false }) => {
             <div className="w-4" />
           )}
           <div className="flex-1">{workout.name || "Workout"}</div>
-          {screenSize.isMobile ? (
+          {screenSize.isMobile && !isReadOnly ? (
             <div
               {...attributes}
               {...listeners}

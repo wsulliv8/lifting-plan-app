@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useLoaderData, useNavigate } from "react-router-dom";
 import {
   ChevronLeftIcon,
@@ -7,29 +7,46 @@ import {
 } from "@heroicons/react/20/solid";
 import Button from "../../components/common/Button";
 import DayModal from "../../components/plans/modals/DayModal";
-import {
-  getCurrentDate,
-  setMockDate,
-  clearMockDate,
-} from "../../utils/dateUtils";
+import { getCurrentDate } from "../../utils/dateUtils";
+import { useTheme } from "../../context/ThemeContext";
 
 const PlanProgress = () => {
   const { plan } = useLoaderData();
   const navigate = useNavigate();
   const [selectedDay, setSelectedDay] = useState(null);
+  const { screenSize } = useTheme();
 
-  // For testing: add state to track mock days
-  const [mockDays, setMockDays] = useState(() => {
-    const storedDate = localStorage.getItem("mockDate");
-    if (!storedDate) return 0;
+  // Refs for mobile scroll synchronization
+  const weekScrollRefs = useRef([]);
+  const headerScrollRef = useRef(null);
 
-    const mockDate = new Date(storedDate);
-    const today = new Date();
-    const diffTime = mockDate.getTime() - today.getTime();
-    return Math.round(diffTime / (1000 * 60 * 60 * 24)); // Convert ms to days
-  });
+  // Initialize week scroll refs for mobile
+  useEffect(() => {
+    if (screenSize.isMobile) {
+      weekScrollRefs.current = Array(5)
+        .fill()
+        .map((_, i) => weekScrollRefs.current[i] || React.createRef());
+    }
+  }, [screenSize.isMobile]);
 
-  console.log(plan);
+  // Sync scroll across all week rows and header for mobile
+  const handleMobileScroll = (scrollingElement) => {
+    if (!screenSize.isMobile) return;
+
+    const scrollLeft = scrollingElement.scrollLeft;
+
+    // Sync header scroll
+    if (headerScrollRef.current) {
+      headerScrollRef.current.scrollLeft = scrollLeft;
+    }
+
+    // Sync all week rows
+    weekScrollRefs.current.forEach((ref) => {
+      if (ref.current && ref.current !== scrollingElement) {
+        ref.current.scrollLeft = scrollLeft;
+      }
+    });
+  };
 
   // Calculate plan date range
   const planDateRange = useMemo(() => {
@@ -468,45 +485,57 @@ const PlanProgress = () => {
   }, [plan, planDateRange, calendarData]);
 
   return (
-    <div className="flex h-full bg-[var(--background)]">
+    <div className="flex  h-full bg-[var(--background)]">
       {/* Calendar Section - Expands when right panel collapses */}
       <div
         className={`${
-          isRightPanelCollapsed ? "w-full pr-16" : "w-3/4"
-        } transition-all duration-300 p-4 flex flex-col min-h-0`}
+          isRightPanelCollapsed || screenSize.isMobile ? "w-full" : "w-3/4"
+        } transition-all duration-300 flex flex-col min-h-0 ${
+          screenSize.isMobile ? "p-2" : "pr-16 p-4"
+        }`}
       >
         {/* Calendar Header */}
-        <div className="flex items-center justify-between mb-6 flex-shrink-0">
-        <Button
-          variant="tertiary"
-          className="flex items-center gap-2"
-          onClick={() => navigate("/plans")}
+        <div
+          className={`flex ${screenSize.isMobile ? "flex-col gap-4" : "items-center justify-between mb-6"} flex-shrink-0`}
         >
-          <ArrowLeftIcon className="h-5 w-5" />
-          Back to Plans
-        </Button>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">
+          {!screenSize.isMobile && (
+            <Button
+              variant="tertiary"
+              className="flex items-center gap-2"
+              onClick={() => navigate("/plans")}
+            >
+              <ArrowLeftIcon className="h-5 w-5" />
+              Back to Plans
+            </Button>
+          )}
+          <h1
+            className={`text-2xl font-bold text-[var(--text-primary)] ${screenSize.isMobile ? "text-center" : ""}`}
+          >
             {plan.name} - Progress
           </h1>
-          <span className="flex items-center gap-6">
-            <div className="space-y-2">
-              <h4 className="font-medium text-center text-[var(--text-primary)]">
-                Legend
-              </h4>
-              <div className="space-y-1 text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-1 bg-[var(--secondary-light)]"></div>
-                  <span className="text-[var(--text-secondary)]">
-                    Successful
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-1 bg-[var(--danger-dark)]"></div>
-                  <span className="text-[var(--text-secondary)]">Failed</span>
+          <span
+            className={`flex items-center ${screenSize.isMobile ? "justify-center" : ""}`}
+          >
+            {!screenSize.isMobile && (
+              <div className="space-y-2">
+                <h4 className="font-medium text-center text-[var(--text-primary)]">
+                  Legend
+                </h4>
+                <div className="space-y-1 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-1 bg-[var(--secondary-light)]"></div>
+                    <span className="text-[var(--text-secondary)]">
+                      Successful
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-1 bg-[var(--danger-dark)]"></div>
+                    <span className="text-[var(--text-secondary)]">Failed</span>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="flex items-center gap-4">
+            )}
+            <div className="flex items-center">
               <Button
                 variant="tertiary"
                 onClick={() => navigateMonth(-1)}
@@ -515,7 +544,9 @@ const PlanProgress = () => {
               >
                 <ChevronLeftIcon className="w-5 h-5" />
               </Button>
-              <h2 className="text-xl font-semibold text-[var(--text-primary)] min-w-[200px] text-center">
+              <h2
+                className={`${screenSize.isMobile ? "text-base" : "text-xl"} font-semibold text-[var(--text-primary)] min-w-[200px] text-center`}
+              >
                 {monthNames[currentMonth.getMonth()]}{" "}
                 {currentMonth.getFullYear()}
               </h2>
@@ -531,204 +562,265 @@ const PlanProgress = () => {
           </span>
         </div>
 
-        {/* Testing Controls */}
-        <div className="mb-4 flex items-center gap-4 p-2 bg-[var(--surface)] rounded-lg">
-          <span className="text-sm text-[var(--text-secondary)]">
-            Testing Controls:
-          </span>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              const newMockDays = mockDays - 7;
-              setMockDays(newMockDays);
-              if (newMockDays === 0) {
-                clearMockDate();
-              } else {
-                const mockDate = new Date();
-                mockDate.setDate(mockDate.getDate() + newMockDays);
-                setMockDate(mockDate);
-              }
-            }}
-          >
-            -7 Days
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              const newMockDays = mockDays - 1;
-              setMockDays(newMockDays);
-              if (newMockDays === 0) {
-                clearMockDate();
-              } else {
-                const mockDate = new Date();
-                mockDate.setDate(mockDate.getDate() + newMockDays);
-                setMockDate(mockDate);
-              }
-            }}
-          >
-            -1 Day
-          </Button>
-          <Button
-            variant="primary"
-            onClick={() => {
-              setMockDays(0);
-              clearMockDate();
-            }}
-          >
-            Reset
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              const newMockDays = mockDays + 1;
-              setMockDays(newMockDays);
-              const mockDate = new Date();
-              mockDate.setDate(mockDate.getDate() + newMockDays);
-              setMockDate(mockDate);
-            }}
-          >
-            +1 Day
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              const newMockDays = mockDays + 7;
-              setMockDays(newMockDays);
-              const mockDate = new Date();
-              mockDate.setDate(mockDate.getDate() + newMockDays);
-              setMockDate(mockDate);
-            }}
-          >
-            +7 Days
-          </Button>
-          <span className="text-sm text-[var(--text-secondary)]">
-            {mockDays !== 0
-              ? `Mock Date: ${getCurrentDate().toLocaleDateString()}`
-              : "Using Real Date"}
-          </span>
-        </div>
-
         {/* Calendar Grid */}
-        <div className="flex-1 rounded-lg p-4 flex flex-col min-h-0">
-          {/* Day Headers */}
-          <div className="grid grid-cols-7 gap-1 mb-2 flex-shrink-0">
-            {dayNames.map((dayName) => (
-              <div
-                key={dayName}
-                className="p-2 text-center text-sm font-medium text-[var(--text-primary)]"
-              >
-                {dayName}
-              </div>
-            ))}
-          </div>
-
-          {/* Calendar Days */}
-          <div className="flex-1 grid grid-cols-7 grid-rows-5 gap-2">
-            {calendarGrid.flat().map((day, index) => (
-              <div
-                key={index}
-                className={`
-                  relative p-2 rounded-lg flex flex-col
-                  ${
-                    !day.isCurrentMonth || !day.data
-                      ? "border border-[var(--border)] border-dashed opacity-50"
-                      : "bg-[var(--surface)] cursor-pointer hover:border-2 hover:border-[var(--primary)]"
-                  }
-                 ${
-                   day.data && day.data.type === "missed"
-                     ? "border border-[var(--danger)] border-dashed bg-opacity-50"
-                     : ""
-                 }`}
-                onClick={() => handleDayClick(day)}
-              >
-                {day.data?.type !== "rest" && (
-                  <div
-                    className={`w-full h-2 absolute top-0 left-0 rounded-t-lg ${getDayColor(
-                      day.data
-                    )}`}
-                  />
-                )}
-                <div className="text-sm text-[var(--text-primary)]">
-                  {getDisplayedDay(day)}
+        <div className="flex-1 rounded-lg p-2 pt-6 flex flex-col justify-start min-h-0">
+          {screenSize.isMobile ? (
+            <>
+              {/* Mobile Day Headers - sticky */}
+              <div className="sticky top-0 bg-[var(--background)] pb-2">
+                <div
+                  ref={headerScrollRef}
+                  className="overflow-x-auto scrollbar-none"
+                  style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+                  onScroll={(e) => handleMobileScroll(e.target)}
+                >
+                  <div className="grid grid-cols-7 gap-2 min-w-[800px] z-[-1]">
+                    {dayNames.map((dayName) => (
+                      <div
+                        key={dayName}
+                        className="p-2 text-center text-xs font-medium text-[var(--text-primary)]"
+                      >
+                        {dayName.slice(0, 1)}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                {day.data && (
-                  <div className="flex-1 flex flex-col">
-                    {day.data.type === "missed" ? (
-                      <div className="flex-1 flex items-center justify-center text-xs text-red-500 font-medium">
-                        Missed
-                      </div>
-                    ) : day.data.type === "rest" ? (
-                      <div className="flex-1 flex items-center justify-center text-xs text-[var(--text-secondary)]">
-                        Rest Day
-                      </div>
-                    ) : day.data.workouts.length > 0 ? (
-                      <div className="mt-1 space-y-1 overflow-hidden">
-                        {day.data.workouts.map((workout) => (
-                          <div key={workout.id} className="text-xs">
-                            <div className="font-medium text-[var(--text-primary)] truncate">
-                              {workout.name}
+              </div>
+
+              {/* Mobile Calendar Grid - scrollable weeks */}
+              <div className="flex flex-col gap-2 flex-1">
+                {calendarGrid.map((week, weekIndex) => (
+                  <div key={weekIndex} className="flex flex-1">
+                    <div
+                      ref={weekScrollRefs.current[weekIndex]}
+                      className="overflow-x-auto scrollbar-none flex-1"
+                      style={{
+                        scrollbarWidth: "none",
+                        msOverflowStyle: "none",
+                      }}
+                      onScroll={(e) => handleMobileScroll(e.target)}
+                    >
+                      <div className="grid grid-cols-7 gap-2 min-w-[800px] h-full">
+                        {week.map((day, dayIndex) => (
+                          <div
+                            key={dayIndex}
+                            className={`
+                              relative p-1 rounded-lg flex flex-col min-h-[100px] h-full
+                              ${
+                                !day.isCurrentMonth || !day.data
+                                  ? "border border-[var(--border)] border-dashed opacity-50"
+                                  : "bg-[var(--surface)] cursor-pointer "
+                              }
+                              ${
+                                day.data && day.data.type === "missed"
+                                  ? "border border-[var(--danger)] border-dashed bg-opacity-50"
+                                  : ""
+                              }`}
+                            onClick={() => handleDayClick(day)}
+                          >
+                            {day.data?.type !== "rest" && (
+                              <div
+                                className={`w-full h-[5px] absolute top-0 left-0 rounded-t-lg ${getDayColor(
+                                  day.data
+                                )}`}
+                              />
+                            )}
+                            <div className="text-xs text-[var(--text-primary)]">
+                              {getDisplayedDay(day)}
                             </div>
-                            <div className="space-y-0.5 max-h-16 overflow-hidden">
-                              {workout.lifts?.slice(0, 3).map((lift) => (
-                                <div
-                                  key={lift.id}
-                                  className="text-[var(--text-secondary)] truncate"
-                                >
-                                  {lift.name}: {lift.sets}x
-                                  {lift.reps?.[0] || "?"}
-                                  {lift.weight?.[0]
-                                    ? ` @ ${lift.weight[0]}kg`
-                                    : ""}
-                                </div>
-                              ))}
-                              {workout.lifts?.length > 3 && (
-                                <div className="text-[var(--text-secondary)]">
-                                  +{workout.lifts.length - 3} more
-                                </div>
-                              )}
-                            </div>
+                            {day.data && (
+                              <div className="flex-1 flex flex-col">
+                                {day.data.type === "missed" ? (
+                                  <div className="flex-1 flex items-center justify-center text-xs text-red-500 font-medium">
+                                    Missed
+                                  </div>
+                                ) : day.data.type === "rest" ? (
+                                  <div className="flex-1 flex items-center justify-center text-xs text-[var(--text-secondary)]">
+                                    Rest
+                                  </div>
+                                ) : day.data.workouts.length > 0 ? (
+                                  <div className="mt-1 space-y-1 overflow-hidden text-[10px]">
+                                    {day.data.workouts.map((workout) => (
+                                      <div key={workout.id}>
+                                        <div className="font-medium text-[var(--text-primary)] truncate">
+                                          {workout.name}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : null}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
-                    ) : null}
+                    </div>
                   </div>
-                )}
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          ) : (
+            // Desktop Calendar Grid - unchanged
+            <>
+              <div className="grid grid-cols-7 gap-1 mb-2 flex-shrink-0">
+                {dayNames.map((dayName) => (
+                  <div
+                    key={dayName}
+                    className="p-2 text-center text-sm font-medium text-[var(--text-primary)]"
+                  >
+                    {dayName}
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex-1 grid grid-cols-7 grid-rows-5 gap-2">
+                {calendarGrid.flat().map((day, index) => (
+                  <div
+                    key={index}
+                    className={`
+                      relative ${screenSize.isMobile ? "p-1" : "p-2"} rounded-lg flex flex-col
+                      ${
+                        !day.isCurrentMonth || !day.data
+                          ? "border border-[var(--border)] border-dashed opacity-50"
+                          : "bg-[var(--surface)] cursor-pointer hover:border-2 hover:border-[var(--primary)]"
+                      }
+                     ${
+                       day.data && day.data.type === "missed"
+                         ? "border border-[var(--danger)] border-dashed bg-opacity-50"
+                         : ""
+                     }`}
+                    onClick={() => handleDayClick(day)}
+                  >
+                    {day.data?.type !== "rest" && (
+                      <div
+                        className={`w-full h-2 absolute top-0 left-0 rounded-t-lg ${getDayColor(
+                          day.data
+                        )}`}
+                      />
+                    )}
+                    <div
+                      className={`${screenSize.isMobile ? "text-xs" : "text-sm"} text-[var(--text-primary)]`}
+                    >
+                      {getDisplayedDay(day)}
+                    </div>
+                    {day.data && (
+                      <div className="flex-1 flex flex-col">
+                        {day.data.type === "missed" ? (
+                          <div className="flex-1 flex items-center justify-center text-xs text-red-500 font-medium">
+                            Missed
+                          </div>
+                        ) : day.data.type === "rest" ? (
+                          <div className="flex-1 flex items-center justify-center text-xs text-[var(--text-secondary)]">
+                            Rest
+                          </div>
+                        ) : day.data.workouts.length > 0 ? (
+                          <div
+                            className={`mt-1 space-y-1 overflow-hidden ${screenSize.isMobile ? "text-[10px]" : "text-xs"}`}
+                          >
+                            {day.data.workouts.map((workout) => (
+                              <div key={workout.id}>
+                                <div className="font-medium text-[var(--text-primary)] truncate">
+                                  {workout.name}
+                                </div>
+                                {!screenSize.isMobile && (
+                                  <div className="space-y-0.5 max-h-16 overflow-hidden">
+                                    {workout.lifts?.slice(0, 3).map((lift) => (
+                                      <div
+                                        key={lift.id}
+                                        className="text-[var(--text-secondary)] truncate"
+                                      >
+                                        {lift.name}: {lift.sets}x
+                                        {lift.reps?.[0] || "?"}
+                                        {lift.weight?.[0]
+                                          ? ` @ ${lift.weight[0]}kg`
+                                          : ""}
+                                      </div>
+                                    ))}
+                                    {workout.lifts?.length > 3 && (
+                                      <div className="text-[var(--text-secondary)]">
+                                        +{workout.lifts.length - 3} more
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Right Panel - Fixed position, collapses to thin bar */}
+      {/* Right Panel - Fixed position, collapses to thin bar on desktop, slides from right on mobile */}
       <div
         className={`${
-          isRightPanelCollapsed ? "w-16" : "w-1/4"
-        } transition-all duration-300 border-l border-[var(--border)] bg-[var(--surface)] flex flex-col fixed right-0 top-0 h-full z-10`}
+          screenSize.isMobile
+            ? `fixed ${
+                isRightPanelCollapsed
+                  ? "w-[40px] right-0 top-[4rem] h-auto rounded-l-lg"
+                  : "w-[85vw] right-0 top-[4rem] h-[60vh] rounded-l-xl"
+              } transition-all duration-300 shadow-lg`
+            : `${
+                isRightPanelCollapsed ? "w-16" : "w-1/4"
+              } fixed right-0 top-0 h-full`
+        } border-l border-[var(--border)] bg-[var(--surface)] flex flex-col z-10`}
       >
         {/* Header with collapse button */}
-        <div className="flex items-center p-4 flex-shrink-0">
+        <div
+          className={`flex items-center ${
+            screenSize.isMobile && isRightPanelCollapsed
+              ? "w-full flex-col justify-center cursor-pointer p-2"
+              : "p-4 flex-shrink-0"
+          }`}
+          onClick={() =>
+            screenSize.isMobile &&
+            setIsRightPanelCollapsed(!isRightPanelCollapsed)
+          }
+        >
           {!isRightPanelCollapsed && (
             <h3 className="text-lg font-semibold text-[var(--text-primary)] flex-1">
               Overview
             </h3>
           )}
-          <Button
-            variant="tertiary"
-            onClick={() => setIsRightPanelCollapsed(!isRightPanelCollapsed)}
-            className="p-2"
-          >
-            <ChevronRightIcon
-              className={`w-5 h-5 transition-transform ${
-                isRightPanelCollapsed ? "rotate-180" : ""
-              }`}
-            />
-          </Button>
+          {screenSize.isMobile ? (
+            isRightPanelCollapsed ? (
+              <>
+                <span
+                  className="text-[var(--text-primary)] font-semibold text-sm mb-1"
+                  style={{ writingMode: "vertical-rl" }}
+                >
+                  Overview
+                </span>
+                <ChevronRightIcon className="w-5 h-5 text-[var(--text-primary)] transform rotate-180" />
+              </>
+            ) : (
+              <ChevronRightIcon className="w-5 h-5 text-[var(--text-primary)]" />
+            )
+          ) : (
+            <Button
+              variant="tertiary"
+              onClick={() => setIsRightPanelCollapsed(!isRightPanelCollapsed)}
+              className="p-2"
+            >
+              <ChevronRightIcon
+                className={`w-5 h-5 transition-transform ${
+                  isRightPanelCollapsed ? "rotate-180" : ""
+                }`}
+              />
+            </Button>
+          )}
         </div>
 
         {/* Content - only visible when not collapsed */}
         {!isRightPanelCollapsed && progressStats && (
           <div className="flex-1 px-4 pb-4 overflow-y-auto">
-            <div className="h-full space-y-10">
+            <div className="h-full space-y-6">
               {/* Progress Bars Section */}
               <div className="space-y-4">
                 <h4 className="text-sm font-semibold text-[var(--text-primary)]">

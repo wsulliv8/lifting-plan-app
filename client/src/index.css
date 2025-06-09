@@ -126,10 +126,10 @@
       border-color: var(--primary-light);
     }
 
-    &:focus {
+/*     &:focus {
       @apply ring-2 ring-offset-2;
       --tw-ring-color: var(--border);
-    }
+    } */
 
     @apply md:w-auto md:py-2 md:px-6;
   }

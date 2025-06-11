@@ -20,7 +20,7 @@ export const usePlanActions = ({
   clipboard,
   setClipboard,
   setContextMenu,
-  setShowCopiedMessage,
+  setMessage,
   setShowGroupForm,
   setGroupName,
   setGroupColor,
@@ -265,13 +265,13 @@ export const usePlanActions = ({
       if (copiedData.some((data) => data.workouts.length > 0)) {
         setClipboard(copiedData);
         setSelectedDays([]);
-        setShowCopiedMessage(true);
-        setTimeout(() => setShowCopiedMessage(false), 2000);
+        setMessage("Copied!");
+        setTimeout(() => setMessage(""), 2000);
       } else {
         console.warn("No workouts found for the selected days");
       }
     },
-    [workouts, setClipboard, setSelectedDays, setShowCopiedMessage]
+    [workouts, setClipboard, setSelectedDays, setMessage]
   );
 
   const handlePaste = useCallback(
@@ -392,7 +392,9 @@ export const usePlanActions = ({
     console.log("rebuiltPlan", rebuiltPlan);
     setPlan(rebuiltPlan);
     await savePlan(rebuiltPlan);
-  }, [plan, totalDays, workoutsRef, setPlan]);
+    setMessage("Saved!");
+    setTimeout(() => setMessage(""), 2000);
+  }, [plan, totalDays, workoutsRef, setPlan, setMessage]);
 
   const handleGroupConfirm = useCallback(() => {
     const newGroup = {

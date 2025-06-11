@@ -65,15 +65,8 @@ const workoutController = {
   async completeWorkout(req, res, next) {
     try {
       const workoutId = parseInt(req.params.id);
-      console.log("workoutId", workoutId);
       const { lifts: updatedLifts } = req.body;
-      console.log(
-        "Received lifts:",
-        updatedLifts.map((l) => ({
-          name: l.name,
-          completed: l.completed,
-        }))
-      );
+    
 
       const workout = await prisma.workouts.findUnique({
         where: { id: workoutId },
@@ -162,26 +155,12 @@ const workoutController = {
 
       // Process progression for completed lifts using refreshed data
       for (const lift of refreshedWorkout.lifts) {
-        console.log("Processing lift:", {
-          name: lift.name,
-          completed: lift.completed,
-          progression_rule: lift.progression_rule,
-          weight: lift.weight,
-          weight_achieved: lift.weight_achieved,
-          reps: lift.reps,
-          reps_achieved: lift.reps_achieved,
-          rpe: lift.rpe,
-          rpe_achieved: lift.rpe_achieved,
-        });
+
 
         if (lift.completed && lift.progression_rule) {
           // Calculate weight adjustment
           const weightAdjustment =
             progressionAlgorithm.adjustFutureWeights(lift);
-          console.log("Weight adjustment calculation:", {
-            name: lift.name,
-            weightAdjustment,
-          });
 
           // Check if this lift failed (negative adjustment = failed)
           if (weightAdjustment < 0) {

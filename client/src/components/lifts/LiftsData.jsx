@@ -5,7 +5,7 @@ const LiftsData = ({ lift }) => {
         <h3 className="text-lg font-semibold text-[var(--text-primary)]">
           Progress Over Time
         </h3>
-        <div className="w-full h-64 bg-[var(--background)] flex items-center justify-center rounded-lg mt-2">
+        <div className="w-full h-48 md:h-64 bg-[var(--background)] flex items-center justify-center rounded-lg mt-2">
           <span className="text-[var(--text-secondary)]">
             Graph placeholder for {lift.name}
           </span>
@@ -15,7 +15,7 @@ const LiftsData = ({ lift }) => {
         <h3 className="text-lg font-semibold text-[var(--text-primary)]">
           Volume Breakdown
         </h3>
-        <div className="w-full h-64 bg-[var(--background)] flex items-center justify-center rounded-lg mt-2">
+        <div className="w-full h-48 md:h-64 bg-[var(--background)] flex items-center justify-center rounded-lg mt-2">
           <span className="text-[var(--text-secondary)]">
             Graph placeholder for {lift.name}
           </span>

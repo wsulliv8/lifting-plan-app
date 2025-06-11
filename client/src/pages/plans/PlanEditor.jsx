@@ -56,7 +56,7 @@ const PlanEditor = () => {
     clipboard: uiState.clipboard,
     setClipboard: uiState.setClipboard,
     setContextMenu: uiState.setContextMenu,
-    setShowCopiedMessage: uiState.setShowCopiedMessage,
+    setMessage: uiState.setMessage,
     setShowGroupForm: uiState.setShowGroupForm,
     setGroupName: uiState.setGroupName,
     setGroupColor: uiState.setGroupColor,
@@ -151,7 +151,7 @@ const PlanEditor = () => {
         clipboard={uiState.clipboard}
         selectedDays={uiState.selectedDays}
       />
-      <Toast message="Copied!" visible={uiState.showCopiedMessage} />
+      <Toast message={uiState.message} visible={uiState.message} />
       <WorkoutEditorModal
         editingDay={uiState.editingDay}
         onClose={() => uiState.setEditingDay(null)}

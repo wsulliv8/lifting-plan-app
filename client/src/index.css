@@ -68,7 +68,33 @@
     @apply font-sans text-base;
     background-color: var(--background);
     color: var(--text-primary);
-    transition: background-color 0.3s ease, color 0.3s ease;
+    transition:
+      background-color 0.3s ease,
+      color 0.3s ease;
+  }
+
+  /* Custom Scrollbar Styles */
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    background-color: var(--background);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    @apply rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--text-secondary);
+  }
+
+  /* Firefox Scrollbar Styles */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) var(--background);
   }
 }
 
@@ -86,7 +112,7 @@
       background-color: var(--primary-dark);
     }
 
-/*     &:focus {
+    /*     &:focus {
       @apply ring-2 ring-offset-2;
       --tw-ring-color: var(--primary);
     } */
@@ -107,7 +133,7 @@
       background-color: var(--secondary);
     }
 
-/*     &:focus {
+    /*     &:focus {
       @apply ring-2 ring-offset-2;
       --tw-ring-color: var(--secondary);
     } */
@@ -126,7 +152,7 @@
       border-color: var(--primary-light);
     }
 
-/*     &:focus {
+    /*     &:focus {
       @apply ring-2 ring-offset-2;
       --tw-ring-color: var(--border);
     } */

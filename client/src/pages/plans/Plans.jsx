@@ -163,7 +163,7 @@ const Plans = () => {
           isOpen={isModalOpen}
           onClose={handleCloseModal}
           title="Create New Plan"
-          className={screenSize.isMobile ? "w-[95%]" : "w-1/2"}
+          className={`${screenSize.isMobile ? "w-[95%]" : "w-1/2"} p-4`}
         >
           <FormContent
             formData={formInputs}

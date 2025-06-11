@@ -19,7 +19,7 @@ export const usePlanUIState = (weeksLength) => {
   });
   const [clipboard, setClipboard] = useState([]);
   const [contextMenu, setContextMenu] = useState(null);
-  const [showCopiedMessage, setShowCopiedMessage] = useState(false);
+  const [message, setMessage] = useState("");
   const [editingDay, setEditingDay] = useState(null);
 
   const contextMenuRef = useRef(null);
@@ -123,8 +123,8 @@ export const usePlanUIState = (weeksLength) => {
     setClipboard,
     contextMenu,
     setContextMenu,
-    showCopiedMessage,
-    setShowCopiedMessage,
+    message,
+    setMessage,
     editingDay,
     setEditingDay,
     contextMenuRef,

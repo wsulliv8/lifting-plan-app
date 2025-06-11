@@ -2,7 +2,7 @@ import { useTheme } from "../../context/ThemeContext";
 import { SunIcon, MoonIcon } from "@heroicons/react/24/outline";
 
 const ThemeToggle = () => {
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme, screenSize } = useTheme();
 
   return (
     <button
@@ -13,9 +13,9 @@ const ThemeToggle = () => {
       }
     >
       {theme === "light" ? (
-        <MoonIcon className="h-8 w-8" />
+        <MoonIcon className={`${screenSize.isMobile ? "h-6 w-6" : "h-8 w-8"}`} />
       ) : (
-        <SunIcon className="h-8 w-8" />
+        <SunIcon className={`${screenSize.isMobile ? "h-6 w-6" : "h-8 w-8"}`} />
       )}
     </button>
   );

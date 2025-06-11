@@ -61,19 +61,22 @@ const Navbar = () => {
       )}
 
       {/* Main Navigation */}
-      <div className="flex flex-row w-full md:flex-col md:h-full">
+      <div className={`flex flex-row w-full md:flex-col md:h-full ${
+        screenSize.isMobile ? "h-12" : "h-full"
+      }`}>
         {/* Top Navigation Items */}
         <div className="flex flex-row md:flex-col flex-1 md:flex-none md:mt-10 justify-around md:justify-start md:items-center">
           {navItems.map((item) => (
-            <div key={item.to} className="relative group md:mb-8">
+            <div key={item.to} className="relative group md:mb-8 flex items-center justify-center">
               <NavLink
                 to={item.to}
                 className={({ isActive }) =>
-                  `nav-item h-12 w-12 ${
+                  `nav-item ${
                     isActive
                       ? "bg-[var(--primary)] text-[var(--text-primary-light)]"
                       : "text-[var(--text-primary)] hover:bg-[var(--background-dark)]"
-                  }`
+                  }
+                  ${screenSize.isMobile ? "h-10 w-10" : "h-12 w-12"}`
                 }
               >
                 <item.icon className="h-8 w-8" />
@@ -100,8 +103,11 @@ const Navbar = () => {
         {/* Bottom Items (Theme and Profile) */}
         <div className="flex flex-row md:flex-col flex-1 md:flex-none justify-around md:justify-start md:items-center md:mt-auto md:mb-4">
           {/* Theme Toggle */}
-          <div className="relative group md:mb-4">
-            <div className="nav-item h-12 w-12 hover:bg-[var(--background-dark)]">
+          <div className="relative group md:mb-4 flex items-center justify-center">
+            <div className={`nav-item ${
+                screenSize.isMobile ? "h-10 w-10" : "h-12 w-12"
+              } hover:bg-[var(--background-dark)]`}
+            >
               <ThemeToggle />
               {/* Mobile Label */}
             </div>
@@ -112,16 +118,18 @@ const Navbar = () => {
           </div>
 
           {/* User Profile */}
-          <div className="relative group" ref={profileRef}>
+          <div className="relative group flex items-center justify-center" ref={profileRef}>
             <button
-              className={`nav-item h-12 w-12 ${
+              className={`nav-item ${
+                screenSize.isMobile ? "h-10 w-10" : "h-12 w-12"
+              } ${
                 isProfileOpen
                   ? "bg-[var(--primary)] text-[var(--text-primary-light)]"
                   : "text-[var(--text-primary)] hover:bg-[var(--background-dark)]"
               }`}
               onClick={() => setIsProfileOpen(!isProfileOpen)}
             >
-              <UserIcon className="h-6 w-6" />
+              <UserIcon className={`${screenSize.isMobile ? "h-5 w-5" : "h-6 w-6"}`} />
             </button>
             {/* Desktop Hover Label */}
             <span
@@ -135,7 +143,9 @@ const Navbar = () => {
             </span>
             {/* Dropdown */}
             {isProfileOpen && (
-              <div className="absolute md:bottom-auto md:top-[-45px] bottom-full mb-2 md:left-[60px] md:ml-2 md:mb-0 shadow-lg rounded-lg w-40 py-2 z-50 bg-[var(--surface)]">
+              <div className={`absolute md:bottom-auto md:top-[-45px] bottom-full mb-2 md:ml-2 md:mb-0 shadow-lg rounded-lg py-2 z-50 bg-[var(--surface)] ${
+                screenSize.isMobile ? "left-[-40%] transform -translate-x-1/2 w-32" : "left-[60px] w-40"
+              }`}>
                 <NavLink
                   to="/settings"
                   className="flex items-center space-x-2 px-4 py-2 text-[var(--text-primary)] hover:bg-[var(--background)]"

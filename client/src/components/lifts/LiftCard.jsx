@@ -29,9 +29,9 @@ const LiftCard = ({ lift }) => {
         </button>
       </div>
       {/* Card Content */}
-      <div className="flex justify-between p-4 bg-[var(--surface)] rounded-b-lg">
-        {/* Name (Left) */}
-        <div>
+      <div className="flex flex-col md:flex-row md:justify-between p-4 bg-[var(--surface)] rounded-b-lg">
+        {/* Name and Info */}
+        <div className="mb-4 md:mb-0">
           <h2 className="text-xl font-semibold text-[var(--text-primary)]">
             {lift.name}
           </h2>
@@ -68,16 +68,16 @@ const LiftCard = ({ lift }) => {
             </div>
           )}
         </div>
-        {/* GIF (Right) */}
-        <div>
+        {/* GIF */}
+        <div className="w-full md:w-56 md:flex-shrink-0 md:ml-4">
           {lift.video_url ? (
             <img
               src={lift.video_url}
               alt={`${lift.name} demo`}
-              className="w-56 h-48 object-cover rounded-lg border border-[var(--border)]"
+              className="w-full md:w-56 h-48 object-cover rounded-lg border border-[var(--border)]"
             />
           ) : (
-            <div className="w-56 h-48 bg-[var(--background)] flex items-center justify-center rounded-lg border border-[var(--border)]">
+            <div className="w-full md:w-56 h-48 bg-[var(--background)] flex items-center justify-center rounded-lg border border-[var(--border)]">
               <span className="text-[var(--text-secondary)]">
                 No GIF available
               </span>

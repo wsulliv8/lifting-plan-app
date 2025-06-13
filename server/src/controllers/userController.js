@@ -7,15 +7,26 @@ const userController = {
   async getUserLiftsData(req, res, next) {
     try {
       const userId = req.user.userId;
+      console.log("Fetching lifts data for userId:", userId);
       const userLiftsData = await prisma.userLiftsData.findMany({
         where: { user_id: userId },
         select: {
+          id: true,
+          user_id: true,
           base_lift_id: true,
-          max_weights: true,
-          rep_ranges: true,
-          max_estimated: true,
+          rep_range_progress: true,
+          base_lift: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
       });
+      console.log(
+        "Found user lifts data:",
+        JSON.stringify(userLiftsData, null, 2)
+      );
       res.status(200).json(userLiftsData);
     } catch (error) {
       console.error("Error fetching UserLiftsData:", error);

@@ -3,6 +3,50 @@ const userLifts = [
     name: "Bench Press", // BB Bench
     max_weights: [185, 200, 215, 225, 240, 0, 0],
     rep_ranges: [12, 10, 8, 6, 5, 3, 1],
+    rep_range_progress: {
+      rep_ranges: {
+        12: {
+          current: { weight: 185 },
+          history: [
+            { date: "2025-05-20", weight: 185 },
+            { date: "2025-05-13", weight: 175 },
+            { date: "2025-05-06", weight: 165 },
+          ],
+        },
+        10: {
+          current: { weight: 200 },
+          history: [
+            { date: "2025-05-20", weight: 200 },
+            { date: "2025-05-13", weight: 190 },
+            { date: "2025-05-06", weight: 180 },
+          ],
+        },
+        8: {
+          current: { weight: 215 },
+          history: [
+            { date: "2025-05-20", weight: 215 },
+            { date: "2025-05-13", weight: 205 },
+            { date: "2025-05-06", weight: 195 },
+          ],
+        },
+        6: {
+          current: { weight: 225 },
+          history: [
+            { date: "2025-05-20", weight: 225 },
+            { date: "2025-05-13", weight: 215 },
+            { date: "2025-05-06", weight: 205 },
+          ],
+        },
+        5: {
+          current: { weight: 240 },
+          history: [
+            { date: "2025-05-20", weight: 240 },
+            { date: "2025-05-13", weight: 230 },
+            { date: "2025-05-06", weight: 220 },
+          ],
+        },
+      },
+    },
   },
   {
     name: "Dumbbell Bench Press",
@@ -148,11 +192,83 @@ const userLifts = [
     name: "Squat",
     max_weights: [265, 275, 305, 325, 335, 0, 0],
     rep_ranges: [12, 10, 8, 6, 5, 3, 1],
+    rep_range_progress: {
+      rep_ranges: {
+        12: {
+          current: { weight: 265 },
+          history: [
+            { date: "2025-05-20", weight: 265 },
+            { date: "2025-05-13", weight: 255 },
+            { date: "2025-05-06", weight: 245 },
+          ],
+        },
+        10: {
+          current: { weight: 275 },
+          history: [
+            { date: "2025-05-20", weight: 275 },
+            { date: "2025-05-13", weight: 265 },
+            { date: "2025-05-06", weight: 255 },
+          ],
+        },
+        8: {
+          current: { weight: 305 },
+          history: [
+            { date: "2025-05-20", weight: 305 },
+            { date: "2025-05-13", weight: 295 },
+            { date: "2025-05-06", weight: 285 },
+          ],
+        },
+        6: {
+          current: { weight: 325 },
+          history: [
+            { date: "2025-05-20", weight: 325 },
+            { date: "2025-05-13", weight: 315 },
+            { date: "2025-05-06", weight: 305 },
+          ],
+        },
+        5: {
+          current: { weight: 335 },
+          history: [
+            { date: "2025-05-20", weight: 335 },
+            { date: "2025-05-13", weight: 325 },
+            { date: "2025-05-06", weight: 315 },
+          ],
+        },
+      },
+    },
   },
   {
     name: "Deadlift",
     max_weights: [0, 0, 285, 305, 325, 0, 0],
     rep_ranges: [12, 10, 8, 6, 5, 3, 1],
+    rep_range_progress: {
+      rep_ranges: {
+        8: {
+          current: { weight: 285 },
+          history: [
+            { date: "2025-05-20", weight: 285 },
+            { date: "2025-05-13", weight: 275 },
+            { date: "2025-05-06", weight: 265 },
+          ],
+        },
+        6: {
+          current: { weight: 305 },
+          history: [
+            { date: "2025-05-20", weight: 305 },
+            { date: "2025-05-13", weight: 295 },
+            { date: "2025-05-06", weight: 285 },
+          ],
+        },
+        5: {
+          current: { weight: 325 },
+          history: [
+            { date: "2025-05-20", weight: 325 },
+            { date: "2025-05-13", weight: 315 },
+            { date: "2025-05-06", weight: 305 },
+          ],
+        },
+      },
+    },
   },
   {
     name: "Barbell Lunge",

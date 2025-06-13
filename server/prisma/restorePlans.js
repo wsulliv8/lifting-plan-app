@@ -6,17 +6,29 @@ const prisma = new PrismaClient();
 
 async function restoreGenericPlans() {
   try {
+    // Only delete plan-related data, preserve base lifts and user data
+    await prisma.workoutDay.deleteMany();
+    await prisma.day.deleteMany();
+    await prisma.week.deleteMany();
+    await prisma.supersetLinks.deleteMany();
+    await prisma.lifts.deleteMany();
+    await prisma.workouts.deleteMany();
+    await prisma.plans.deleteMany({
+      where: { user_id: null },
+    });
+
+    // Get existing base lifts mapping
+    const baseLifts = await prisma.baseLifts.findMany();
+    const liftMap = new Map(
+      baseLifts.map((lift) => [lift.name.toLowerCase(), lift.id])
+    );
+
     // Read the backup file
     const data = await fs.readFile(
       "prisma/data/backup_generic_plans.json",
       "utf8"
     );
     const plans = JSON.parse(data);
-
-    // Delete existing generic plans first
-    await prisma.plans.deleteMany({
-      where: { user_id: null },
-    });
 
     // Restore each plan
     for (const plan of plans) {
@@ -74,6 +86,15 @@ async function restoreGenericPlans() {
 
               // Create lifts for the workout
               for (const lift of workout.lifts) {
+                // Get base_lift_id from the map
+                const base_lift_id = liftMap.get(lift.name.toLowerCase());
+                if (!base_lift_id) {
+                  console.warn(
+                    `Base lift not found for ${lift.name}, skipping...`
+                  );
+                  continue;
+                }
+
                 await prisma.lifts.create({
                   data: {
                     workout_id: createdWorkout.id,
@@ -85,7 +106,7 @@ async function restoreGenericPlans() {
                     rest_time: lift.rest_time,
                     progression_rule: lift.progression_rule,
                     created_at: lift.created_at || new Date(),
-                    base_lift_id: lift.base_lift_id,
+                    base_lift_id: base_lift_id,
                     completed: lift.completed || false,
                     reps_achieved: lift.reps_achieved || [],
                     weight_achieved: lift.weight_achieved || [],

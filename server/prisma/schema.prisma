@@ -101,9 +101,7 @@ model UserLiftsData {
   id            Int       @id @default(autoincrement())
   user_id       Int
   base_lift_id  Int
-  max_weights   Int[]
-  rep_ranges    Int[]
-  max_estimated Int[]
+  rep_range_progress Json  // Store progress history for each rep range
   set_counts    Int[]
   week_starts   DateTime[]
   weekly_reps   Int[]

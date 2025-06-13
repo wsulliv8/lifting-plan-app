@@ -208,64 +208,78 @@ const workoutController = {
           });
 
           if (!userLiftData) {
-            // For new users, initialize with all sets from first workout
-            const maxWeights = [];
-            const repRanges = [];
-            const maxEstimated = [];
+            // Initialize rep_range_progress structure
+            const rep_range_progress = { rep_ranges: {} };
 
             // Process each set
             for (let i = 0; i < lift.weight.length; i++) {
               const weight = lift.weight[i];
               const reps = parseInt(lift.reps[i].split("-")[0]);
-              maxWeights.push(weight);
-              repRanges.push(reps);
-              maxEstimated.push(Math.round(weight * (1 + reps / 30)));
+              const estimated_max = Math.round(weight * (1 + reps / 30));
+
+              rep_range_progress.rep_ranges[reps] = {
+                current: {
+                  weight,
+                  estimated_max,
+                },
+                history: [
+                  {
+                    date: new Date().toISOString(),
+                    weight,
+                    estimated_max,
+                  },
+                ],
+              };
             }
 
             await prisma.userLiftsData.create({
               data: {
                 user_id: req.user.userId,
                 base_lift_id: lift.base_lift_id,
-                max_weights: maxWeights,
-                rep_ranges: repRanges,
-                max_estimated: maxEstimated,
+                rep_range_progress,
               },
             });
           } else {
-            const updatedMaxWeights = [...userLiftData.max_weights];
-            const updatedMaxEstimated = [...userLiftData.max_estimated];
-            const updatedRepRanges = [...userLiftData.rep_ranges];
+            const rep_range_progress = userLiftData.rep_range_progress;
 
             // Process each set in the current lift
             for (let i = 0; i < lift.weight.length; i++) {
               const weight = lift.weight[i];
               const reps = parseInt(lift.reps[i].split("-")[0]);
+              const estimated_max = Math.round(weight * (1 + reps / 30));
 
-              // Find if we already have this rep range
-              const index = updatedRepRanges.indexOf(reps);
+              // Get or initialize rep range data
+              if (!rep_range_progress.rep_ranges[reps]) {
+                rep_range_progress.rep_ranges[reps] = {
+                  current: {
+                    weight,
+                    estimated_max,
+                  },
+                  history: [],
+                };
+              }
 
-              if (index >= 0) {
-                // Update existing rep range if new weight is higher
-                if (weight > updatedMaxWeights[index]) {
-                  updatedMaxWeights[index] = weight;
-                  updatedMaxEstimated[index] = Math.round(
-                    weight * (1 + reps / 30)
-                  );
-                }
-              } else {
-                // Add new rep range
-                updatedMaxWeights.push(weight);
-                updatedRepRanges.push(reps);
-                updatedMaxEstimated.push(Math.round(weight * (1 + reps / 30)));
+              const repRangeData = rep_range_progress.rep_ranges[reps];
+
+              // If new weight is higher, update current and add to history
+              if (weight > repRangeData.current.weight) {
+                repRangeData.history.push({
+                  date: new Date().toISOString(),
+                  weight,
+                  estimated_max,
+                });
+
+                repRangeData.current = {
+                  weight,
+                  estimated_max,
+                };
               }
             }
 
             await prisma.userLiftsData.update({
               where: { id: userLiftData.id },
               data: {
-                max_weights: updatedMaxWeights,
-                rep_ranges: updatedRepRanges,
-                max_estimated: updatedMaxEstimated,
+                rep_range_progress,
               },
             });
           }

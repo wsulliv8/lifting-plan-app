@@ -47,7 +47,7 @@ async function seed() {
       createdLifts.map((lift) => [lift.name.toLowerCase(), lift.id])
     );
 
-    // Generate UserLiftsData
+    // Generate UserLiftsData with new rep_range_progress structure
     const userLiftsDataEntries = userLiftsData
       .map((lift) => {
         const base_lift_id = liftMap.get(lift.name.toLowerCase());
@@ -56,41 +56,64 @@ async function seed() {
           return null;
         }
 
-        // Calculate max_estimated (1RM = weight * (1 + reps/30))
-        const max_estimated = lift.max_weights.map((weight, index) => {
-          const reps = lift.rep_ranges[index];
-          return Math.round(weight * (1 + reps / 30));
-        });
+        // If lift has no rep_range_progress yet, create it from max_weights and rep_ranges
+        if (!lift.rep_range_progress) {
+          const rep_range_progress = { rep_ranges: {} };
 
-        // Assume 3 sets for Main lifts, 2 for Supplementary (based on liftData.js)
+          lift.rep_ranges.forEach((reps, index) => {
+            const weight = lift.max_weights[index];
+            if (weight > 0) {
+              // Only create entries for weights > 0
+              rep_range_progress.rep_ranges[reps] = {
+                current: { weight },
+                history: [
+                  { date: "2025-05-20", weight },
+                  { date: "2025-05-13", weight: Math.round(weight * 0.95) },
+                  { date: "2025-05-06", weight: Math.round(weight * 0.9) },
+                ],
+              };
+            }
+          });
+
+          lift.rep_range_progress = rep_range_progress;
+        }
+
+        // Calculate set_counts based on lift type
         const isMainLift =
           liftData.find((l) => l.name.toLowerCase() === lift.name.toLowerCase())
             ?.lift_type === "Main";
-        const set_counts = Array(lift.max_weights.length).fill(
+
+        // Get unique rep ranges from the progress data
+        const uniqueRepRanges = Object.keys(
+          lift.rep_range_progress.rep_ranges
+        ).map(Number);
+        const set_counts = Array(uniqueRepRanges.length).fill(
           isMainLift ? 3 : 2
         );
 
-        // Generate week_starts for 3 weeks (current and previous two)
+        // Generate week_starts
         const week_starts = [
           new Date("2025-05-20"),
           new Date("2025-05-13"),
           new Date("2025-05-06"),
-        ].slice(0, 3); // Limit to 3 weeks
+        ];
 
-        // Calculate weekly_reps (sets * reps) and weekly_volume (sets * reps * weight)
-        const weekly_reps = lift.max_weights.map(
-          (weight, index) => set_counts[index] * lift.rep_ranges[index]
+        // Calculate weekly_reps and weekly_volume using current weights
+        const weekly_reps = uniqueRepRanges.map(
+          (reps) => set_counts[0] * reps // Using first set_count since they're all the same
         );
-        const weekly_volume = lift.max_weights.map(
-          (weight, index) => set_counts[index] * lift.rep_ranges[index] * weight
+
+        const weekly_volume = uniqueRepRanges.map(
+          (reps) =>
+            set_counts[0] *
+            reps *
+            lift.rep_range_progress.rep_ranges[reps].current.weight
         );
 
         return {
           user_id: user.id,
           base_lift_id,
-          max_weights: lift.max_weights,
-          rep_ranges: lift.rep_ranges,
-          max_estimated,
+          rep_range_progress: lift.rep_range_progress,
           set_counts,
           week_starts,
           weekly_reps,

@@ -66,7 +66,6 @@ const workoutController = {
     try {
       const workoutId = parseInt(req.params.id);
       const { lifts: updatedLifts } = req.body;
-    
 
       const workout = await prisma.workouts.findUnique({
         where: { id: workoutId },
@@ -155,8 +154,6 @@ const workoutController = {
 
       // Process progression for completed lifts using refreshed data
       for (const lift of refreshedWorkout.lifts) {
-
-
         if (lift.completed && lift.progression_rule) {
           // Calculate weight adjustment
           const weightAdjustment =
@@ -203,7 +200,6 @@ const workoutController = {
             }
           }
 
-          // Update user lift data as before
           let userLiftData = await prisma.userLiftsData.findFirst({
             where: {
               user_id: req.user.userId,
@@ -212,50 +208,63 @@ const workoutController = {
           });
 
           if (!userLiftData) {
+            // For new users, initialize with all sets from first workout
+            const maxWeights = [];
+            const repRanges = [];
+            const maxEstimated = [];
+
+            // Process each set
+            for (let i = 0; i < lift.weight.length; i++) {
+              const weight = lift.weight[i];
+              const reps = parseInt(lift.reps[i].split("-")[0]);
+              maxWeights.push(weight);
+              repRanges.push(reps);
+              maxEstimated.push(Math.round(weight * (1 + reps / 30)));
+            }
+
             await prisma.userLiftsData.create({
               data: {
                 user_id: req.user.userId,
                 base_lift_id: lift.base_lift_id,
-                max_weights: [lift.weight[0]],
-                rep_ranges: [parseInt(lift.reps[0].split("-")[0])],
-                max_estimated: [
-                  Math.round(
-                    lift.weight[0] *
-                      (1 + parseInt(lift.reps[0].split("-")[0]) / 30)
-                  ),
-                ],
+                max_weights: maxWeights,
+                rep_ranges: repRanges,
+                max_estimated: maxEstimated,
               },
             });
           } else {
-            const index = userLiftData.rep_ranges.indexOf(
-              parseInt(lift.reps[0].split("-")[0])
-            );
-            const newMaxWeight = Math.max(
-              lift.weight[0],
-              userLiftData.max_weights[index] || 0
-            );
-            const newMaxEstimated = Math.round(
-              newMaxWeight * (1 + parseInt(lift.reps[0].split("-")[0]) / 30)
-            );
-
             const updatedMaxWeights = [...userLiftData.max_weights];
             const updatedMaxEstimated = [...userLiftData.max_estimated];
-            if (index >= 0) {
-              updatedMaxWeights[index] = newMaxWeight;
-              updatedMaxEstimated[index] = newMaxEstimated;
-            } else {
-              updatedMaxWeights.push(newMaxWeight);
-              updatedMaxEstimated.push(newMaxEstimated);
-              userLiftData.rep_ranges.push(
-                parseInt(lift.reps[0].split("-")[0])
-              );
+            const updatedRepRanges = [...userLiftData.rep_ranges];
+
+            // Process each set in the current lift
+            for (let i = 0; i < lift.weight.length; i++) {
+              const weight = lift.weight[i];
+              const reps = parseInt(lift.reps[i].split("-")[0]);
+
+              // Find if we already have this rep range
+              const index = updatedRepRanges.indexOf(reps);
+
+              if (index >= 0) {
+                // Update existing rep range if new weight is higher
+                if (weight > updatedMaxWeights[index]) {
+                  updatedMaxWeights[index] = weight;
+                  updatedMaxEstimated[index] = Math.round(
+                    weight * (1 + reps / 30)
+                  );
+                }
+              } else {
+                // Add new rep range
+                updatedMaxWeights.push(weight);
+                updatedRepRanges.push(reps);
+                updatedMaxEstimated.push(Math.round(weight * (1 + reps / 30)));
+              }
             }
 
             await prisma.userLiftsData.update({
               where: { id: userLiftData.id },
               data: {
                 max_weights: updatedMaxWeights,
-                rep_ranges: userLiftData.rep_ranges,
+                rep_ranges: updatedRepRanges,
                 max_estimated: updatedMaxEstimated,
               },
             });

@@ -139,7 +139,6 @@ const planController = {
       const { name, duration_weeks } = req.body;
 
       const duration = duration_weeks ? duration_weeks : 3;
-      console.log("req.user.userId:", req.user.userId);
       const plan = await prisma.plans.create({
         data: {
           name: name ? name : "New Plan",
@@ -430,7 +429,6 @@ const planController = {
                       const lift = workout.lifts[liftIndex];
                       let liftRecord;
                       if (lift.id) {
-                        console.log("lift id:", lift.id);
                         // Update existing lift
                         liftRecord = await prismaTransaction.lifts.update({
                           where: { id: parseInt(lift.id) },

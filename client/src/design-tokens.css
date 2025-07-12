@@ -64,6 +64,13 @@
   --color-text-secondary-300: #787774;
   --color-text-secondary-400: #4f4e4b;
 
+  /* Chart Colors */
+  --chart-1: 221 90% 54%; /* blue-600 in HSL */
+  --chart-2: 142 76% 36%; /* green-600 in HSL */
+  --chart-3: 0 72% 51%; /* red-600 in HSL */
+  --chart-4: 271 81% 56%; /* purple-600 in HSL */
+  --chart-5: 25 95% 53%; /* orange-600 in HSL */
+
   /* Semantic Tokens - Light Theme */
   --primary: var(--color-primary-500);
   --primary-hover: var(--color-primary-700);

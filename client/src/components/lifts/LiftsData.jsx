@@ -14,7 +14,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { data } from "react-router-dom";
 
 const LiftsData = ({ lift }) => {
   const [progressData, setProgressData] = useState(null);
@@ -102,7 +101,11 @@ const LiftsData = ({ lift }) => {
             className="justify-start rounded-lg p-1 bg-[var(--background)] text-[var(--text-secondary)]"
           >
             {availableReps.map((reps) => (
-              <ToggleGroupItem key={reps} value={reps} className="flex-1">
+              <ToggleGroupItem
+                key={reps}
+                value={reps}
+                className="flex-1 data-[state=on]:bg-[var(--primary)] data-[state=on]:text-white hover:bg-[var(--primary-hover)] transition-colors"
+              >
                 {reps} Reps
               </ToggleGroupItem>
             ))}
@@ -114,15 +117,32 @@ const LiftsData = ({ lift }) => {
             <ResponsiveContainer width="100%" height="100%">
               <ChartContainer config={getChartConfig()}>
                 <LineChart data={getProgressChartData()}>
-                  <CartesianGrid strokeDasharray="3 3" />
+                  <CartesianGrid
+                    vertical={false}
+                    stroke="var(--text-secondary)"
+                    strokeOpacity={0.1}
+                  />
                   <XAxis
                     dataKey="date"
-                    tick={{
-                      stroke: "var(--text-secondary)",
-                    }}
                     tickLine={false}
                     axisLine={false}
                     tickFormatter={formatDate}
+                    tick={{
+                      stroke: "var(--text-secondary)",
+                      dy: 10,
+                    }}
+                  />
+                  <YAxis
+                    dataKey="actual"
+                    tick={{
+                      stroke: "var(--text-secondary)",
+                      dx: -10,
+                      textAnchor: "end",
+                    }}
+                    tickLine={false}
+                    axisLine={false}
+                    width={35}
+                    domain={["dataMin - 10", "dataMax + 10"]}
                   />
                   <Line
                     type="monotone"

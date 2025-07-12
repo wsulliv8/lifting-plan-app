@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getUserLiftsData } from "@/services/user";
 import {
   ChartContainer,
   ChartTooltip,
@@ -14,90 +15,37 @@ import {
 } from "recharts";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-// Function to generate sample data
-const generateSampleData = (startWeight, daysBack = 90) => {
-  const data = [];
-  const today = new Date();
-  let currentWeight = startWeight;
-
-  for (let i = daysBack; i >= 0; i--) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - i);
-
-    // Add some random variation to the weight progression
-    const randomProgress = Math.random() * 2.5 - 0.5; // Random number between -0.5 and 2
-    currentWeight += randomProgress;
-
-    // Occasionally add a bigger jump or drop to simulate good/bad days
-    if (Math.random() < 0.1) {
-      // 10% chance
-      currentWeight += Math.random() * 5 - 2.5;
-    }
-
-    data.push({
-      date: date.toISOString(),
-      weight: Math.round(currentWeight),
-    });
-  }
-
-  return {
-    base_lift_id: "sample",
-    rep_range_progress: {
-      rep_ranges: {
-        5: {
-          history: data.map((entry) => ({
-            date: entry.date,
-            weight: entry.weight,
-          })),
-        },
-        8: {
-          history: data.map((entry) => ({
-            date: entry.date,
-            weight: Math.round(entry.weight * 0.9), // 90% of 5-rep weight
-          })),
-        },
-        12: {
-          history: data.map((entry) => ({
-            date: entry.date,
-            weight: Math.round(entry.weight * 0.8), // 80% of 5-rep weight
-          })),
-        },
-      },
-    },
-  };
-};
-
 const LiftsData = ({ lift }) => {
   const [progressData, setProgressData] = useState(null);
   const [selectedReps, setSelectedReps] = useState(null);
 
   useEffect(() => {
     // Comment out the API call temporarily and use sample data instead
-    // const fetchLiftData = async () => {
-    //   try {
-    //     const liftsData = await getUserLiftsData();
-    //     const currentLiftData = liftsData.find(
-    //       (data) => String(data.base_lift_id) === String(lift.id)
-    //     );
-    //     setProgressData(currentLiftData);
-    //
-    //     if (currentLiftData?.rep_range_progress?.rep_ranges) {
-    //       const firstRange = Object.keys(
-    //         currentLiftData.rep_range_progress.rep_ranges
-    //       )[0];
-    //       setSelectedReps(firstRange);
-    //     }
-    //   } catch (error) {
-    //     console.error("Error fetching lift data:", error);
-    //   }
-    // };
+    const fetchLiftData = async () => {
+      try {
+        const liftsData = await getUserLiftsData();
+        const currentLiftData = liftsData.find(
+          (data) => String(data.base_lift_id) === String(lift.id)
+        );
+        setProgressData(currentLiftData);
+
+        if (currentLiftData?.rep_range_progress?.rep_ranges) {
+          const firstRange = Object.keys(
+            currentLiftData.rep_range_progress.rep_ranges
+          )[0];
+          setSelectedReps(firstRange);
+        }
+      } catch (error) {
+        console.error("Error fetching lift data:", error);
+      }
+    };
 
     // Use sample data instead
-    const sampleData = generateSampleData(135); // Start at 135 lbs
-    setProgressData(sampleData);
-    setSelectedReps("5"); // Default to 5 reps
+    // const sampleData = generateSampleData(135); // Start at 135 lbs
+    // setProgressData(sampleData);
+    // setSelectedReps("5"); // Default to 5 reps
 
-    // fetchLiftData();
+    fetchLiftData();
   }, [lift.id]);
 
   const formatDate = (dateString) => {
@@ -121,7 +69,7 @@ const LiftsData = ({ lift }) => {
       .map((entry) => ({
         date: entry.date,
         actual: entry.weight,
-        estimated: entry.weight + 10, // Static 10lbs above actual
+        estimated: entry.estimated_max, // Use the estimated_max from history
       }))
       .sort((a, b) => new Date(a.date) - new Date(b.date));
   };
@@ -209,24 +157,33 @@ const LiftsData = ({ lift }) => {
                     domain={["dataMin", "auto"]}
                     ticks={(() => {
                       const data = getProgressChartData();
-                      if (!data.length) return [];
-                      const min =
-                        Math.floor(Math.min(...data.map((d) => d.actual)) / 5) *
-                        5;
-                      // Consider both actual and estimated for max value
+                      if (!data?.length) return [0, 20, 40, 60, 80, 100]; // Default ticks if no data
+
+                      // Find min and max considering both actual and estimated
+                      const minActual = Math.min(...data.map((d) => d.actual));
                       const maxActual = Math.max(...data.map((d) => d.actual));
                       const maxEstimated = Math.max(
                         ...data.map((d) => d.estimated)
                       );
-                      const max =
-                        Math.ceil(Math.max(maxActual, maxEstimated) / 5) * 5;
-                      const count = 8; // Number of ticks we want
-                      const step = Math.ceil((max - min) / (count - 1) / 5) * 5;
-                      const ticks = [];
-                      for (let i = min; i <= max; i += step) {
-                        ticks.push(i);
-                      }
-                      return ticks;
+                      const overallMax = Math.max(maxActual, maxEstimated);
+
+                      // Round min down and max up to nearest 5
+                      const min = Math.floor(minActual / 5) * 5;
+                      const max = Math.ceil(overallMax / 5) * 5;
+
+                      // Calculate step size (at least 5)
+                      const range = max - min;
+                      const minStep = 5;
+                      const step = Math.max(
+                        minStep,
+                        Math.ceil(range / 7 / minStep) * minStep
+                      );
+
+                      // Generate ticks
+                      return Array.from(
+                        { length: Math.floor((max - min) / step) + 1 },
+                        (_, i) => min + step * i
+                      );
                     })()}
                   />
                   <Line

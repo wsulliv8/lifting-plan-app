@@ -213,9 +213,13 @@ const workoutController = {
 
             // Process each set
             for (let i = 0; i < lift.weight.length; i++) {
-              const weight = lift.weight[i];
-              const reps = parseInt(lift.reps[i].split("-")[0]);
-              const estimated_max = Math.round(weight * (1 + reps / 30));
+              const weight = lift.weight_achieved[i];
+              const actualReps = parseInt(lift.reps_achieved[i]);
+
+              // Round down to nearest even number unless reps is 1,2,3
+              const reps =
+                actualReps <= 3 ? actualReps : Math.floor(actualReps / 2) * 2;
+              const estimated_max = weight;
 
               rep_range_progress.rep_ranges[reps] = {
                 current: {
@@ -244,16 +248,19 @@ const workoutController = {
 
             // Process each set in the current lift
             for (let i = 0; i < lift.weight.length; i++) {
-              const weight = lift.weight[i];
-              const reps = parseInt(lift.reps[i].split("-")[0]);
-              const estimated_max = Math.round(weight * (1 + reps / 30));
+              const weight = lift.weight_achieved[i];
+              const actualReps = parseInt(lift.reps_achieved[i]);
+
+              // Round down to nearest even number unless reps is 1,2,3
+              const reps =
+                actualReps <= 3 ? actualReps : Math.floor(actualReps / 2) * 2;
 
               // Get or initialize rep range data
               if (!rep_range_progress.rep_ranges[reps]) {
                 rep_range_progress.rep_ranges[reps] = {
                   current: {
                     weight,
-                    estimated_max,
+                    estimated_max: weight, // Initial estimated max is the weight achieved
                   },
                   history: [],
                 };
@@ -261,19 +268,52 @@ const workoutController = {
 
               const repRangeData = rep_range_progress.rep_ranges[reps];
 
-              // If new weight is higher, update current and add to history
+              // If new weight is higher than previous estimated max
               if (weight > repRangeData.current.weight) {
-                repRangeData.history.push({
-                  date: new Date().toISOString(),
-                  weight,
-                  estimated_max,
-                });
+                // For this rep range, estimated max becomes exactly the weight achieved
+                repRangeData.current.estimated_max = weight;
 
-                repRangeData.current = {
-                  weight,
-                  estimated_max,
-                };
+                const percentageIncrease =
+                  (weight - repRangeData.current.weight) /
+                  repRangeData.current.weight;
+                repRangeData.current.weight = weight;
+                console.log("Percentage increase:", percentageIncrease);
+
+                // Adjust other rep ranges based on the improvement
+                Object.entries(rep_range_progress.rep_ranges).forEach(
+                  ([otherReps, data]) => {
+                    if (otherReps !== reps.toString()) {
+                      const otherRepsNum = parseInt(otherReps);
+                      // If lower reps (heavier weight), increase slightly more
+                      // If higher reps (lighter weight), increase slightly less
+                      const adjustmentFactor = otherRepsNum < reps ? 1.1 : 0.9;
+                      const adjustment = percentageIncrease * adjustmentFactor;
+
+                      // Round down to nearest 5
+                      const newEstimatedMax =
+                        Math.floor(
+                          (data.current.estimated_max * (1 + adjustment)) / 5
+                        ) * 5;
+
+                      data.current.estimated_max = newEstimatedMax;
+
+                      // Add history entry for the adjusted rep range
+                      data.history.push({
+                        date: new Date().toISOString(),
+                        weight: data.current.weight,
+                        estimated_max: newEstimatedMax,
+                      });
+                    }
+                  }
+                );
               }
+
+              // Record history
+              repRangeData.history.push({
+                date: new Date().toISOString(),
+                weight: weight,
+                estimated_max: repRangeData.current.estimated_max,
+              });
             }
 
             await prisma.userLiftsData.update({

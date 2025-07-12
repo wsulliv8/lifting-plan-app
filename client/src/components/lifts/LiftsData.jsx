@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { getUserLiftsData } from "@/services/user";
 import {
   ChartContainer,
   ChartTooltip,
@@ -15,32 +14,90 @@ import {
 } from "recharts";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
+// Function to generate sample data
+const generateSampleData = (startWeight, daysBack = 90) => {
+  const data = [];
+  const today = new Date();
+  let currentWeight = startWeight;
+
+  for (let i = daysBack; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+
+    // Add some random variation to the weight progression
+    const randomProgress = Math.random() * 2.5 - 0.5; // Random number between -0.5 and 2
+    currentWeight += randomProgress;
+
+    // Occasionally add a bigger jump or drop to simulate good/bad days
+    if (Math.random() < 0.1) {
+      // 10% chance
+      currentWeight += Math.random() * 5 - 2.5;
+    }
+
+    data.push({
+      date: date.toISOString(),
+      weight: Math.round(currentWeight),
+    });
+  }
+
+  return {
+    base_lift_id: "sample",
+    rep_range_progress: {
+      rep_ranges: {
+        5: {
+          history: data.map((entry) => ({
+            date: entry.date,
+            weight: entry.weight,
+          })),
+        },
+        8: {
+          history: data.map((entry) => ({
+            date: entry.date,
+            weight: Math.round(entry.weight * 0.9), // 90% of 5-rep weight
+          })),
+        },
+        12: {
+          history: data.map((entry) => ({
+            date: entry.date,
+            weight: Math.round(entry.weight * 0.8), // 80% of 5-rep weight
+          })),
+        },
+      },
+    },
+  };
+};
+
 const LiftsData = ({ lift }) => {
   const [progressData, setProgressData] = useState(null);
   const [selectedReps, setSelectedReps] = useState(null);
 
   useEffect(() => {
-    const fetchLiftData = async () => {
-      try {
-        const liftsData = await getUserLiftsData();
-        const currentLiftData = liftsData.find(
-          (data) => String(data.base_lift_id) === String(lift.id)
-        );
-        setProgressData(currentLiftData);
+    // Comment out the API call temporarily and use sample data instead
+    // const fetchLiftData = async () => {
+    //   try {
+    //     const liftsData = await getUserLiftsData();
+    //     const currentLiftData = liftsData.find(
+    //       (data) => String(data.base_lift_id) === String(lift.id)
+    //     );
+    //     setProgressData(currentLiftData);
+    //
+    //     if (currentLiftData?.rep_range_progress?.rep_ranges) {
+    //       const firstRange = Object.keys(
+    //         currentLiftData.rep_range_progress.rep_ranges
+    //       )[0];
+    //       setSelectedReps(firstRange);
+    //     }
+    //   } catch (error) {
+    //     console.error("Error fetching lift data:", error);
+    //   }
+    // };
 
-        // Set initial selected reps to the first available rep range
-        if (currentLiftData?.rep_range_progress?.rep_ranges) {
-          const firstRange = Object.keys(
-            currentLiftData.rep_range_progress.rep_ranges
-          )[0];
-          setSelectedReps(firstRange);
-        }
-      } catch (error) {
-        console.error("Error fetching lift data:", error);
-      }
-    };
+    // Use sample data instead
+    const sampleData = generateSampleData(135); // Start at 135 lbs
+    setProgressData(sampleData);
+    setSelectedReps("5"); // Default to 5 reps
 
-    fetchLiftData();
+    // fetchLiftData();
   }, [lift.id]);
 
   const formatDate = (dateString) => {
@@ -124,13 +181,20 @@ const LiftsData = ({ lift }) => {
                   />
                   <XAxis
                     dataKey="date"
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={formatDate}
                     tick={{
                       stroke: "var(--text-secondary)",
                       dy: 10,
                     }}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => {
+                      const date = new Date(value);
+                      return date.toLocaleDateString("en-US", {
+                        month: "short",
+                      });
+                    }}
+                    interval="preserveStart"
+                    minTickGap={200}
                   />
                   <YAxis
                     dataKey="actual"
@@ -142,7 +206,28 @@ const LiftsData = ({ lift }) => {
                     tickLine={false}
                     axisLine={false}
                     width={35}
-                    domain={["dataMin - 10", "dataMax + 10"]}
+                    domain={["dataMin", "auto"]}
+                    ticks={(() => {
+                      const data = getProgressChartData();
+                      if (!data.length) return [];
+                      const min =
+                        Math.floor(Math.min(...data.map((d) => d.actual)) / 5) *
+                        5;
+                      // Consider both actual and estimated for max value
+                      const maxActual = Math.max(...data.map((d) => d.actual));
+                      const maxEstimated = Math.max(
+                        ...data.map((d) => d.estimated)
+                      );
+                      const max =
+                        Math.ceil(Math.max(maxActual, maxEstimated) / 5) * 5;
+                      const count = 8; // Number of ticks we want
+                      const step = Math.ceil((max - min) / (count - 1) / 5) * 5;
+                      const ticks = [];
+                      for (let i = min; i <= max; i += step) {
+                        ticks.push(i);
+                      }
+                      return ticks;
+                    })()}
                   />
                   <Line
                     type="monotone"

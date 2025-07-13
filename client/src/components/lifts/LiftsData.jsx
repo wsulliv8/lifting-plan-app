@@ -17,8 +17,15 @@ import {
   BarChart,
   Bar,
   LabelList,
+  RadialBarChart,
+  RadialBar,
+  PolarGrid,
+  PolarRadiusAxis,
+  Label,
 } from "recharts";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Card } from "@/components/ui/card";
+import { TrendingUp } from "lucide-react";
 
 const generateSampleMonthlyData = () => {
   const months = 6; // Generate 6 months of data
@@ -45,6 +52,146 @@ const generateSampleMonthlyData = () => {
   }
 
   return data;
+};
+
+const StatsBlock = ({ totalVolume, percentile }) => {
+  const [comparison, setComparison] = useState(null);
+
+  useEffect(() => {
+    const fetchComparison = async () => {
+      try {
+        const response = await fetch(
+          `/api/weight-comparison?weight=${totalVolume}`
+        );
+        const data = await response.json();
+        setComparison(data);
+      } catch (error) {
+        console.error("Error fetching weight comparison:", error);
+        setComparison({
+          name: "Loading...",
+          fun_fact: "Loading comparison...",
+          image_url: null,
+        });
+      }
+    };
+
+    fetchComparison();
+  }, [totalVolume]);
+
+  const chartData = [{ percentile }];
+
+  return (
+    <div className="grid grid-cols-2 gap-4 my-4">
+      <Card className="p-4 flex items-center space-x-4 border-2 border-[var(--primary)]">
+        <div className="flex-1">
+          <h3 className="text-lg font-semibold text-[var(--primary)]">
+            Total Volume
+          </h3>
+          <p className="text-5xl font-bold text-[var(--secondary)]">
+            {totalVolume.toLocaleString()} lbs
+          </p>
+          <p className="text-sm text-[var(--text-secondary)]">
+            {comparison?.fun_fact}
+          </p>
+        </div>
+        <div className="w-24 h-24 bg-[var(--background)] rounded-lg flex items-center justify-center">
+          {comparison?.image_url ? (
+            <img
+              src={comparison.image_url}
+              alt={comparison.name}
+              className="w-20 h-20 object-contain"
+            />
+          ) : (
+            <span className="text-[var(--text-secondary)]">Loading...</span>
+          )}
+        </div>
+      </Card>
+
+      <Card className="p-4 border-2 border-[var(--primary)]">
+        <div className="flex flex-col items-center">
+          <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+            Strength Percentile
+          </h3>
+          <div className="w-full aspect-square max-h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <ChartContainer
+                config={{
+                  percentile: {
+                    label: "Percentile",
+                    color: "hsl(var(--chart-2))",
+                  },
+                }}
+              >
+                <RadialBarChart
+                  data={chartData}
+                  startAngle={0}
+                  endAngle={(percentile / 100) * 360}
+                  innerRadius={80}
+                  outerRadius={110}
+                >
+                  <PolarGrid
+                    gridType="circle"
+                    radialLines={false}
+                    stroke="none"
+                    className="first:fill-[var(--border)] last:fill-[var(--background)]"
+                    polarRadius={[86, 74]}
+                  />
+                  <RadialBar
+                    dataKey="percentile"
+                    background
+                    fill="hsl(var(--chart-2))"
+                    backgroundFill="var(--border)"
+                    cornerRadius={10}
+                  />
+                  <PolarRadiusAxis
+                    tick={false}
+                    tickLine={false}
+                    axisLine={false}
+                  >
+                    <Label
+                      content={({ viewBox }) => {
+                        if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                          return (
+                            <text
+                              x={viewBox.cx}
+                              y={viewBox.cy}
+                              textAnchor="middle"
+                              dominantBaseline="middle"
+                            >
+                              <tspan
+                                x={viewBox.cx}
+                                y={viewBox.cy}
+                                className="fill-[var(--text-primary)] text-4xl font-bold"
+                              >
+                                {percentile}%
+                              </tspan>
+                              <tspan
+                                x={viewBox.cx}
+                                y={(viewBox.cy || 0) + 24}
+                                className="fill-[var(--text-secondary)]"
+                              >
+                                stronger than average
+                              </tspan>
+                            </text>
+                          );
+                        }
+                      }}
+                    />
+                  </PolarRadiusAxis>
+                </RadialBarChart>
+              </ChartContainer>
+            </ResponsiveContainer>
+          </div>
+          <div className="flex items-center gap-2 text-sm mt-2">
+            <TrendingUp className="h-4 w-4 text-[var(--text-secondary)]" />
+            <span className="text-[var(--text-secondary)]">
+              Based on population data
+            </span>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
 };
 
 const LiftsData = ({ lift }) => {
@@ -209,6 +356,19 @@ const LiftsData = ({ lift }) => {
       .sort((a, b) => a.month.localeCompare(b.month));
   };
 
+  const calculateTotalVolume = () => {
+    if (!progressData?.rep_range_progress?.monthly_volume) return 0;
+    return Object.values(progressData.rep_range_progress.monthly_volume).reduce(
+      (total, month) => total + month.volume,
+      0
+    );
+  };
+
+  const calculatePercentile = () => {
+    // This would use your population statistics data
+    return 85; // Placeholder
+  };
+
   const { min: yMin, max: yMax } = getYAxisDomain();
   const yRange = yMax - yMin;
   const yStep = Math.max(5, Math.ceil(yRange / 8 / 5) * 5); // At least 5, rounded up to nearest 5
@@ -328,6 +488,11 @@ const LiftsData = ({ lift }) => {
         </div>
       </div>
 
+      <StatsBlock
+        totalVolume={calculateTotalVolume()}
+        percentile={calculatePercentile()}
+      />
+
       <div className="rounded-lg p-4 bg-[var(--surface)] shadow-md border border-[var(--border)]">
         <h3 className="text-lg font-semibold text-[var(--text-primary)]">
           Volume Breakdown
@@ -369,7 +534,13 @@ const LiftsData = ({ lift }) => {
                     minTickGap={40}
                   />
                   <ChartLegend
-                    content={<ChartLegendContent nameKey={(item) => item.dataKey.replace('scaled', '').toLowerCase()} />}
+                    content={
+                      <ChartLegendContent
+                        nameKey={(item) =>
+                          item.dataKey.replace("scaled", "").toLowerCase()
+                        }
+                      />
+                    }
                     verticalAlign="top"
                     height={36}
                     className="text-[var(--text-secondary)]"

@@ -7,6 +7,7 @@ const Select = ({
   onChange,
   options,
   name,
+  disabled = false,
   className = "",
   containerClass = "",
 }) => (
@@ -21,6 +22,7 @@ const Select = ({
       onChange={onChange}
       name={name}
       className={`input-field ${className}`}
+      disabled={disabled}
     >
       {options.map((option) => (
         <option key={option.value} value={option.value}>

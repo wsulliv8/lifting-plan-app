@@ -8,4 +8,6 @@ router.get("/", authMiddleware, userController.getCurrentUser);
 
 router.get("/lifts", authMiddleware, userController.getUserLiftsData);
 
+router.put("/", authMiddleware, userController.updateUser);
+
 module.exports = router;

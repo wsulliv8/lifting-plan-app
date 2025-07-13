@@ -23,4 +23,9 @@ const getCurrentUser = async () => {
   return response.data;
 };
 
-export { getUserLiftsData, getCurrentUser };
+const updateUser = async (updates) => {
+  const response = await api.put("/user", updates);
+  return response.data;
+};
+
+export { getUserLiftsData, getCurrentUser, updateUser };

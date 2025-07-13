@@ -20,6 +20,8 @@ import { getPlans, getPlanById } from "./services/plans";
 import { getAllBaseLifts } from "./services/lifts";
 import { getUserLiftsData, getCurrentUser } from "./services/user";
 import { getWorkoutById } from "./services/workouts";
+import { ThemeProvider } from "./context/ThemeContext";
+import { UserProvider } from "./context/UserContext";
 
 const checkAuthLoader = async () => {
   const token = localStorage.getItem("token");
@@ -189,7 +191,13 @@ const router = createBrowserRouter([
 ]);
 
 function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <ThemeProvider>
+      <UserProvider>
+        <RouterProvider router={router} />
+      </UserProvider>
+    </ThemeProvider>
+  );
 }
 
 export default App;

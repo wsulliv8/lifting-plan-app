@@ -326,7 +326,7 @@ const workoutController = {
                         }
                       );
                     }
-                  } 
+                  }
                   rep_range_progress.rep_ranges[reps] = {
                     current: {
                       weight,
@@ -340,7 +340,6 @@ const workoutController = {
                       },
                     ],
                   };
-                  
                 } else {
                   const repRangeData = rep_range_progress.rep_ranges[reps];
                   if (weight > repRangeData.current.weight) {
@@ -386,6 +385,36 @@ const workoutController = {
                 data: { rep_range_progress },
               });
             }
+
+            // Track monthly volume metrics
+            if (!rep_range_progress.monthly_volume) {
+              rep_range_progress.monthly_volume = {};
+            }
+
+            const monthKey = new Date().toISOString().substring(0, 7); // YYYY-MM format
+            const totalSets = lift.weight_achieved.length;
+            const totalReps = lift.reps_achieved.reduce(
+              (sum, reps) => sum + reps,
+              0
+            );
+            const totalVolume = lift.volume || 0;
+
+            if (!rep_range_progress.monthly_volume[monthKey]) {
+              rep_range_progress.monthly_volume[monthKey] = {
+                sets: totalSets,
+                reps: totalReps,
+                volume: totalVolume,
+              };
+            } else {
+              rep_range_progress.monthly_volume[monthKey].sets += totalSets;
+              rep_range_progress.monthly_volume[monthKey].reps += totalReps;
+              rep_range_progress.monthly_volume[monthKey].volume += totalVolume;
+            }
+
+            await prisma.userLiftsData.update({
+              where: { id: userLiftData.id },
+              data: { rep_range_progress },
+            });
           } catch (progressionError) {
             console.error(
               `Progression error for lift ${lift.id}:`,

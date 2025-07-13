@@ -101,11 +101,12 @@ model UserLiftsData {
   id            Int       @id @default(autoincrement())
   user_id       Int
   base_lift_id  Int
-  rep_range_progress Json  // Store progress history for each rep range
-  set_counts    Int[]
-  week_starts   DateTime[]
-  weekly_reps   Int[]
-  weekly_volume Int[]
+  // rep_range_progress JSON structure:
+  // {
+  //   rep_ranges: { [reps: string]: { current: { weight, estimated_max }, history: [{ date, weight, estimated_max }] } },
+  //   monthly_volume: { [YYYY-MM: string]: { sets: number, reps: number, volume: number } }
+  // }
+  rep_range_progress Json
   user          Users     @relation(fields: [user_id], references: [id])
   base_lift     BaseLifts @relation(fields: [base_lift_id], references: [id])
 }

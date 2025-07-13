@@ -9,17 +9,42 @@ const workoutRoutes = require("./routes/workoutRoutes");
 const liftRoutes = require("./routes/liftRoutes");
 const userRoutes = require("./routes/userRoutes");
 const errorMiddleware = require("./middleware/errorMiddleware");
-const authRateLimiter = require("./middleware/rateLimitMiddleware");
+const {
+  securityHeaders,
+  generalRateLimit,
+  authRateLimit,
+  loginRateLimit,
+  sanitizeInput,
+} = require("./middleware/securityMiddleware");
 
 dotenv.config();
 
 const app = express();
 
-// Middleware
-app.use(cors({ origin: "https://localhost:5173" })); // Allow React frontend (localhost:5173) to connect
-app.use(express.json()); // Parse JSON bodies
-// Routes
-app.use("/api/auth", authRateLimiter, authRoutes);
+// Security middleware - apply first
+app.use(securityHeaders);
+app.use(generalRateLimit);
+app.use(sanitizeInput);
+
+// CORS configuration
+const corsOptions = {
+  origin:
+    process.env.NODE_ENV === "production"
+      ? process.env.FRONTEND_URL
+      : "https://localhost:5173",
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+app.use(cors(corsOptions));
+
+// Body parsing middleware
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+// Routes with specific rate limiting
+app.use("/api/auth/login", loginRateLimit);
+app.use("/api/auth", authRateLimit, authRoutes);
 app.use("/api/plans", planRoutes);
 app.use("/api/workouts", workoutRoutes);
 app.use("/api/lifts", liftRoutes);

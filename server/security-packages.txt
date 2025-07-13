@@ -1,0 +1,15 @@
+Required security packages to install:
+
+npm install helmet express-rate-limit validator xss express-validator bcrypt jsonwebtoken
+
+Package explanations:
+- helmet: Sets various HTTP headers to help secure your Express app
+- express-rate-limit: Basic rate-limiting middleware for Express
+- validator: A library of string validators and sanitizers
+- xss: Filters input from users to prevent XSS attacks
+- express-validator: An express.js middleware for validation
+- bcrypt: A library to help you hash passwords (already installed)
+- jsonwebtoken: An implementation of JSON Web Tokens (already installed)
+
+Run this command in your server directory:
+cd server && npm install helmet express-rate-limit validator xss express-validator 

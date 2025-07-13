@@ -1,25 +1,45 @@
-const jwt = require("jsonwebtoken");
+const { verifyToken } = require("../utils/authUtils");
 
 const authMiddleware = (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1]; // Bearer <token>
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "No valid token provided" });
+  }
+
+  const token = authHeader.split(" ")[1];
   if (!token) {
     return res.status(401).json({ error: "No token provided" });
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log("Decoded token:", decoded); // Debug line
+    const decoded = verifyToken(token);
+
+    // Remove debug logs in production
+    if (process.env.NODE_ENV === "development") {
+      console.log("Decoded token:", decoded);
+      console.log("User ID from token:", decoded.userId);
+      console.log("User role from token:", decoded.role);
+    }
+
     req.user = {
       userId: decoded.userId,
       role: decoded.role,
       isAdmin: decoded.role === "admin",
     };
-    console.log("User ID from token:", decoded.userId); // Debug line
-    console.log("User role from token:", decoded.role); // Debug line
+
     next();
   } catch (error) {
-    console.log("Auth error:", error);
-    return res.status(401).json({ error: "Invalid token" });
+    if (process.env.NODE_ENV === "development") {
+      console.log("Auth error:", error.message);
+    }
+
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({ error: "Token expired" });
+    } else if (error.name === "JsonWebTokenError") {
+      return res.status(401).json({ error: "Invalid token" });
+    } else {
+      return res.status(401).json({ error: "Authentication failed" });
+    }
   }
 };
 

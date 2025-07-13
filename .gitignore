@@ -3,12 +3,24 @@ node_modules/
 client/node_modules/
 server/node_modules/
 
-# Environment variables
+# Package manager files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Environment variables & secrets
 .env
+.env.*
+!.env.example
 .env.local
 .env.*.local
 
-# Prisma
+# Database files
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
 /prisma/dev.db
 /prisma/dev.db-journal
 /prisma/seed.ts.bak
@@ -26,23 +38,96 @@ server/build/
 logs/
 *.log
 *.log.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
 
-# HTTPS certificates
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+.nyc_output
+
+# HTTPS certificates & keys
 server/key.pem
 server/cert.pem
 server/server.cert
 server/server.key
 server/localhost-key.pem
 server/localhost.pem
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+.temp/
+
+# Cache directories
+.npm
+.eslintcache
+.parcel-cache
+.cache/
+.vscode/settings.json
 
 # Editor and OS files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 .vscode/
 .idea/
 *.swp
+*.swo
+*~
 
 # Postman
 *.postman_environment.json
 
+# Backup files
+*.backup
+*.bak
+*.old
+*.orig
+*~
+
 # Generic plans backup
 prisma/data/backup_generic_plans.json
+
+# Docker (if using)
+.dockerignore
+Dockerfile.prod
+docker-compose.prod.yml
+
+# Deployment files
+.vercel
+.netlify
+
+# Security files (these should NOT be ignored - removing from gitignore)
+# SECURITY_GUIDE.md - This should be committed to repo
+
+# Admin creation script (temporary)
+createAdmin.js
+
+# Custom security tokens/keys
+security-tokens.json
+api-keys.json
+service-account-keys.json
+
+# Local development
+.local
+local.json

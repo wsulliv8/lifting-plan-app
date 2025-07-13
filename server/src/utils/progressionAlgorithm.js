@@ -110,6 +110,31 @@ const progressionAlgorithm = {
       return 0;
     }
   },
+
+  calculateWeightAdjustment(oldWeight, newWeight, repDifference = 0) {
+    // Calculate base percentage increase
+    const percentageIncrease = (newWeight - oldWeight) / oldWeight;
+
+    // If there's a rep difference, adjust the percentage
+    if (repDifference !== 0) {
+      // Each rep difference adds/subtracts 10% to the adjustment
+      const repAdjustmentFactor = 1 + repDifference * 0.1;
+      return percentageIncrease * repAdjustmentFactor;
+    }
+
+    return percentageIncrease;
+  },
+
+  applyWeightAdjustment(
+    currentEstimatedMax,
+    adjustmentFactor,
+    weightAdjustmentFactor
+  ) {
+    const newEstimatedMax =
+      currentEstimatedMax * (1 + adjustmentFactor * weightAdjustmentFactor);
+    // Round down to nearest 5
+    return Math.floor(newEstimatedMax / 5) * 5;
+  },
 };
 
 module.exports = progressionAlgorithm;

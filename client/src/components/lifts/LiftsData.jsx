@@ -69,9 +69,35 @@ const LiftsData = ({ lift }) => {
       .map((entry) => ({
         date: entry.date,
         actual: entry.weight,
-        estimated: entry.estimated_max, // Use the estimated_max from history
+        estimated: entry.estimated_max,
       }))
       .sort((a, b) => new Date(a.date) - new Date(b.date));
+  };
+
+  // Calculate consistent Y-axis domain across all rep ranges
+  const getYAxisDomain = () => {
+    if (!progressData?.rep_range_progress?.rep_ranges) {
+      return { min: 0, max: 100 };
+    }
+
+    // Get all weights and estimated maxes across all rep ranges
+    const allValues = Object.values(
+      progressData.rep_range_progress.rep_ranges
+    ).flatMap((range) =>
+      range.history.flatMap((entry) => [entry.weight, entry.estimated_max])
+    );
+
+    if (!allValues.length) return { min: 0, max: 100 };
+
+    // Find global min and max
+    const minValue = Math.min(...allValues);
+    const maxValue = Math.max(...allValues);
+
+    // Round min down and max up to nearest 5
+    const min = Math.floor(minValue / 5) * 5;
+    const max = Math.ceil(maxValue / 5) * 5;
+
+    return { min, max };
   };
 
   const getChartConfig = () => {
@@ -86,6 +112,14 @@ const LiftsData = ({ lift }) => {
       },
     };
   };
+
+  const { min: yMin, max: yMax } = getYAxisDomain();
+  const yRange = yMax - yMin;
+  const yStep = Math.max(5, Math.ceil(yRange / 8 / 5) * 5); // At least 5, rounded up to nearest 5
+  const yTicks = Array.from(
+    { length: Math.floor(yRange / yStep) + 1 },
+    (_, i) => yMin + yStep * i
+  );
 
   const availableReps = progressData?.rep_range_progress?.rep_ranges
     ? Object.keys(progressData.rep_range_progress.rep_ranges)
@@ -154,37 +188,8 @@ const LiftsData = ({ lift }) => {
                     tickLine={false}
                     axisLine={false}
                     width={35}
-                    domain={["dataMin", "auto"]}
-                    ticks={(() => {
-                      const data = getProgressChartData();
-                      if (!data?.length) return [0, 20, 40, 60, 80, 100]; // Default ticks if no data
-
-                      // Find min and max considering both actual and estimated
-                      const minActual = Math.min(...data.map((d) => d.actual));
-                      const maxActual = Math.max(...data.map((d) => d.actual));
-                      const maxEstimated = Math.max(
-                        ...data.map((d) => d.estimated)
-                      );
-                      const overallMax = Math.max(maxActual, maxEstimated);
-
-                      // Round min down and max up to nearest 5
-                      const min = Math.floor(minActual / 5) * 5;
-                      const max = Math.ceil(overallMax / 5) * 5;
-
-                      // Calculate step size (at least 5)
-                      const range = max - min;
-                      const minStep = 5;
-                      const step = Math.max(
-                        minStep,
-                        Math.ceil(range / 7 / minStep) * minStep
-                      );
-
-                      // Generate ticks
-                      return Array.from(
-                        { length: Math.floor((max - min) / step) + 1 },
-                        (_, i) => min + step * i
-                      );
-                    })()}
+                    domain={[yMin, yMax]}
+                    ticks={yTicks}
                   />
                   <Line
                     type="monotone"

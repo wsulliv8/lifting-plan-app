@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useTheme } from "../../context/ThemeContext";
+import { useUser } from "../../context/UserContext";
 import {
   HomeIcon,
   DocumentTextIcon,
@@ -24,6 +25,7 @@ const Navbar = () => {
   const profileRef = useRef(null);
   const navigate = useNavigate();
   const { theme, screenSize } = useTheme();
+  const { clearUser } = useUser();
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -37,6 +39,7 @@ const Navbar = () => {
   const handleLogout = async () => {
     try {
       await logout();
+      clearUser(); // Clear the user context
       navigate("/login");
     } catch {
       console.error("Logout failed");
@@ -63,34 +66,39 @@ const Navbar = () => {
           </div>
         )}
 
-      {/* Main Navigation */}
-      <div className={`flex flex-row w-full md:flex-col md:h-full ${
-        screenSize.isMobile ? "h-12" : "h-full"
-      }`}>
-        {/* Top Navigation Items */}
-        <div className="flex flex-row md:flex-col flex-1 md:flex-none md:mt-10 justify-around md:justify-start md:items-center">
-          {navItems.map((item) => (
-            <div key={item.to} className="relative group md:mb-8 flex items-center justify-center">
-              <NavLink
-                to={item.to}
-                className={({ isActive }) =>
-                  `nav-item ${
-                    isActive
-                      ? "bg-[var(--primary)] text-[var(--text-primary-light)]"
-                      : "text-[var(--text-primary)] hover:bg-[var(--background-dark)]"
-                  }
-                  ${screenSize.isMobile ? "h-10 w-10" : "h-12 w-12"}`
-                }
+        {/* Main Navigation */}
+        <div
+          className={`flex flex-row w-full md:flex-col md:h-full ${
+            screenSize.isMobile ? "h-12" : "h-full"
+          }`}
+        >
+          {/* Top Navigation Items */}
+          <div className="flex flex-row md:flex-col flex-1 md:flex-none md:mt-10 justify-around md:justify-start md:items-center">
+            {navItems.map((item) => (
+              <div
+                key={item.to}
+                className="relative group md:mb-8 flex items-center justify-center"
               >
-                <item.icon className="h-8 w-8" />
-              </NavLink>
-              {/* Desktop Hover Label */}
-              <span className="nav-label hidden md:block left-16 ml-2 top-1/2 transform -translate-y-1/2 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-200">
-                {item.label}
-              </span>
-            </div>
-          ))}
-        </div>
+                <NavLink
+                  to={item.to}
+                  className={({ isActive }) =>
+                    `nav-item ${
+                      isActive
+                        ? "bg-[var(--primary)] text-[var(--text-primary-light)]"
+                        : "text-[var(--text-primary)] hover:bg-[var(--background-dark)]"
+                    }
+                  ${screenSize.isMobile ? "h-10 w-10" : "h-12 w-12"}`
+                  }
+                >
+                  <item.icon className="h-8 w-8" />
+                </NavLink>
+                {/* Desktop Hover Label */}
+                <span className="nav-label hidden md:block left-16 ml-2 top-1/2 transform -translate-y-1/2 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-200">
+                  {item.label}
+                </span>
+              </div>
+            ))}
+          </div>
 
           {screenSize.isMobile && (
             <div className="flex justify-center items-center">
@@ -103,22 +111,23 @@ const Navbar = () => {
             </div>
           )}
 
-        {/* Bottom Items (Theme and Profile) */}
-        <div className="flex flex-row md:flex-col flex-1 md:flex-none justify-around md:justify-start md:items-center md:mt-auto md:mb-4">
-          {/* Theme Toggle */}
-          <div className="relative group md:mb-4 flex items-center justify-center">
-            <div className={`nav-item ${
-                screenSize.isMobile ? "h-10 w-10" : "h-12 w-12"
-              } hover:bg-[var(--background-dark)]`}
-            >
-              <ThemeToggle />
-              {/* Mobile Label */}
+          {/* Bottom Items (Theme and Profile) */}
+          <div className="flex flex-row md:flex-col flex-1 md:flex-none justify-around md:justify-start md:items-center md:mt-auto md:mb-4">
+            {/* Theme Toggle */}
+            <div className="relative group md:mb-4 flex items-center justify-center">
+              <div
+                className={`nav-item ${
+                  screenSize.isMobile ? "h-10 w-10" : "h-12 w-12"
+                } hover:bg-[var(--background-dark)]`}
+              >
+                <ThemeToggle />
+                {/* Mobile Label */}
+              </div>
+              {/* Desktop Hover Label */}
+              <span className="nav-label hidden md:block left-16 ml-2 top-1/2 transform -translate-y-1/2 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-200">
+                Theme
+              </span>
             </div>
-            {/* Desktop Hover Label */}
-            <span className="nav-label hidden md:block left-16 ml-2 top-1/2 transform -translate-y-1/2 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-200">
-              Theme
-            </span>
-          </div>
 
             {/* User Profile */}
             <div

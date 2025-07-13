@@ -4,6 +4,7 @@ import Button from "../common/Button";
 import Input from "../common/Input";
 import { login } from "../../services/auth";
 import { validateEmail } from "../../utils/validation";
+import { useUser } from "../../context/UserContext";
 
 const LoginForm = () => {
   const [email, setEmail] = useState("");
@@ -12,6 +13,7 @@ const LoginForm = () => {
   const [serverError, setServerError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { refreshUser } = useUser();
 
   const handleInputChange = (field, value) => {
     if (field === "email") {
@@ -60,6 +62,7 @@ const LoginForm = () => {
     setIsLoading(true);
     try {
       await login(email, password);
+      await refreshUser(); // Refresh user context with new user data
       navigate("/plans");
     } catch (err) {
       setServerError(err.response?.data?.error || "Login failed");

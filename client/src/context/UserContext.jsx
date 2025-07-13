@@ -14,14 +14,27 @@ export const UserProvider = ({ children }) => {
       try {
         const userData = await getCurrentUser();
         setUser(userData);
+        setError(null);
       } catch (err) {
-        setError(err.message);
+        // If authentication fails, clear user data
+        if (err.response?.status === 401) {
+          setUser(null);
+          localStorage.removeItem("token");
+        } else {
+          setError(err.message);
+        }
       } finally {
         setLoading(false);
       }
     };
 
-    loadUser();
+    // Only load user if there's a token
+    const token = localStorage.getItem("token");
+    if (token) {
+      loadUser();
+    } else {
+      setLoading(false);
+    }
   }, []);
 
   const updateUserData = async (updates) => {
@@ -29,6 +42,7 @@ export const UserProvider = ({ children }) => {
       setLoading(true);
       const updatedUser = await updateUser(updates);
       setUser(updatedUser);
+      setError(null);
       return { success: true, user: updatedUser };
     } catch (err) {
       setError(err.message);
@@ -43,6 +57,24 @@ export const UserProvider = ({ children }) => {
     setError(null);
   };
 
+  const refreshUser = async () => {
+    try {
+      setLoading(true);
+      const userData = await getCurrentUser();
+      setUser(userData);
+      setError(null);
+    } catch (err) {
+      if (err.response?.status === 401) {
+        setUser(null);
+        localStorage.removeItem("token");
+      } else {
+        setError(err.message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <UserContext.Provider
       value={{
@@ -51,6 +83,7 @@ export const UserProvider = ({ children }) => {
         error,
         updateUserData,
         clearUser,
+        refreshUser,
         isAuthenticated: !!user,
       }}
     >

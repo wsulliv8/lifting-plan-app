@@ -12,6 +12,7 @@ model Users {
   email      String          @unique
   username   String          @unique
   password   String
+  role       String          @default("user") // "user" or "admin"
   experience String
   created_at DateTime        @default(now())
   plans      Plans[]         // Relation to Plans (one-to-many)

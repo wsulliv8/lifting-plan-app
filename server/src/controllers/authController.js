@@ -41,7 +41,7 @@ const authController = {
 
       res
         .status(201)
-        .json({ userId: user.id, email: user.email, username: user.username });
+        .json({ userId: user.id, email: user.email, username: user.username, role: user.role });
     } catch (error) {
       next(error);
     }
@@ -64,12 +64,13 @@ const authController = {
         throw new Error("Invalid credentials");
       }
 
-      const token = signToken({ userId: user.id });
+      const token = signToken({ userId: user.id, role: user.role });
       res.json({
         token,
         userId: user.id,
         email: user.email,
         username: user.username,
+        role: user.role,
       });
     } catch (error) {
       next(error);

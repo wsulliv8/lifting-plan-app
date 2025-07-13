@@ -9,8 +9,13 @@ const authMiddleware = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     console.log("Decoded token:", decoded); // Debug line
-    req.user = decoded; // Attach user ID to request
+    req.user = {
+      userId: decoded.userId,
+      role: decoded.role,
+      isAdmin: decoded.role === "admin",
+    };
     console.log("User ID from token:", decoded.userId); // Debug line
+    console.log("User role from token:", decoded.role); // Debug line
     next();
   } catch (error) {
     console.log("Auth error:", error);

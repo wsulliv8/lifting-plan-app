@@ -30,6 +30,25 @@ async function seed() {
       },
     });
 
+    // Create Admin User
+    const adminUser = await prisma.users.create({
+      data: {
+        email: "admin@example.com",
+        username: "admin",
+        password: await bcrypt.hash("admin123", 10),
+        role: "admin",
+        experience: "advanced",
+        created_at: new Date(),
+      },
+    });
+
+    console.log("Admin user created:", {
+      id: adminUser.id,
+      email: adminUser.email,
+      username: adminUser.username,
+      role: adminUser.role,
+    });
+
     // Create BaseLifts
     const baseLifts = await prisma.baseLifts.createMany({
       data: liftData.map((lift) => ({

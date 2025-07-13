@@ -65,11 +65,11 @@
   --color-text-secondary-400: #4f4e4b;
 
   /* Chart Colors */
-  --chart-1: 221 90% 54%; /* blue-600 in HSL */
-  --chart-2: 142 76% 36%; /* green-600 in HSL */
-  --chart-3: 0 72% 51%; /* red-600 in HSL */
-  --chart-4: 271 81% 56%; /* purple-600 in HSL */
-  --chart-5: 25 95% 53%; /* orange-600 in HSL */
+  --chart-1: 244 65% 75%; /* muted primary-300 in HSL */
+  --chart-2: 243 55% 60%; /* muted primary-500 in HSL */
+  --chart-3: 242 45% 50%; /* muted primary-600 in HSL */
+  --chart-4: 241 40% 40%; /* muted primary-700 in HSL */
+  --chart-5: 240 35% 30%; /* muted primary-800 in HSL */
 
   /* Semantic Tokens - Light Theme */
   --primary: var(--color-primary-500);

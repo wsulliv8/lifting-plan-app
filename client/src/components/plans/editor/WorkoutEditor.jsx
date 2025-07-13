@@ -118,18 +118,32 @@ const WorkoutEditor = ({
     let rpe = ["8", "8", "8"];
     let rest = ["120", "120", "120"];
 
-    if (userLift) {
-      const index =
-        userLift.rep_ranges.indexOf(8) !== -1
-          ? userLift.rep_ranges.indexOf(8)
-          : userLift.rep_ranges.reduce((closestIndex, curr, i, arr) => {
-              const currDiff = Math.abs(curr - 8);
-              const closestDiff = Math.abs(arr[closestIndex] - 8);
-              return currDiff < closestDiff ? i : closestIndex;
-            }, 0);
-      reps = Array(3).fill(userLift.rep_ranges[index]);
-      weight = Array(3).fill(userLift.max_weights[index]);
+    if (userLift && userLift.rep_range_progress?.rep_ranges) {
+      // Get available rep ranges from the new structure
+      const availableRepRanges = Object.keys(
+        userLift.rep_range_progress.rep_ranges
+      ).map(Number);
+
+      if (availableRepRanges.length > 0) {
+        // Find the rep range closest to 8, or use the first available
+        const targetReps = 8;
+        const closestRepRange = availableRepRanges.reduce(
+          (closest, current) => {
+            const currentDiff = Math.abs(current - targetReps);
+            const closestDiff = Math.abs(closest - targetReps);
+            return currentDiff < closestDiff ? current : closest;
+          }
+        );
+
+        const repRangeData =
+          userLift.rep_range_progress.rep_ranges[closestRepRange];
+        if (repRangeData?.current?.weight) {
+          reps = Array(3).fill(closestRepRange);
+          weight = Array(3).fill(repRangeData.current.weight);
+        }
+      }
     }
+
     const newLift = {
       id: `temp_${Date.now()}_${Math.random()}`,
       name: baseLift.name,

@@ -224,8 +224,10 @@ const workoutController = {
               },
             });
 
+            let rep_range_progress;
+
             if (!userLiftData) {
-              const rep_range_progress = { rep_ranges: {} };
+              rep_range_progress = { rep_ranges: {} };
 
               for (let i = 0; i < lift.weight.length; i++) {
                 const weight = lift.weight_achieved[i];
@@ -267,7 +269,7 @@ const workoutController = {
                 },
               });
             } else {
-              const rep_range_progress = userLiftData.rep_range_progress;
+              rep_range_progress = userLiftData.rep_range_progress;
 
               for (let i = 0; i < lift.weight.length; i++) {
                 const weight = lift.weight_achieved[i];

@@ -1,52 +1,114 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import Button from "../common/Button";
 import Input from "../common/Input";
 import { register } from "../../services/auth";
+import { validateUserData } from "../../utils/validation";
 
 const RegisterForm = () => {
-  const [email, setEmail] = useState("");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [formData, setFormData] = useState({
+    email: "",
+    username: "",
+    password: "",
+  });
+  const [validationErrors, setValidationErrors] = useState({});
+  const [serverError, setServerError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    // Clear validation error for this field when user starts typing
+    if (validationErrors[name]) {
+      setValidationErrors((prev) => ({
+        ...prev,
+        [name]: "",
+      }));
+    }
+
+    // Clear server error when user makes changes
+    if (serverError) {
+      setServerError("");
+    }
+  };
+
+  const validateForm = () => {
+    const validation = validateUserData(formData);
+    setValidationErrors(validation.errors);
+    return validation.isValid;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsLoading(true);
     try {
-      await register(email, username, password);
+      await register(formData.email, formData.username, formData.password);
       navigate("/login");
     } catch (err) {
-      setError(err.response?.data?.error || "Registration failed");
+      setServerError(err.response?.data?.error || "Registration failed");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="max-w-md mx-auto p-4 bg-white shadow-md rounded"
-    >
-      <h2 className="text-2xl font-bold mb-4 text-center">Register</h2>
+    <form onSubmit={handleSubmit} className="form-card">
+      <h2 className="heading mb-6 text-center">Register</h2>
+
+      {/* Server Error Display */}
+      {serverError && (
+        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+          {serverError}
+        </div>
+      )}
+
       <Input
         label="Email"
         type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
+        name="email"
+        value={formData.email}
+        onChange={handleInputChange}
+        error={validationErrors.email}
       />
+
       <Input
         label="Username"
         type="text"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
+        name="username"
+        value={formData.username}
+        onChange={handleInputChange}
+        error={validationErrors.username}
       />
+
       <Input
         label="Password"
         type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
+        name="password"
+        value={formData.password}
+        onChange={handleInputChange}
+        error={validationErrors.password}
       />
-      {error && <p className="text-red-500 mb-4">{error}</p>}
-      <Button type="submit">Register</Button>
+
+      <Button type="submit" disabled={isLoading}>
+        {isLoading ? "Creating Account..." : "Register"}
+      </Button>
+
+      <p className="mt-4 text-center text-gray-600">
+        Already have an account?{" "}
+        <Link to="/login" className="text-blue-500 hover:underline">
+          Login
+        </Link>
+      </p>
     </form>
   );
 };

@@ -25,6 +25,7 @@ const getCurrentUser = async () => {
 
 const updateUser = async (updates) => {
   const response = await api.put("/user", updates);
+  console.log("updateUser", response.data);
   return response.data;
 };
 

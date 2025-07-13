@@ -66,9 +66,17 @@ const userController = {
       const userId = req.user.userId;
       const { email, username, password, experience } = req.body;
 
+      console.log("Updating user:", userId, "with data:", {
+        email,
+        username,
+        hasPassword: !!password,
+        experience,
+      });
+
       // Validate email if provided
       if (email) {
         if (!validateEmail(email)) {
+          console.log("Email validation failed for:", email);
           return res.status(400).json({ error: "Invalid email format" });
         }
 
@@ -82,6 +90,7 @@ const userController = {
           },
         });
         if (existingUser) {
+          console.log("Email already in use:", email);
           return res.status(400).json({ error: "Email already in use" });
         }
       }
@@ -97,6 +106,7 @@ const userController = {
           },
         });
         if (existingUser) {
+          console.log("Username already in use:", username);
           return res.status(400).json({ error: "Username already in use" });
         }
       }
@@ -104,9 +114,11 @@ const userController = {
       // Validate password if provided
       if (password) {
         if (!validatePassword(password)) {
-          return res
-            .status(400)
-            .json({ error: "Password must be at least 8 characters" });
+          console.log("Password validation failed for user:", userId);
+          return res.status(400).json({
+            error:
+              "Password must be at least 8 characters and contain at least one uppercase letter, one lowercase letter, one number, and one special character (@$!%*?&)",
+          });
         }
       }
 
@@ -115,6 +127,7 @@ const userController = {
         experience &&
         !["beginner", "intermediate", "advanced"].includes(experience)
       ) {
+        console.log("Invalid experience level:", experience);
         return res.status(400).json({ error: "Invalid experience level" });
       }
 
@@ -131,6 +144,8 @@ const userController = {
         updateData.password = hashedPassword;
       }
 
+      console.log("Updating user with data:", updateData);
+
       // Update user
       const updatedUser = await prisma.users.update({
         where: { id: userId },
@@ -144,6 +159,7 @@ const userController = {
         },
       });
 
+      console.log("User updated successfully:", updatedUser);
       res.status(200).json(updatedUser);
     } catch (error) {
       console.error("Error updating user:", error);
@@ -164,7 +180,9 @@ const userController = {
 
       // Validate role
       if (!role || !["user", "admin"].includes(role)) {
-        return res.status(400).json({ error: "Invalid role. Must be 'user' or 'admin'" });
+        return res
+          .status(400)
+          .json({ error: "Invalid role. Must be 'user' or 'admin'" });
       }
 
       // Check if user exists

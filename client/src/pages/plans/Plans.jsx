@@ -6,6 +6,7 @@ import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
 import { createPlan, deletePlan } from "../../services/plans";
 import { useTheme } from "../../context/ThemeContext";
+import { useUser } from "../../context/UserContext";
 
 const Plans = () => {
   const [view, setView] = useState("your");
@@ -19,6 +20,8 @@ const Plans = () => {
   const navigate = useNavigate();
   const navigation = useNavigation();
   const { screenSize } = useTheme();
+  const { user } = useUser();
+  const isAdmin = user?.role === "admin";
 
   // State only for controlled inputs
   const [formInputs, setFormInputs] = useState({
@@ -157,6 +160,7 @@ const Plans = () => {
         isLoading={navigation.state === "loading"}
         planType={view}
         onDelete={handleDelete}
+        isAdmin={isAdmin}
       />
       {isModalOpen && (
         <Modal

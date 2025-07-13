@@ -3,9 +3,8 @@ import Button from "../common/Button";
 import { downloadPlan } from "../../services/plans";
 import { TrashIcon } from "@heroicons/react/24/outline";
 
-const PlanCard = ({ plan, planType, onDelete }) => {
+const PlanCard = ({ plan, planType, onDelete, isAdmin }) => {
   const navigate = useNavigate();
-  console.log("plan", plan);
   const handleDownload = async () => {
     try {
       const newPlan = await downloadPlan(plan.id);
@@ -109,13 +108,24 @@ const PlanCard = ({ plan, planType, onDelete }) => {
           >
             Download Plan
           </Button>
-          <Button
-            variant="secondary"
-            onClick={() => navigate(`/plans/${plan.id}`)}
-            className="text-sm sm:col-span-2"
-          >
-            View Plan
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => navigate(`/plans/${plan.id}`)}
+              className="text-sm flex-1"
+            >
+              View Plan
+            </Button>
+            {isAdmin && (
+              <Button
+                variant="danger"
+                onClick={() => onDelete(plan.id)}
+                className="text-sm flex-none"
+              >
+                <TrashIcon className="h-6 w-6" />
+              </Button>
+            )}
+          </div>
         </>
       )}
     </div>

@@ -5,6 +5,7 @@ import Select from "./Select";
 import Button from "./Button";
 import { useTheme } from "../../context/ThemeContext";
 import { useUser } from "../../context/UserContext";
+import { validateUserData } from "../../utils/validation";
 
 const SettingsModal = ({ isOpen, onClose }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -16,6 +17,8 @@ const SettingsModal = ({ isOpen, onClose }) => {
     password: "",
     experience: "",
   });
+  const [validationErrors, setValidationErrors] = useState({});
+  const [serverError, setServerError] = useState("");
 
   // Update form data when user data changes
   useEffect(() => {
@@ -35,9 +38,32 @@ const SettingsModal = ({ isOpen, onClose }) => {
       ...prev,
       [name]: value,
     }));
+
+    // Clear validation error for this field when user starts typing
+    if (validationErrors[name]) {
+      setValidationErrors((prev) => ({
+        ...prev,
+        [name]: "",
+      }));
+    }
+
+    // Clear server error when user makes changes
+    if (serverError) {
+      setServerError("");
+    }
+  };
+
+  const validateForm = () => {
+    const validation = validateUserData(formData);
+    setValidationErrors(validation.errors);
+    return validation.isValid;
   };
 
   const handleSave = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
     const updates = {
       email: formData.email,
       username: formData.username,
@@ -48,14 +74,17 @@ const SettingsModal = ({ isOpen, onClose }) => {
     const result = await updateUserData(updates);
     if (result.success) {
       setIsEditing(false);
+      setValidationErrors({});
+      setServerError("");
     } else {
-      // TODO: Show error message to user
-      console.error("Failed to update user:", result.error);
+      setServerError(result.error || "Failed to update user");
     }
   };
 
   const handleCancel = () => {
     setIsEditing(false);
+    setValidationErrors({});
+    setServerError("");
     // Reset form data to current user data
     if (user) {
       setFormData({
@@ -73,55 +102,54 @@ const SettingsModal = ({ isOpen, onClose }) => {
     { value: "advanced", label: "Advanced" },
   ];
 
-  if (loading) {
-    return (
-      <Modal
-        isOpen={isOpen}
-        onClose={onClose}
-        title="Settings"
-        className={`${screenSize.isMobile ? "w-[95%]" : "w-1/2"} p-4`}
-      >
-        <div className="flex justify-center items-center h-32">Loading...</div>
-      </Modal>
-    );
-  }
+  if (!user) return null;
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title="Settings"
-      className={`${screenSize.isMobile ? "w-[95%]" : "w-1/2"} p-4`}
+      className={screenSize.isMobile ? "w-[95%] mx-auto p-4" : "w-1/2 p-6"}
     >
-      <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+      <div className="space-y-4">
+        {/* Server Error Display */}
+        {serverError && (
+          <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+            {serverError}
+          </div>
+        )}
+
         <Input
           label="Email"
-          type="email"
           name="email"
+          type="email"
           value={formData.email}
           onChange={handleInputChange}
           disabled={!isEditing}
-          required
+          error={validationErrors.email}
         />
+
         <Input
           label="Username"
-          type="text"
           name="username"
           value={formData.username}
           onChange={handleInputChange}
           disabled={!isEditing}
-          required
+          error={validationErrors.username}
         />
+
         {isEditing && (
           <Input
-            label="New Password"
-            type="password"
+            label="Password (leave blank to keep current)"
             name="password"
+            type="password"
             value={formData.password}
             onChange={handleInputChange}
-            placeholder="Leave blank to keep current password"
+            placeholder="Enter new password"
+            error={validationErrors.password}
           />
         )}
+
         <Select
           label="Experience Level"
           name="experience"
@@ -129,42 +157,42 @@ const SettingsModal = ({ isOpen, onClose }) => {
           onChange={handleInputChange}
           options={experienceOptions}
           disabled={!isEditing}
-          required
+          error={validationErrors.experience}
         />
 
         <div
-          className={`flex ${screenSize.isMobile ? "flex-col" : "justify-end"} gap-2`}
+          className={`flex ${screenSize.isMobile ? "flex-col" : "justify-end"} gap-2 mt-6`}
         >
-          {isEditing ? (
+          {!isEditing ? (
+            <Button
+              onClick={() => setIsEditing(true)}
+              variant="primary"
+              className={screenSize.isMobile ? "w-full" : ""}
+            >
+              Edit Profile
+            </Button>
+          ) : (
             <>
               <Button
-                variant="primary"
                 onClick={handleSave}
-                className={screenSize.isMobile ? "w-full" : ""}
+                variant="primary"
                 disabled={loading}
+                className={screenSize.isMobile ? "w-full" : ""}
               >
                 {loading ? "Saving..." : "Save Changes"}
               </Button>
               <Button
-                variant="danger"
                 onClick={handleCancel}
-                className={screenSize.isMobile ? "w-full" : ""}
+                variant="secondary"
                 disabled={loading}
+                className={screenSize.isMobile ? "w-full" : ""}
               >
                 Cancel
               </Button>
             </>
-          ) : (
-            <Button
-              variant="primary"
-              onClick={() => setIsEditing(true)}
-              className={screenSize.isMobile ? "w-full" : ""}
-            >
-              Edit
-            </Button>
           )}
         </div>
-      </form>
+      </div>
     </Modal>
   );
 };

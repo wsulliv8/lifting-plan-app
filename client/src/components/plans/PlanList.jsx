@@ -1,6 +1,6 @@
 import PlanCard from "./PlanCard";
 
-const PlanList = ({ plans, isLoading, planType, onDelete }) => {
+const PlanList = ({ plans, isLoading, planType, onDelete, isAdmin }) => {
   if (isLoading) {
     return (
       <div className="p-4 text-[var(--text-secondary)]">Loading plans...</div>
@@ -18,6 +18,7 @@ const PlanList = ({ plans, isLoading, planType, onDelete }) => {
             plan={plan}
             planType={planType}
             onDelete={onDelete}
+            isAdmin={isAdmin}
           />
         ))
       )}

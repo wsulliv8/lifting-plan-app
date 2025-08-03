@@ -53,14 +53,22 @@ app.use("/api/user", userRoutes);
 // Error handling middleware
 app.use(errorMiddleware);
 
-// HTTPS options
-const options = {
-  key: fs.readFileSync(process.env.SSL_KEY_PATH),
-  cert: fs.readFileSync(process.env.SSL_CERT_PATH),
-};
-
-// Start HTTPS server
+// Start server based on environment
 const PORT = process.env.PORT || 3001;
-https.createServer(options, app).listen(PORT, () => {
-  console.log(`HTTPS server running on port ${PORT}`);
-});
+
+if (process.env.NODE_ENV === "production") {
+  // Production: Use HTTP (Render handles HTTPS)
+  app.listen(PORT, () => {
+    console.log(`HTTP server running on port ${PORT}`);
+  });
+} else {
+  // Development: Use HTTPS with SSL certificates
+  const options = {
+    key: fs.readFileSync(process.env.SSL_KEY_PATH),
+    cert: fs.readFileSync(process.env.SSL_CERT_PATH),
+  };
+
+  https.createServer(options, app).listen(PORT, () => {
+    console.log(`HTTPS server running on port ${PORT}`);
+  });
+}

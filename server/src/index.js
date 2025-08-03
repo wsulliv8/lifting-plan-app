@@ -21,6 +21,9 @@ dotenv.config();
 
 const app = express();
 
+// Trust proxy for Render deployment
+app.set("trust proxy", 1);
+
 // Security middleware - apply first
 app.use(securityHeaders);
 app.use(generalRateLimit);
@@ -57,10 +60,10 @@ app.use(errorMiddleware);
 const PORT = process.env.PORT || 3001;
 
 // if (process.env.NODE_ENV === "production") {
-  // Production: Use HTTP (Render handles HTTPS)
-  app.listen(PORT, () => {
-    console.log(`HTTP server running on port ${PORT}`);
-  });
+// Production: Use HTTP (Render handles HTTPS)
+app.listen(PORT, () => {
+  console.log(`HTTP server running on port ${PORT}`);
+});
 /* } else {
   // Development: Use HTTPS with SSL certificates
   const options = {

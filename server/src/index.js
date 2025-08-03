@@ -56,12 +56,12 @@ app.use(errorMiddleware);
 // Start server based on environment
 const PORT = process.env.PORT || 3001;
 
-if (process.env.NODE_ENV === "production") {
+// if (process.env.NODE_ENV === "production") {
   // Production: Use HTTP (Render handles HTTPS)
   app.listen(PORT, () => {
     console.log(`HTTP server running on port ${PORT}`);
   });
-} else {
+/* } else {
   // Development: Use HTTPS with SSL certificates
   const options = {
     key: fs.readFileSync(process.env.SSL_KEY_PATH),
@@ -71,4 +71,4 @@ if (process.env.NODE_ENV === "production") {
   https.createServer(options, app).listen(PORT, () => {
     console.log(`HTTPS server running on port ${PORT}`);
   });
-}
+} */

@@ -12,10 +12,10 @@ const prisma = new PrismaClient();
 const authController = {
   async registerUser(req, res, next) {
     try {
-      const { email, username, password } = req.body;
+      const { email, username, password, experience } = req.body;
 
       // Validate required fields
-      if (!email || !username || !password) {
+      if (!email || !username || !password || !experience) {
         return res.status(400).json({ error: "Missing required fields" });
       }
 
@@ -58,6 +58,7 @@ const authController = {
           email,
           username,
           password: hashedPassword,
+          experience,
           created_at: new Date(),
         },
       });

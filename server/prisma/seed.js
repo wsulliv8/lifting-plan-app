@@ -97,46 +97,10 @@ async function seed() {
           lift.rep_range_progress = rep_range_progress;
         }
 
-        // Calculate set_counts based on lift type
-        const isMainLift =
-          liftData.find((l) => l.name.toLowerCase() === lift.name.toLowerCase())
-            ?.lift_type === "Main";
-
-        // Get unique rep ranges from the progress data
-        const uniqueRepRanges = Object.keys(
-          lift.rep_range_progress.rep_ranges
-        ).map(Number);
-        const set_counts = Array(uniqueRepRanges.length).fill(
-          isMainLift ? 3 : 2
-        );
-
-        // Generate week_starts
-        const week_starts = [
-          new Date("2025-05-20"),
-          new Date("2025-05-13"),
-          new Date("2025-05-06"),
-        ];
-
-        // Calculate weekly_reps and weekly_volume using current weights
-        const weekly_reps = uniqueRepRanges.map(
-          (reps) => set_counts[0] * reps // Using first set_count since they're all the same
-        );
-
-        const weekly_volume = uniqueRepRanges.map(
-          (reps) =>
-            set_counts[0] *
-            reps *
-            lift.rep_range_progress.rep_ranges[reps].current.weight
-        );
-
         return {
           user_id: user.id,
           base_lift_id,
           rep_range_progress: lift.rep_range_progress,
-          set_counts,
-          week_starts,
-          weekly_reps,
-          weekly_volume,
         };
       })
       .filter((entry) => entry !== null);

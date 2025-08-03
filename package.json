@@ -11,7 +11,8 @@
     "build:server": "cd server && npx prisma generate && npx prisma migrate deploy",
     "install:all": "npm install && cd client && npm install && cd ../server && npm install",
     "install:client": "cd client && npm install",
-    "install:server": "cd server && npm install"
+    "install:server": "cd server && npm install",
+    "seed": "cd server && node prisma/seed.js"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

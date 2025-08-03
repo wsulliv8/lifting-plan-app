@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import Button from "../common/Button";
 import Input from "../common/Input";
+import Select from "../common/Select";
 import { register } from "../../services/auth";
 import { validateUserData } from "../../utils/validation";
 
@@ -10,6 +11,7 @@ const RegisterForm = () => {
     email: "",
     username: "",
     password: "",
+    experience: "beginner",
   });
   const [validationErrors, setValidationErrors] = useState({});
   const [serverError, setServerError] = useState("");
@@ -52,7 +54,12 @@ const RegisterForm = () => {
 
     setIsLoading(true);
     try {
-      await register(formData.email, formData.username, formData.password);
+      await register(
+        formData.email,
+        formData.username,
+        formData.password,
+        formData.experience
+      );
       navigate("/login");
     } catch (err) {
       setServerError(err.response?.data?.error || "Registration failed");
@@ -97,6 +104,19 @@ const RegisterForm = () => {
         value={formData.password}
         onChange={handleInputChange}
         error={validationErrors.password}
+      />
+
+      <Select
+        label="Experience Level"
+        name="experience"
+        value={formData.experience}
+        onChange={handleInputChange}
+        options={[
+          { value: "beginner", label: "Beginner" },
+          { value: "intermediate", label: "Intermediate" },
+          { value: "advanced", label: "Advanced" },
+        ]}
+        error={validationErrors.experience}
       />
 
       <Button type="submit" disabled={isLoading}>

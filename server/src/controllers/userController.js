@@ -25,10 +25,6 @@ const userController = {
           },
         },
       });
-      console.log(
-        "Found user lifts data:",
-        JSON.stringify(userLiftsData, null, 2)
-      );
       res.status(200).json(userLiftsData);
     } catch (error) {
       console.error("Error fetching UserLiftsData:", error);

@@ -11,7 +11,12 @@ const securityHeaders = helmet({
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "http://localhost:3001", "https://localhost:3001"],
+      connectSrc: [
+        "'self'",
+        "http://localhost:3001",
+        "https://localhost:3001",
+        process.env.FRONTEND_URL || "https://localhost:5173",
+      ],
       fontSrc: ["'self'"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],

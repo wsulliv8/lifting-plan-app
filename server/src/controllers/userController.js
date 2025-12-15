@@ -1,8 +1,6 @@
-const { PrismaClient } = require("@prisma/client");
+const prisma = require("../../prisma/client");
 const bcrypt = require("bcrypt");
 const { validateEmail, validatePassword } = require("../utils/authUtils");
-
-const prisma = new PrismaClient();
 
 const userController = {
   // Get UserLiftsData for the authenticated user

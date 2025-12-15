@@ -1,7 +1,5 @@
-const { PrismaClient } = require("@prisma/client");
+const prisma = require("../../prisma/client");
 const progressionAlgorithm = require("../utils/progressionAlgorithm");
-
-const prisma = new PrismaClient();
 
 const workoutController = {
   async getWorkouts(req, res, next) {

@@ -1,13 +1,11 @@
 const bcrypt = require("bcrypt");
-const { PrismaClient } = require("@prisma/client");
+const prisma = require("../../prisma/client");
 const {
   signToken,
   validateEmail,
   validatePassword,
   validateUsername,
 } = require("../utils/authUtils");
-
-const prisma = new PrismaClient();
 
 const authController = {
   async registerUser(req, res, next) {

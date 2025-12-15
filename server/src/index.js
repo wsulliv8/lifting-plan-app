@@ -31,10 +31,30 @@ app.use(sanitizeInput);
 
 // CORS configuration
 const corsOptions = {
-  origin:
-    process.env.NODE_ENV === "production"
-      ? process.env.FRONTEND_URL
-      : "https://localhost:5173",
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    const allowedOrigins =
+      process.env.NODE_ENV === "production"
+        ? [
+            process.env.FRONTEND_URL,
+            "https://lifting-plan-app-1.onrender.com",
+            "https://lifting-plan-app.onrender.com",
+          ].filter(Boolean) // Remove undefined values
+        : ["https://localhost:5173", "http://localhost:5173"];
+
+    // Check if origin matches (exact match or starts with allowed origin)
+    if (
+      allowedOrigins.some(
+        (allowed) => origin === allowed || origin.startsWith(allowed)
+      )
+    ) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],

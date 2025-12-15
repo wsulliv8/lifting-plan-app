@@ -176,7 +176,9 @@ const router = createBrowserRouter([
       },
       {
         index: true,
-        loader: () => redirect("/plans"),
+        element: <Plans />,
+        loader: plansLoader,
+        errorElement: <ErrorPage />,
       },
     ],
   },

@@ -2,11 +2,12 @@
 const getApiBaseUrl = () => {
   // Check if we're in production mode
   if (import.meta.env.PROD) {
-    // In production, use the VITE_API_URL environment variable
-    return import.meta.env.VITE_API_URL || "https://api.yourdomain.com/api";
+    // In production, use the VITE_API_URL environment variable or default to same origin
+    return import.meta.env.VITE_API_URL || "/api";
   }
 
-  return import.meta.env.VITE_API_URL;
+  // In development, use VITE_API_URL or default to localhost
+  return import.meta.env.VITE_API_URL || "https://localhost:3001/api";
 };
 
 export const API_BASE_URL = getApiBaseUrl();

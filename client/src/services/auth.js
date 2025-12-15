@@ -3,12 +3,17 @@ import sanitizeHtml from "sanitize-html";
 
 export const login = async (email, password) => {
   const cleanEmail = sanitizeHtml(email);
-  const response = await api.post("/auth/login", {
-    email: cleanEmail,
-    password,
-  });
-  localStorage.setItem("token", response.data.token);
-  return response.data;
+  try {
+    const response = await api.post("/auth/login", {
+      email: cleanEmail,
+      password,
+    });
+    localStorage.setItem("token", response.data.token);
+    return response.data;
+  } catch (error) {
+    console.error("Login failed:", error);
+    throw error;
+  }
 };
 
 export const register = async (email, username, password, experience) => {

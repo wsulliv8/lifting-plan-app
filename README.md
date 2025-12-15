@@ -4,8 +4,6 @@ A full-stack web application for creating, managing, and tracking personalized s
 
 ## Contributors
 
-This project was created by the **GitOdyssey Team**:
-
 - **Will Sullivan** ([@wsulliv8](https://github.com/wsulliv8))
 
 ## Technologies & Stack

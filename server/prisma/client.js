@@ -1,15 +1,6 @@
-import { PrismaClient } from "@prisma/client";
-import { Pool } from "pg";
+const { PrismaClient } = require("@prisma/client");
 
-const directConnection = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false,
-  },
-});
-
-const prisma = new PrismaClient({
-  adapter: directConnection,
-});
+// Prisma 6.6.0 automatically reads DATABASE_URL from environment
+const prisma = new PrismaClient();
 
 module.exports = prisma;

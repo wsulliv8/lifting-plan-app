@@ -13,7 +13,6 @@ const Lifts = () => {
   const baseLiftsData = useLoaderData();
   const lifts = baseLiftsData ?? [];
   const { screenSize } = useTheme();
-  console.log(lifts);
 
   const handleLiftSelect = (selectedLifts) => {
     if (selectedLifts.length > 0) {

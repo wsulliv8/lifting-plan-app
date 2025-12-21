@@ -4,111 +4,77 @@ const { Prisma } = require("@prisma/client");
 const planController = {
   async getPlans(req, res, next) {
     try {
-      const userPlans = await prisma.plans.findMany({
-        where: {
-          user_id: req.user.userId,
-        },
-        include: {
-          weeks: {
-            include: {
-              days: {
-                include: {
-                  workoutDays: {
-                    include: {
-                      workout: {
-                        select: {
-                          id: true,
-                          completed_at: true,
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
+      const userId = req.user.userId;
+
+      // 1. Fetch user plans and generic plans with only necessary fields
+      const [userPlans, genericPlans] = await Promise.all([
+        prisma.plans.findMany({
+          where: { user_id: userId },
+          select: {
+            id: true,
+            name: true,
+            goal: true,
+            duration_weeks: true,
+            difficulty: true,
+            current_workout_id: true,
+            user_id: true,
           },
-        },
-      });
-
-      // Add workout counts to each plan
-      const userPlansWithCounts = userPlans.map((plan) => {
-        let totalWorkouts = 0;
-        let completedWorkouts = 0;
-
-        plan.weeks?.forEach((week) => {
-          week.days?.forEach((day) => {
-            day.workoutDays?.forEach((workoutDay) => {
-              totalWorkouts++;
-              if (workoutDay.workout.completed_at) {
-                completedWorkouts++;
-              }
-            });
-          });
-        });
-
-        // Remove the weeks data since we don't need it in the frontend
-        const { weeks, ...planWithoutWeeks } = plan;
-        return {
-          ...planWithoutWeeks,
-          totalWorkouts,
-          completedWorkouts,
-        };
-      });
-
-      const genericPlans = await prisma.plans.findMany({
-        where: {
-          user_id: null,
-        },
-        include: {
-          weeks: {
-            include: {
-              days: {
-                include: {
-                  workoutDays: {
-                    include: {
-                      workout: {
-                        select: {
-                          id: true,
-                          completed_at: true,
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
+        }),
+        prisma.plans.findMany({
+          where: { user_id: null },
+          select: {
+            id: true,
+            name: true,
+            goal: true,
+            duration_weeks: true,
+            difficulty: true,
+            current_workout_id: true,
+            user_id: true,
           },
-        },
-      });
+        }),
+      ]);
 
-      // Add workout counts to each generic plan
-      const genericPlansWithCounts = genericPlans.map((plan) => {
-        let totalWorkouts = 0;
-        let completedWorkouts = 0;
+      const allPlanIds = [...userPlans, ...genericPlans].map((p) => p.id);
 
-        plan.weeks?.forEach((week) => {
-          week.days?.forEach((day) => {
-            day.workoutDays?.forEach((workoutDay) => {
-              totalWorkouts++;
-              if (workoutDay.workout.completed_at) {
-                completedWorkouts++;
-              }
-            });
-          });
+      // 3. Run the fast GroupBy queries (The code you wrote!)
+      // NOTE: This assumes 'workouts' table has a 'plan_id' column.
+      const [totalCounts, completedCounts] = await Promise.all([
+        prisma.workouts.groupBy({
+          by: ["plan_id"],
+          where: { plan_id: { in: allPlanIds } },
+          _count: { id: true },
+        }),
+        prisma.workouts.groupBy({
+          by: ["plan_id"],
+          where: {
+            plan_id: { in: allPlanIds },
+            completed_at: { not: null },
+          },
+          _count: { id: true },
+        }),
+      ]);
+
+      // 4. Helper function to merge counts back into plans
+      const mergeCounts = (plans) => {
+        return plans.map((plan) => {
+          // Find the count for this specific plan
+          const total =
+            totalCounts.find((c) => c.plan_id === plan.id)?._count.id || 0;
+          const completed =
+            completedCounts.find((c) => c.plan_id === plan.id)?._count.id || 0;
+
+          return {
+            ...plan,
+            totalWorkouts: total,
+            completedWorkouts: completed,
+          };
         });
+      };
 
-        // Remove the weeks data since we don't need it in the frontend
-        const { weeks, ...planWithoutWeeks } = plan;
-        return {
-          ...planWithoutWeeks,
-          totalWorkouts,
-          completedWorkouts,
-        };
-      });
-
+      // 5. Send the optimized response
       res.json({
-        userPlans: userPlansWithCounts,
-        genericPlans: genericPlansWithCounts,
+        userPlans: mergeCounts(userPlans),
+        genericPlans: mergeCounts(genericPlans),
       });
     } catch (error) {
       next(error);

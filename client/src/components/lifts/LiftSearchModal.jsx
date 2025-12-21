@@ -1,6 +1,6 @@
 import Modal from "../common/Modal";
 import LiftSearch from "./LiftSearch";
-import { useTheme } from "../../context/ThemeContext";
+import { useTheme } from "../../context/useTheme";
 import { useState, useEffect } from "react";
 import Button from "../common/Button";
 

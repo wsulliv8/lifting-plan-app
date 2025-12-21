@@ -5,7 +5,7 @@ import {
   AdjustmentsHorizontalIcon,
   PlusCircleIcon,
 } from "@heroicons/react/24/solid";
-import { useTheme } from "../../../context/ThemeContext";
+import { useTheme } from "../../../context/useTheme";
 
 const PlanToolbar = ({
   plan,

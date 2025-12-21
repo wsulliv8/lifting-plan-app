@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import Modal from "../../common/Modal";
 import PlanSettingsForm from "../forms/PlanSettingsForm";
-import { useTheme } from "../../../context/ThemeContext";
+import { useTheme } from "../../../context/useTheme";
 
 const PlanSettingsModal = ({ isOpen, onClose, plan, handleSubmit }) => {
   const { screenSize } = useTheme();

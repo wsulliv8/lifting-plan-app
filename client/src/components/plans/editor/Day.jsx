@@ -6,7 +6,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { memo, useMemo } from "react";
 import Button from "../../common/Button";
 import Workout from "./Workout";
-import { useTheme } from "../../../context/ThemeContext";
+import { useTheme } from "../../../context/useTheme";
 
 function shallowEqualWorkouts(arr1, arr2) {
   if (arr1 === arr2) {

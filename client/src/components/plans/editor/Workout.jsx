@@ -2,7 +2,7 @@ import { memo, useMemo } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Bars3Icon } from "@heroicons/react/24/solid";
-import { useTheme } from "../../../context/ThemeContext";
+import { useTheme } from "../../../context/useTheme";
 
 const Workout = memo(({ id, workout, handleClick, isReadOnly = false }) => {
   const { screenSize } = useTheme();

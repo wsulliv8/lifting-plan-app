@@ -2,7 +2,7 @@ import Modal from "../../common/Modal";
 import WorkoutEditor from "../editor/WorkoutEditor";
 import Button from "../../common/Button";
 import { useState } from "react";
-import { useTheme } from "../../../context/ThemeContext";
+import { useTheme } from "../../../context/useTheme";
 
 const WorkoutEditorModal = ({
   editingDay,

@@ -5,8 +5,8 @@ import Modal from "../../components/common/Modal";
 import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
 import { createPlan, deletePlan } from "../../services/plans";
-import { useTheme } from "../../context/ThemeContext";
-import { useUser } from "../../context/UserContext";
+import { useTheme } from "../../context/useTheme";
+import { useUser } from "../../context/useUser";
 
 const Plans = () => {
   const [view, setView] = useState("your");

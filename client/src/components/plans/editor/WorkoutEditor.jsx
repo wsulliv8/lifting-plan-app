@@ -30,7 +30,7 @@ import Button from "../../common/Button";
 import LiftSearch from "../../lifts/LiftSearch";
 import LiftSearchModal from "../../lifts/LiftSearchModal";
 import progressionRules from "../../../utils/progressionRules";
-import { useTheme } from "../../../context/ThemeContext";
+import { useTheme } from "../../../context/useTheme";
 
 // Simple arrayMove function for reordering
 const arrayMove = (array, from, to) => {

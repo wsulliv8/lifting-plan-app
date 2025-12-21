@@ -3,8 +3,8 @@ import Modal from "./Modal";
 import Input from "./Input";
 import Select from "./Select";
 import Button from "./Button";
-import { useTheme } from "../../context/ThemeContext";
-import { useUser } from "../../context/UserContext";
+import { useTheme } from "../../context/useTheme";
+import { useUser } from "../../context/useUser";
 import { validateUserData } from "../../utils/validation";
 
 const SettingsModal = ({ isOpen, onClose }) => {

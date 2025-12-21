@@ -1,4 +1,4 @@
-import { useTheme } from "../../context/ThemeContext";
+import { useTheme } from "../../context/useTheme";
 import { SunIcon, MoonIcon } from "@heroicons/react/24/outline";
 
 const ThemeToggle = () => {
@@ -13,7 +13,9 @@ const ThemeToggle = () => {
       }
     >
       {theme === "light" ? (
-        <MoonIcon className={`${screenSize.isMobile ? "h-6 w-6" : "h-8 w-8"}`} />
+        <MoonIcon
+          className={`${screenSize.isMobile ? "h-6 w-6" : "h-8 w-8"}`}
+        />
       ) : (
         <SunIcon className={`${screenSize.isMobile ? "h-6 w-6" : "h-8 w-8"}`} />
       )}

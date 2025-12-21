@@ -8,7 +8,7 @@ import {
 import Button from "../../components/common/Button";
 import DayModal from "../../components/plans/modals/DayModal";
 import { getCurrentDate } from "../../utils/dateUtils";
-import { useTheme } from "../../context/ThemeContext";
+import { useTheme } from "../../context/useTheme";
 
 const PlanProgress = () => {
   const { plan } = useLoaderData();

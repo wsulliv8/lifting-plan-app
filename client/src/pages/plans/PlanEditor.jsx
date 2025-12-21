@@ -17,7 +17,7 @@ import { usePlanData } from "../../hooks/usePlanData";
 import { usePlanUIState } from "../../hooks/usePlanUIState";
 import { usePlanDragAndDrop } from "../../hooks/usePlanDragAndDrop";
 import { usePlanActions } from "../../hooks/usePlanActions";
-import { useTheme } from "../../context/ThemeContext";
+import { useTheme } from "../../context/useTheme";
 
 const PlanEditor = () => {
   const {

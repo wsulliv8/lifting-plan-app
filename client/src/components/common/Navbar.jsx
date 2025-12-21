@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { useTheme } from "../../context/ThemeContext";
-import { useUser } from "../../context/UserContext";
+import { useTheme } from "../../context/useTheme";
+import { useUser } from "../../context/useUser";
 import {
   HomeIcon,
   DocumentTextIcon,

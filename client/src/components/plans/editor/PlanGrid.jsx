@@ -16,7 +16,7 @@ import {
 import Day from "./Day";
 import Workout from "./Workout";
 import { TrashIcon, PlusCircleIcon } from "@heroicons/react/24/solid";
-import { useTheme } from "../../../context/ThemeContext";
+import { useTheme } from "../../../context/useTheme";
 
 const PlanGrid = ({
   workouts,

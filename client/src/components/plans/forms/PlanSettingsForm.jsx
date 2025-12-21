@@ -3,7 +3,7 @@ import Select from "../../common/Select";
 import MultiSelect from "../../common/MultiSelect";
 import TextArea from "../../common/TextArea";
 import Button from "../../common/Button";
-import { useTheme } from "../../../context/ThemeContext";
+import { useTheme } from "../../../context/useTheme";
 
 // Memoized form component
 const PlanSettingsForm = ({

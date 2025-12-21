@@ -4,7 +4,7 @@ import Button from "../common/Button";
 import Input from "../common/Input";
 import { login } from "../../services/auth";
 import { validateEmail } from "../../utils/validation";
-import { useUser } from "../../context/UserContext";
+import { useUser } from "../../context/useUser";
 
 const LoginForm = () => {
   const [email, setEmail] = useState("");

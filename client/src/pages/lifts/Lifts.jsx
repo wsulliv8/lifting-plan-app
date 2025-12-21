@@ -5,7 +5,7 @@ import LiftsData from "../../components/lifts/LiftsData";
 import LiftSearch from "../../components/lifts/LiftSearch";
 import LiftSearchModal from "../../components/lifts/LiftSearchModal";
 import Button from "../../components/common/Button";
-import { useTheme } from "../../context/ThemeContext";
+import { useTheme } from "../../context/useTheme";
 
 const Lifts = () => {
   const [selectedLift, setSelectedLift] = useState(null);

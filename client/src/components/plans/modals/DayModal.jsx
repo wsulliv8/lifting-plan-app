@@ -1,7 +1,7 @@
 import React from "react";
 import Modal from "../../common/Modal";
 import { CheckIcon } from "@heroicons/react/20/solid";
-import { useTheme } from "../../../context/ThemeContext";
+import { useTheme } from "../../../context/useTheme";
 
 const DayModal = ({ isOpen, onClose, day }) => {
   const { screenSize } = useTheme();

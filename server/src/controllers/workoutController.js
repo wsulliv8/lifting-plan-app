@@ -1,6 +1,120 @@
 const prisma = require("../../prisma/client");
 const progressionAlgorithm = require("../utils/progressionAlgorithm");
 
+// Helper function to normalize rep range
+const normalizeRepRange = (actualReps) => {
+  return actualReps <= 3 ? actualReps : Math.floor(actualReps / 2) * 2;
+};
+
+// Helper function to update estimated maxes for all other rep ranges
+const updateOtherRepRangesEstimates = (
+  rep_range_progress,
+  adjustment,
+  currentReps
+) => {
+  Object.entries(rep_range_progress.rep_ranges).forEach(([otherReps, data]) => {
+    if (otherReps !== currentReps.toString()) {
+      const newEstimatedMax = progressionAlgorithm.applyWeightAdjustment(
+        data.current.estimated_max,
+        adjustment,
+        parseInt(otherReps) < currentReps ? 1.1 : 0.9
+      );
+      data.current.estimated_max = newEstimatedMax;
+      data.history.push({
+        date: new Date().toISOString(),
+        weight: data.current.weight,
+        estimated_max: newEstimatedMax,
+      });
+    }
+  });
+};
+
+// Helper function to update rep range progress for a single set
+const updateRepRangeProgress = (rep_range_progress, weight, actualReps) => {
+  const reps = normalizeRepRange(actualReps);
+
+  if (!rep_range_progress.rep_ranges[reps]) {
+    // Create new rep range entry
+    const existingReps = Object.keys(rep_range_progress.rep_ranges)
+      .map((r) => parseInt(r))
+      .filter((r) => r < reps)
+      .sort((a, b) => b - a);
+
+    if (existingReps.length > 0) {
+      const closestLowerReps = existingReps[0];
+      const lowerRangeData = rep_range_progress.rep_ranges[closestLowerReps];
+
+      if (weight >= lowerRangeData.current.weight) {
+        const repDifference = reps - closestLowerReps;
+        const adjustment = progressionAlgorithm.calculateWeightAdjustment(
+          lowerRangeData.current.weight,
+          weight,
+          repDifference
+        );
+
+        // Update all other rep ranges based on this achievement
+        updateOtherRepRangesEstimates(rep_range_progress, adjustment, reps);
+      }
+    }
+
+    rep_range_progress.rep_ranges[reps] = {
+      current: { weight, estimated_max: weight },
+      history: [
+        { date: new Date().toISOString(), weight, estimated_max: weight },
+      ],
+    };
+  } else {
+    // Update existing rep range if new weight is higher
+    const repRangeData = rep_range_progress.rep_ranges[reps];
+    if (weight > repRangeData.current.weight) {
+      const adjustment = progressionAlgorithm.calculateWeightAdjustment(
+        repRangeData.current.weight,
+        weight,
+        0
+      );
+
+      repRangeData.current.weight = weight;
+      repRangeData.current.estimated_max = weight;
+      repRangeData.history.push({
+        date: new Date().toISOString(),
+        weight,
+        estimated_max: weight,
+      });
+
+      // Update all other rep ranges
+      updateOtherRepRangesEstimates(rep_range_progress, adjustment, reps);
+    }
+  }
+
+  return rep_range_progress;
+};
+
+// Helper function to update monthly volume
+const updateMonthlyVolume = (rep_range_progress, lift) => {
+  if (!rep_range_progress.monthly_volume) {
+    rep_range_progress.monthly_volume = {};
+  }
+
+  const monthKey = new Date().toISOString().substring(0, 7);
+  const totalSets = lift.weight_achieved.length;
+  const totalReps = lift.reps_achieved.reduce((sum, reps) => sum + reps, 0);
+  const totalVolume = lift.volume || 0;
+
+  if (!rep_range_progress.monthly_volume[monthKey]) {
+    rep_range_progress.monthly_volume[monthKey] = {
+      sets: totalSets,
+      reps: totalReps,
+      volume: totalVolume,
+    };
+  } else {
+    rep_range_progress.monthly_volume[monthKey].sets += totalSets;
+    rep_range_progress.monthly_volume[monthKey].reps += totalReps;
+    rep_range_progress.monthly_volume[monthKey].volume += totalVolume;
+  }
+
+  return rep_range_progress;
+};
+
 const workoutController = {
   async getWorkouts(req, res, next) {
     try {
@@ -74,402 +188,240 @@ const workoutController = {
         });
       }
 
-      const workout = await prisma.workouts.findUnique({
-        where: { id: workoutId },
-        include: {
-          lifts: { include: { base_lift: true } },
-          plan: {
-            include: {
-              weeks: {
-                include: {
-                  days: {
-                    include: {
-                      workoutDays: {
-                        include: {
-                          workout: {
-                            include: {
-                              lifts: true,
-                            },
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      });
-
-      if (!workout) {
-        throw new Error("Workout not found", { cause: { status: 404 } });
-      }
-
-      // Update all lifts first
-      for (const updatedLift of updatedLifts) {
-        if (!updatedLift.id || !updatedLift.completed) {
+      // Validate all lifts before starting transaction
+      for (const lift of updatedLifts) {
+        if (!lift.id || lift.completed === undefined) {
           throw new Error(
-            `Invalid lift data for lift ID ${updatedLift.id || "unknown"}`,
+            `Invalid lift data for lift ID ${lift.id || "unknown"}`,
             {
               cause: { status: 400 },
             }
           );
         }
-        await prisma.lifts.update({
-          where: { id: updatedLift.id },
-          data: {
-            completed: updatedLift.completed,
-            reps_achieved:
-              updatedLift.reps_achieved?.map((lift) => parseInt(lift)) ?? [],
-            weight_achieved:
-              updatedLift.weight_achieved?.map((lift) => parseFloat(lift)) ??
-              [],
-            rpe_achieved:
-              updatedLift.rpe_achieved?.map((lift) => parseInt(lift)) ?? [],
-            volume: updatedLift.volume,
-            notes: updatedLift.notes,
-          },
-        });
       }
 
-      // Refresh workout data after updates
-      const refreshedWorkout = await prisma.workouts.findUnique({
-        where: { id: workoutId },
-        include: {
-          lifts: {
-            include: { base_lift: true },
-          },
-          plan: {
-            include: {
-              weeks: {
-                include: {
-                  days: {
-                    include: {
-                      workoutDays: {
-                        include: {
-                          workout: {
-                            include: { lifts: true },
-                          },
-                        },
-                      },
-                    },
-                  },
+      // Use transaction for atomicity
+      const result = await prisma.$transaction(
+        async (tx) => {
+          // 1. Fetch workout with only necessary data
+          const workout = await tx.workouts.findUnique({
+            where: { id: workoutId },
+            select: {
+              id: true,
+              week_number: true,
+              day_of_week: true,
+              plan_id: true,
+              lifts: {
+                select: {
+                  id: true,
+                  base_lift_id: true,
+                  progression_rule: true,
+                  weight: true,
+                  reps: true,
+                  weight_achieved: true,
+                  reps_achieved: true,
+                  volume: true,
                 },
               },
             },
-          },
-        },
-      });
+          });
 
-      if (!refreshedWorkout) {
-        throw new Error("Failed to refresh workout data", {
-          cause: { status: 500 },
-        });
-      }
+          if (!workout) {
+            throw new Error("Workout not found", { cause: { status: 404 } });
+          }
 
-      // Calculate workout success based on lift performance
-      let workoutSuccess = true;
+          // 2. Batch update all lifts
+          await Promise.all(
+            updatedLifts.map((updatedLift) =>
+              tx.lifts.update({
+                where: { id: updatedLift.id },
+                data: {
+                  completed: updatedLift.completed,
+                  reps_achieved:
+                    updatedLift.reps_achieved?.map((r) => parseInt(r)) ?? [],
+                  weight_achieved:
+                    updatedLift.weight_achieved?.map((w) => parseFloat(w)) ??
+                    [],
+                  rpe_achieved:
+                    updatedLift.rpe_achieved?.map((r) => parseInt(r)) ?? [],
+                  volume: updatedLift.volume,
+                  notes: updatedLift.notes,
+                },
+              })
+            )
+          );
 
-      // Process progression for completed lifts using refreshed data
-      for (const lift of refreshedWorkout.lifts) {
-        if (lift.completed && lift.progression_rule) {
-          try {
+          // 3. Process progression for completed lifts
+          let workoutSuccess = true;
+          const liftUpdates = [];
+
+          for (const updatedLift of updatedLifts) {
+            if (!updatedLift.completed) continue;
+
+            const originalLift = workout.lifts.find(
+              (l) => l.id === updatedLift.id
+            );
+            if (!originalLift?.progression_rule) continue;
+
+            // Merge original lift data with updated data
+            // Preserve progression_rule from database (don't let frontend overwrite it)
+            const lift = {
+              ...originalLift,
+              ...updatedLift,
+              progression_rule: originalLift.progression_rule, // Always use DB value
+              reps_achieved: updatedLift.reps_achieved
+                ?.filter((r) => r !== null && r !== undefined && r !== "")
+                .map((r) => parseInt(r)),
+              weight_achieved: updatedLift.weight_achieved
+                ?.filter((w) => w !== null && w !== undefined && w !== "")
+                .map((w) => parseFloat(w)),
+            };
+
             const weightAdjustment =
               progressionAlgorithm.adjustFutureWeights(lift);
+            if (weightAdjustment < 0) workoutSuccess = false;
 
-            if (weightAdjustment < 0) {
-              workoutSuccess = false;
+            // 4. Apply progression to future lifts (if needed)
+            if (weightAdjustment !== 0 && workout.plan_id) {
+              const futureLifts = await tx.lifts.findMany({
+                where: {
+                  base_lift_id: lift.base_lift_id,
+                  workout: {
+                    plan_id: workout.plan_id,
+                    OR: [
+                      { week_number: { gt: workout.week_number } },
+                      {
+                        week_number: workout.week_number,
+                        day_of_week: { gt: workout.day_of_week },
+                      },
+                    ],
+                  },
+                },
+                select: { id: true, weight: true },
+              });
+
+              liftUpdates.push(
+                ...futureLifts.map((futureLift) => ({
+                  id: futureLift.id,
+                  weight: futureLift.weight.map((w) =>
+                    Math.max(0, Number((w + weightAdjustment).toFixed(1)))
+                  ),
+                }))
+              );
             }
 
-            if (weightAdjustment !== 0 && refreshedWorkout.plan) {
-              const futureWorkouts = refreshedWorkout.plan.weeks
-                .flatMap((week) =>
-                  week.days.flatMap((day) =>
-                    day.workoutDays.map((wd) => wd.workout)
-                  )
-                )
-                .filter(
-                  (w) =>
-                    w.week_number > refreshedWorkout.week_number ||
-                    (w.week_number === refreshedWorkout.week_number &&
-                      parseInt(w.day_of_week) >
-                        parseInt(refreshedWorkout.day_of_week))
-                );
-
-              for (const futureWorkout of futureWorkouts) {
-                const futureLift = futureWorkout.lifts.find(
-                  (l) => l.base_lift_id === lift.base_lift_id
-                );
-
-                if (futureLift) {
-                  await prisma.lifts.update({
-                    where: { id: futureLift.id },
-                    data: {
-                      weight: futureLift.weight.map((w) =>
-                        Math.max(0, Number((w + weightAdjustment).toFixed(1)))
-                      ),
-                    },
-                  });
-                }
-              }
-            }
-
-            let userLiftData = await prisma.userLiftsData.findFirst({
+            // 5. Update user lift data (rep ranges and monthly volume)
+            let userLiftData = await tx.userLiftsData.findFirst({
               where: {
                 user_id: req.user.userId,
                 base_lift_id: lift.base_lift_id,
               },
             });
 
-            let rep_range_progress;
+            let rep_range_progress = userLiftData?.rep_range_progress || {
+              rep_ranges: {},
+            };
 
-            if (!userLiftData) {
-              rep_range_progress = { rep_ranges: {} };
+            // Update rep ranges for all sets
+            for (let i = 0; i < lift.weight_achieved.length; i++) {
+              const weight = lift.weight_achieved[i];
+              const actualReps = lift.reps_achieved[i];
 
-              for (let i = 0; i < lift.weight.length; i++) {
-                const weight = lift.weight_achieved[i];
-                const actualReps = parseInt(lift.reps_achieved[i]);
-
-                if (isNaN(weight) || isNaN(actualReps)) {
-                  throw new Error(
-                    `Invalid weight or reps for lift ${lift.id}`,
-                    {
-                      cause: { status: 400 },
-                    }
-                  );
-                }
-
-                const reps =
-                  actualReps <= 3 ? actualReps : Math.floor(actualReps / 2) * 2;
-                const estimated_max = weight;
-
-                rep_range_progress.rep_ranges[reps] = {
-                  current: {
-                    weight,
-                    estimated_max,
-                  },
-                  history: [
-                    {
-                      date: new Date().toISOString(),
-                      weight,
-                      estimated_max,
-                    },
-                  ],
-                };
+              if (isNaN(weight) || isNaN(actualReps)) {
+                throw new Error(`Invalid weight or reps for lift ${lift.id}`, {
+                  cause: { status: 400 },
+                });
               }
 
-              await prisma.userLiftsData.create({
+              rep_range_progress = updateRepRangeProgress(
+                rep_range_progress,
+                weight,
+                actualReps
+              );
+            }
+
+            // Update monthly volume
+            rep_range_progress = updateMonthlyVolume(rep_range_progress, lift);
+
+            // Upsert user lift data
+            if (userLiftData) {
+              await tx.userLiftsData.update({
+                where: { id: userLiftData.id },
+                data: { rep_range_progress },
+              });
+            } else {
+              await tx.userLiftsData.create({
                 data: {
                   user_id: req.user.userId,
                   base_lift_id: lift.base_lift_id,
                   rep_range_progress,
                 },
               });
-            } else {
-              rep_range_progress = userLiftData.rep_range_progress;
-
-              for (let i = 0; i < lift.weight.length; i++) {
-                const weight = lift.weight_achieved[i];
-                const actualReps = parseInt(lift.reps_achieved[i]);
-
-                if (isNaN(weight) || isNaN(actualReps)) {
-                  throw new Error(
-                    `Invalid weight or reps for lift ${lift.id}`,
-                    {
-                      cause: { status: 400 },
-                    }
-                  );
-                }
-
-                const reps =
-                  actualReps <= 3 ? actualReps : Math.floor(actualReps / 2) * 2;
-
-                if (!rep_range_progress.rep_ranges[reps]) {
-                  const existingReps = Object.keys(
-                    rep_range_progress.rep_ranges
-                  )
-                    .map((r) => parseInt(r))
-                    .filter((r) => r < reps)
-                    .sort((a, b) => b - a);
-
-                  if (existingReps.length > 0) {
-                    const closestLowerReps = existingReps[0];
-                    const lowerRangeData =
-                      rep_range_progress.rep_ranges[closestLowerReps];
-                    if (weight >= lowerRangeData.current.weight) {
-                      const repDifference = reps - closestLowerReps;
-                      const adjustment =
-                        progressionAlgorithm.calculateWeightAdjustment(
-                          lowerRangeData.current.weight,
-                          weight,
-                          repDifference
-                        );
-
-                      Object.entries(rep_range_progress.rep_ranges).forEach(
-                        ([otherReps, data]) => {
-                          if (otherReps !== reps.toString()) {
-                            const newEstimatedMax =
-                              progressionAlgorithm.applyWeightAdjustment(
-                                data.current.estimated_max,
-                                adjustment,
-                                parseInt(otherReps) < reps ? 1.1 : 0.9
-                              );
-
-                            data.current.estimated_max = newEstimatedMax;
-                            data.history.push({
-                              date: new Date().toISOString(),
-                              weight: data.current.weight,
-                              estimated_max: newEstimatedMax,
-                            });
-                          }
-                        }
-                      );
-                    }
-                  }
-                  rep_range_progress.rep_ranges[reps] = {
-                    current: {
-                      weight,
-                      estimated_max: weight,
-                    },
-                    history: [
-                      {
-                        date: new Date().toISOString(),
-                        weight,
-                        estimated_max: weight,
-                      },
-                    ],
-                  };
-                } else {
-                  const repRangeData = rep_range_progress.rep_ranges[reps];
-                  if (weight > repRangeData.current.weight) {
-                    const adjustment =
-                      progressionAlgorithm.calculateWeightAdjustment(
-                        repRangeData.current.weight,
-                        weight,
-                        0
-                      );
-                    repRangeData.current.weight = weight;
-                    repRangeData.current.estimated_max = weight;
-                    repRangeData.history.push({
-                      date: new Date().toISOString(),
-                      weight,
-                      estimated_max: weight,
-                    });
-
-                    Object.entries(rep_range_progress.rep_ranges).forEach(
-                      ([otherReps, data]) => {
-                        if (otherReps !== reps.toString()) {
-                          const newEstimatedMax =
-                            progressionAlgorithm.applyWeightAdjustment(
-                              data.current.estimated_max,
-                              adjustment,
-                              parseInt(otherReps) < reps ? 1.1 : 0.9
-                            );
-                          console.log(newEstimatedMax);
-                          data.current.estimated_max = newEstimatedMax;
-                          data.history.push({
-                            date: new Date().toISOString(),
-                            weight: data.current.weight,
-                            estimated_max: newEstimatedMax,
-                          });
-                        }
-                      }
-                    );
-                  }
-                }
-              }
-
-              await prisma.userLiftsData.update({
-                where: { id: userLiftData.id },
-                data: { rep_range_progress },
-              });
             }
+          }
 
-            // Track monthly volume metrics
-            if (!rep_range_progress.monthly_volume) {
-              rep_range_progress.monthly_volume = {};
-            }
-
-            const monthKey = new Date().toISOString().substring(0, 7); // YYYY-MM format
-            const totalSets = lift.weight_achieved.length;
-            const totalReps = lift.reps_achieved.reduce(
-              (sum, reps) => sum + reps,
-              0
-            );
-            const totalVolume = lift.volume || 0;
-
-            if (!rep_range_progress.monthly_volume[monthKey]) {
-              rep_range_progress.monthly_volume[monthKey] = {
-                sets: totalSets,
-                reps: totalReps,
-                volume: totalVolume,
-              };
-            } else {
-              rep_range_progress.monthly_volume[monthKey].sets += totalSets;
-              rep_range_progress.monthly_volume[monthKey].reps += totalReps;
-              rep_range_progress.monthly_volume[monthKey].volume += totalVolume;
-            }
-
-            await prisma.userLiftsData.update({
-              where: { id: userLiftData.id },
-              data: { rep_range_progress },
-            });
-          } catch (progressionError) {
-            console.error(
-              `Progression error for lift ${lift.id}:`,
-              progressionError
-            );
-            throw new Error(
-              `Failed to process progression for lift ${lift.id}`,
-              {
-                cause: { status: 500, originalError: progressionError },
-              }
+          // 6. Batch update future lifts
+          if (liftUpdates.length > 0) {
+            await Promise.all(
+              liftUpdates.map((update) =>
+                tx.lifts.update({
+                  where: { id: update.id },
+                  data: { weight: update.weight },
+                })
+              )
             );
           }
-        }
-      }
 
-      // Update workout with success status and completion time
-      await prisma.workouts.update({
-        where: { id: workoutId },
-        data: {
-          success: workoutSuccess,
-          completed_at: new Date(),
-        },
-      });
-
-      // Find the next workout in the plan
-      if (refreshedWorkout.plan) {
-        const allWorkouts = refreshedWorkout.plan.weeks
-          .flatMap((week) =>
-            week.days.flatMap((day) =>
-              day.workoutDays.map((wd) => ({
-                ...wd.workout,
-                week_number: week.week_number,
-                day_of_week: day.day_of_week,
-              }))
-            )
-          )
-          .sort((a, b) => {
-            if (a.week_number !== b.week_number) {
-              return a.week_number - b.week_number;
-            }
-            return parseInt(a.day_of_week) - parseInt(b.day_of_week);
+          // 7. Update workout completion status
+          await tx.workouts.update({
+            where: { id: workoutId },
+            data: {
+              success: workoutSuccess,
+              completed_at: new Date(),
+            },
           });
 
-        const currentIndex = allWorkouts.findIndex((w) => w.id === workoutId);
-        const nextWorkout = allWorkouts[currentIndex + 1];
+          // 8. Auto-start plan if not started & update current workout
+          if (workout.plan_id) {
+            const plan = await tx.plans.findUnique({
+              where: { id: workout.plan_id },
+              select: { id: true, started_at: true },
+            });
 
-        await prisma.plans.update({
-          where: { id: refreshedWorkout.plan.id },
-          data: {
-            current_workout_id: nextWorkout ? nextWorkout.id : null,
-          },
-        });
-      }
+            // Find next workout
+            const nextWorkout = await tx.workouts.findFirst({
+              where: {
+                plan_id: workout.plan_id,
+                OR: [
+                  { week_number: { gt: workout.week_number } },
+                  {
+                    week_number: workout.week_number,
+                    day_of_week: { gt: workout.day_of_week },
+                  },
+                ],
+              },
+              orderBy: [{ week_number: "asc" }, { day_of_week: "asc" }],
+              select: { id: true },
+            });
 
-      res.json({ message: "Workout completed", workoutId });
+            // Update plan: auto-start if needed + set next workout
+            await tx.plans.update({
+              where: { id: workout.plan_id },
+              data: {
+                started_at: plan?.started_at || new Date(),
+                current_workout_id: nextWorkout?.id || null,
+              },
+            });
+          }
+
+          return { workoutId };
+        },
+        {
+          timeout: 60000,
+        }
+      );
+
+      res.json({ message: "Workout completed", ...result });
     } catch (error) {
       console.error("Error in completeWorkout:", {
         message: error.message,

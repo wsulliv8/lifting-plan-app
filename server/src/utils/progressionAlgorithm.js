@@ -27,36 +27,6 @@ const progressionAlgorithm = {
     };
   },
 
-  applyProgressionRule(lift, sessionIndex, userLiftData) {
-    if (!lift.progressionRule) console.log(lift);
-    const { progressionIncrement, progressionFrequency } = lift.progressionRule;
-    // Calculate increments based on session and frequency
-    const incrementsApplied = Math.floor(sessionIndex / progressionFrequency);
-    const newWeight = lift.weight.map(
-      (w) => w + incrementsApplied * progressionIncrement
-    );
-
-    // Validate against max weights (cap at 110% of max)
-    if (userLiftData) {
-      const maxWeight = Math.max(
-        ...userLiftData.max_weights.filter((w) => w > 0)
-      );
-      if (maxWeight > 0) {
-        return {
-          ...lift,
-          weight: newWeight.map((w) =>
-            Number(Math.min(w, maxWeight * 1.1).toFixed(1))
-          ),
-        };
-      }
-    }
-
-    return {
-      ...lift,
-      weight: newWeight,
-    };
-  },
-
   adjustFutureWeights(lift) {
     if (!lift.progression_rule || !lift.weight_achieved) {
       return 0; // No adjustment if missing data

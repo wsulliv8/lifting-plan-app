@@ -160,10 +160,13 @@ const planController = {
         include: include
           ? {
               weeks: {
+                orderBy: { week_number: "asc" },
                 include: {
                   days: {
+                    orderBy: { day_of_week: "asc" },
                     include: {
                       workoutDays: {
+                        orderBy: { order: "asc" },
                         include: {
                           workout: {
                             include: {
@@ -188,6 +191,7 @@ const planController = {
           .status(403)
           .json({ error: "Unauthorized access to this plan" });
       }
+
       res.json(plan);
     } catch (error) {
       next(error);
@@ -259,68 +263,163 @@ const planController = {
             },
           });
 
-          // 2. WIPE the old structure
-          // This is fast and ensures no "ghost" data remains.
-          // cascading deletes in Prisma/Postgres make this clean.
-          await tx.week.deleteMany({ where: { plan_id: planId } });
+          // 2a. Clean up orphaned completed workouts from old system (one-time migration)
+          // These are completed workouts with no WorkoutDay links (from before Day-Level Protection)
+          const orphanedCompleted = await tx.workouts.findMany({
+            where: {
+              plan_id: planId,
+              completed_at: { not: null },
+              workoutDays: { none: {} },
+            },
+            select: { id: true, name: true, completed_at: true },
+          });
 
-          // 3. REBUILD everything using nested creates (in parallel)
-          // Create all weeks simultaneously for speed
-          await Promise.all(
-            weeks.map((week) =>
-              tx.week.create({
-                data: {
-                  week_number: parseInt(week.week_number),
-                  plan_id: planId,
-                  days: {
-                    create: week.days.map((day) => ({
-                      day_of_week: parseInt(day.day_of_week),
-                      workoutDays: {
-                        create: (day.workouts || []).map((workout, index) => ({
-                          order: index,
-                          workout: {
-                            create: {
-                              name: workout.name || `Workout ${index + 1}`,
-                              plan_id: planId,
-                              user_id: req.user.userId,
-                              week_number: parseInt(week.week_number),
-                              day_of_week: String(day.day_of_week),
-                              plan_day: parseInt(day.day_of_week),
-                              lifts: {
-                                create: (workout.lifts || []).map((lift) => ({
-                                  name: lift.name,
-                                  base_lift_id: lift.base_lift_id,
-                                  sets: lift.sets,
-                                  reps: lift.reps.map(String),
-                                  weight: lift.weight,
-                                  rpe: lift.rpe.map(String),
-                                  rest_time: lift.rest.map((t) => parseInt(t)),
-                                  progression_rule: lift.progression_rule,
-                                })),
-                              },
-                            },
-                          },
-                        })),
-                      },
-                    })),
-                  },
-                },
-              })
-            )
+          // Note: orphanedCompleted are logged for debugging but not reconnected
+          // These are from old system before Day-Level Protection was implemented
+
+          // 2b. Build protected set (days with completed workouts)
+          const completedDays = await tx.workouts.findMany({
+            where: {
+              plan_id: planId,
+              completed_at: { not: null },
+            },
+            select: { week_number: true, day_of_week: true },
+          });
+
+          const protectedSet = new Set(
+            completedDays.map((d) => `${d.week_number}-${d.day_of_week}`)
           );
 
-          // 4. Update the "current_workout_id"
-          const firstWorkout = await tx.workouts.findFirst({
-            where: { plan_id: planId },
+          // 3. Delete ONLY unprotected days (preserves completed progress)
+          await tx.day.deleteMany({
+            where: {
+              week: { plan_id: planId },
+              workoutDays: {
+                none: {
+                  workout: { completed_at: { not: null } },
+                },
+              },
+            },
+          });
+
+          // 4. Rebuild weeks with only unprotected days (parallel + fast)
+          await Promise.all(
+            weeks.map((week) => {
+              const weekNum = parseInt(week.week_number);
+
+              // Filter out protected days
+              const safeDays = week.days.filter(
+                (day) => !protectedSet.has(`${weekNum}-${day.day_of_week}`)
+              );
+
+              if (safeDays.length === 0) return Promise.resolve();
+
+              // Prepare days for creation
+              const daysToCreate = safeDays.map((day) => ({
+                day_of_week: parseInt(day.day_of_week),
+                workoutDays: {
+                  create: (day.workouts || []).map((workout, index) => ({
+                    order: index,
+                    workout: {
+                      create: {
+                        name: workout.name || `Workout ${index + 1}`,
+                        plan_id: planId,
+                        user_id: req.user.userId,
+                        week_number: weekNum,
+                        day_of_week: String(day.day_of_week),
+                        plan_day: parseInt(day.day_of_week),
+                        lifts: {
+                          create: (workout.lifts || []).map((lift) => ({
+                            name: lift.name,
+                            base_lift_id: lift.base_lift_id,
+                            sets: lift.sets,
+                            reps: lift.reps.map(String),
+                            weight: lift.weight,
+                            rpe: lift.rpe?.map(String) || [],
+                            rest_time: lift.rest?.map((t) => parseInt(t)) || [],
+                            progression_rule: lift.progression_rule,
+                          })),
+                        },
+                      },
+                    },
+                  })),
+                },
+              }));
+
+              // Find or create week
+              return tx.week
+                .findFirst({
+                  where: {
+                    plan_id: planId,
+                    week_number: weekNum,
+                  },
+                })
+                .then(async (existingWeek) => {
+                  if (existingWeek) {
+                    // Week exists, add days to it
+                    return tx.week.update({
+                      where: { id: existingWeek.id },
+                      data: {
+                        days: {
+                          create: daysToCreate,
+                        },
+                      },
+                    });
+                  } else {
+                    // Create new week with days
+                    return tx.week.create({
+                      data: {
+                        plan_id: planId,
+                        week_number: weekNum,
+                        days: {
+                          create: daysToCreate,
+                        },
+                      },
+                    });
+                  }
+                });
+            })
+          );
+
+          // 6. Delete orphaned incomplete workouts (no WorkoutDay links)
+          await tx.workouts.deleteMany({
+            where: {
+              plan_id: planId,
+              completed_at: null,
+              workoutDays: { none: {} }, // No WorkoutDay links
+            },
+          });
+
+          // 6a. Clean up any orphaned days (no WorkoutDay entries after workout cleanup)
+          await tx.day.deleteMany({
+            where: {
+              week: { plan_id: planId },
+              workoutDays: { none: {} }, // No workouts on this day
+            },
+          });
+
+          // 5c. Clean up any orphaned weeks (no days left after day cleanup)
+          await tx.week.deleteMany({
+            where: {
+              plan_id: planId,
+              days: { none: {} },
+            },
+          });
+
+          // 6. Update the "current_workout_id" to first incomplete workout
+          const nextWorkout = await tx.workouts.findFirst({
+            where: {
+              plan_id: planId,
+              completed_at: null,
+              workoutDays: { some: {} }, // Must have WorkoutDay link
+            },
             orderBy: [{ week_number: "asc" }, { plan_day: "asc" }],
           });
 
-          if (firstWorkout) {
-            await tx.plans.update({
-              where: { id: planId },
-              data: { current_workout_id: firstWorkout.id },
-            });
-          }
+          await tx.plans.update({
+            where: { id: planId },
+            data: { current_workout_id: nextWorkout?.id || null },
+          });
 
           return { id: planId };
         },

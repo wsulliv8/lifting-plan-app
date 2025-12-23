@@ -7,7 +7,6 @@ const userController = {
   async getUserLiftsData(req, res, next) {
     try {
       const userId = req.user.userId;
-      console.log("Fetching lifts data for userId:", userId);
       const userLiftsData = await prisma.userLiftsData.findMany({
         where: { user_id: userId },
         select: {

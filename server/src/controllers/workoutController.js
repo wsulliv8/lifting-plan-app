@@ -388,10 +388,12 @@ const workoutController = {
               select: { id: true, started_at: true },
             });
 
-            // Find next workout
+            // Find next workout (must have WorkoutDay link to be valid)
             const nextWorkout = await tx.workouts.findFirst({
               where: {
                 plan_id: workout.plan_id,
+                completed_at: null,
+                workoutDays: { some: {} }, // Must have WorkoutDay link
                 OR: [
                   { week_number: { gt: workout.week_number } },
                   {
@@ -421,7 +423,17 @@ const workoutController = {
         }
       );
 
-      res.json({ message: "Workout completed", ...result });
+      // Get plan_id for response
+      const verifyWorkout = await prisma.workouts.findUnique({
+        where: { id: workoutId },
+        select: { plan_id: true },
+      });
+
+      res.json({
+        message: "Workout completed",
+        ...result,
+        plan_id: verifyWorkout.plan_id,
+      });
     } catch (error) {
       console.error("Error in completeWorkout:", {
         message: error.message,

@@ -19,6 +19,7 @@ const getPlanById = async (planId) => {
     });
 
     const data = response.data;
+
     return {
       id: data.id,
       name: data.name,

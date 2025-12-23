@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import React from "react";
-import { useLoaderData, useNavigate } from "react-router-dom";
+import { useLoaderData, useNavigate, useFetcher } from "react-router-dom";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
@@ -15,10 +15,6 @@ import {
 import { CheckCircleIcon } from "@heroicons/react/24/outline";
 import Button from "../../components/common/Button.jsx";
 import Input from "../../components/common/Input.jsx";
-import Select from "../../components/common/Select.jsx";
-import { updateWorkout } from "../../services/workouts.js";
-import { startPlan } from "../../services/plans.js";
-import { getCurrentDate } from "../../utils/dateUtils.js";
 
 const formatTime = (seconds) => {
   const hrs = Math.floor(seconds / 3600);
@@ -40,6 +36,9 @@ const calculateVolume = (lifts) => {
 
 const ActiveWorkout = () => {
   const initialWorkout = useLoaderData();
+  const navigate = useNavigate();
+  const fetcher = useFetcher();
+
   const [workout, setWorkout] = useState(() => {
     return {
       ...initialWorkout,
@@ -61,7 +60,6 @@ const ActiveWorkout = () => {
   const [totalVolume, setTotalVolume] = useState(() =>
     calculateVolume(workout.lifts)
   );
-  const navigate = useNavigate();
   useEffect(() => {
     const timer = setInterval(() => {
       setElapsedTime((prev) => prev + 1);
@@ -99,12 +97,6 @@ const ActiveWorkout = () => {
         lift.completed = lift.set_completed.every(
           (complete) => complete === true
         );
-        console.log(`Lift ${lift.name} completion status:`, {
-          setIndex,
-          value,
-          set_completed: lift.set_completed,
-          completed: lift.completed,
-        });
       } else if (
         field === "weight_achieved" ||
         field === "reps_achieved" ||
@@ -127,45 +119,21 @@ const ActiveWorkout = () => {
     });
   };
 
-  const handleSave = async () => {
-    console.log("Saving workout with lifts:", workout.lifts);
-    const updatedLifts = workout.lifts.map((lift) => {
-      console.log(`Lift ${lift.name} before save:`, {
-        set_completed: lift.set_completed,
-        completed: lift.completed,
-      });
-      return {
-        ...lift,
-        completed: lift.completed,
-        // Keep all other fields
-        id: lift.id,
-        base_lift_id: lift.base_lift_id,
-        name: lift.name,
-        sets: lift.sets,
-        reps: lift.reps,
-        reps_achieved: lift.reps_achieved,
-        weight: lift.weight,
-        weight_achieved: lift.weight_achieved,
-        rpe: lift.rpe || [],
-        rpe_achieved: lift.rpe_achieved,
-        rest_time: lift.rest_time,
-        volume: lift.volume,
-        notes: lift.notes,
-        progression_rule: lift.progressionRule,
-      };
+  const handleSave = () => {
+    const updatedLifts = workout.lifts.map((lift) => ({
+      ...lift,
+      progression_rule: lift.progressionRule,
+    }));
+
+    const formData = new FormData();
+    formData.append("lifts", JSON.stringify(updatedLifts));
+
+    fetcher.submit(formData, {
+      method: "post",
+      action: `/workouts/${workout.id}`,
     });
 
-    console.log(
-      "Updated lifts before save:",
-      updatedLifts.map((l) => ({
-        name: l.name,
-        completed: l.completed,
-      }))
-    );
-
-    await updateWorkout(workout.id, updatedLifts);
-    await startPlan(workout.plan.id);
-    navigate("/plans");
+    navigate(`/plans/${workout.plan.id}/progress`);
   };
 
   if (!workout || !workout.lifts || workout.lifts.length === 0)
@@ -304,22 +272,21 @@ const SortableLift = ({ lift, exerciseIndex, updateField, updateNotes }) => {
 
   const getValueColor = (achieved, target, isRPE = false) => {
     if (achieved === undefined || achieved === null || achieved === "")
-      return "text-[var(--text-primary)]";
+      return null;
 
     const achievedNum = parseInt(achieved);
     const targetNum = parseInt(target);
 
-    if (isNaN(achievedNum) || isNaN(targetNum))
-      return "text-[var(--text-primary)]";
+    if (isNaN(achievedNum) || isNaN(targetNum)) return null;
 
     if (isRPE) {
-      if (achievedNum > targetNum) return "text-[var(--danger)]";
-      if (achievedNum < targetNum) return "text-[var(--primary)]";
+      if (achievedNum > targetNum) return "var(--danger)";
+      if (achievedNum < targetNum) return "var(--success)";
     } else {
-      if (achievedNum < targetNum) return "text-[var(--danger)]";
-      if (achievedNum > targetNum) return "text-[var(--primary)]";
+      if (achievedNum < targetNum) return "var(--danger)";
+      if (achievedNum > targetNum) return "var(--success)";
     }
-    return "text-[var(--text-primary)]";
+    return null;
   };
 
   if (isCollapsed) {
@@ -461,10 +428,13 @@ const SortableLift = ({ lift, exerciseIndex, updateField, updateNotes }) => {
                 disabled={lift.set_completed?.[setIndex]}
                 className={`text-center w-20 p-1 ${
                   lift.set_completed?.[setIndex] ? "bg-[var(--background)]" : ""
-                } ${getValueColor(
-                  lift.weight_achieved?.[setIndex],
-                  lift.weight?.[setIndex]
-                )}`}
+                }`}
+                style={{
+                  color: getValueColor(
+                    lift.weight_achieved?.[setIndex],
+                    lift.weight?.[setIndex]
+                  ),
+                }}
                 containerClass="mb-0"
               />
             </div>
@@ -486,10 +456,13 @@ const SortableLift = ({ lift, exerciseIndex, updateField, updateNotes }) => {
                 disabled={lift.set_completed?.[setIndex]}
                 className={`text-center w-20 p-1 ${
                   lift.set_completed?.[setIndex] ? "bg-[var(--background)]" : ""
-                } ${getValueColor(
-                  lift.reps_achieved?.[setIndex],
-                  lift.reps?.[setIndex]
-                )}`}
+                }`}
+                style={{
+                  color: getValueColor(
+                    lift.reps_achieved?.[setIndex],
+                    lift.reps?.[setIndex]
+                  ),
+                }}
                 containerClass="mb-0"
               />
             </div>
@@ -518,11 +491,14 @@ const SortableLift = ({ lift, exerciseIndex, updateField, updateNotes }) => {
                     lift.set_completed?.[setIndex]
                       ? "bg-[var(--background)]"
                       : ""
-                  } ${getValueColor(
-                    lift.rpe_achieved?.[setIndex],
-                    lift.rpe?.[setIndex],
-                    true
-                  )}`}
+                  }`}
+                  style={{
+                    color: getValueColor(
+                      lift.rpe_achieved?.[setIndex],
+                      lift.rpe?.[setIndex],
+                      true
+                    ),
+                  }}
                   containerClass="mb-0"
                 />
               </div>

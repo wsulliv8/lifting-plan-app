@@ -145,26 +145,29 @@ const PlanProgress = () => {
         const completedWorkouts = dayWorkouts.filter((w) => w.completed_at);
         const allCompleted = completedWorkouts.length === dayWorkouts.length;
 
-        if (plan.started_at && currentDate < getCurrentDate()) {
-          // Past day
-          if (allCompleted) {
-            const allSuccessful = completedWorkouts.every((w) => w.success);
-            dayType = allSuccessful ? "success" : "failed";
-          } else {
-            // Instead of marking as missed, increment missedDays and add a missed day
-            missedDays++;
-            days.push({
-              date: new Date(currentDate),
-              planDay,
-              type: "missed",
-              workouts: [],
-            });
-            currentDate.setDate(currentDate.getDate() + 1);
-            planDay++;
-            continue; // Skip to next day
-          }
+        const today = getCurrentDate();
+        const isToday = currentDate.toDateString() === today.toDateString();
+        const isPast = currentDate < today;
+
+        // Check completion status FIRST (regardless of date)
+        if (allCompleted) {
+          // Workout completed (past, present, or future)
+          const allSuccessful = completedWorkouts.every((w) => w.success);
+          dayType = allSuccessful ? "success" : "failed";
+        } else if (plan.started_at && isPast && !isToday) {
+          // Past day with incomplete workout - mark as missed
+          missedDays++;
+          days.push({
+            date: new Date(currentDate),
+            planDay,
+            type: "missed",
+            workouts: [],
+          });
+          currentDate.setDate(currentDate.getDate() + 1);
+          planDay++;
+          continue; // Skip to next day
         } else {
-          // Future day or not started
+          // Today or future with incomplete workout - show as scheduled
           dayType = "scheduled";
         }
       }

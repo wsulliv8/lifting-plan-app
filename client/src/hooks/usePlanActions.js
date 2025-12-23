@@ -31,6 +31,8 @@ export const usePlanActions = ({
   editingDay,
   setEditingDay,
   setIsModalOpen,
+  experience,
+  baseLifts,
 }) => {
   const handleDuplicateConfirm = useCallback(() => {
     setWorkouts((prevWorkouts) => {
@@ -39,6 +41,7 @@ export const usePlanActions = ({
       const userLiftsMap = new Map(
         userLiftsData.map((data) => [data.base_lift_id, data])
       );
+      const baseLiftsMap = new Map(baseLifts.map((lift) => [lift.id, lift]));
 
       // Track group updates
       const updatedGroups = plan.dayGroups ? [...plan.dayGroups] : [];
@@ -89,13 +92,28 @@ export const usePlanActions = ({
               const newLifts = duplicateFormData.autoProgress
                 ? workout.lifts.map((lift) => {
                     const { id: _, ...liftWithoutId } = lift;
+                    // Recompute progression rule based on current experience
+                    const baseLift = baseLiftsMap.get(lift.base_lift_id);
+                    const liftType =
+                      baseLift?.lift_type === "Main"
+                        ? "primary"
+                        : "supplementary";
+                    const newProgressionRule = experience
+                      ? progressionRules.computeProgressionRule(
+                          liftType,
+                          experience.toLowerCase()
+                        )
+                      : lift.progressionRule;
                     return {
                       ...progressionRules.applyProgressionRule(
-                        liftWithoutId,
+                        {
+                          ...liftWithoutId,
+                          progressionRule: newProgressionRule,
+                        },
                         sessionIndex,
                         userLiftsMap.get(lift.base_lift_id)
                       ),
-                      progressionRule: lift.progressionRule || "none",
+                      progressionRule: newProgressionRule,
                     };
                   })
                 : workout.lifts.map((lift) => {
@@ -176,13 +194,28 @@ export const usePlanActions = ({
               const newLifts = duplicateFormData.autoProgress
                 ? workout.lifts.map((lift) => {
                     const { id: _, ...liftWithoutId } = lift;
+                    // Recompute progression rule based on current experience
+                    const baseLift = baseLiftsMap.get(lift.base_lift_id);
+                    const liftType =
+                      baseLift?.lift_type === "Main"
+                        ? "primary"
+                        : "supplementary";
+                    const newProgressionRule = experience
+                      ? progressionRules.computeProgressionRule(
+                          liftType,
+                          experience.toLowerCase()
+                        )
+                      : lift.progressionRule;
                     return {
                       ...progressionRules.applyProgressionRule(
-                        liftWithoutId,
+                        {
+                          ...liftWithoutId,
+                          progressionRule: newProgressionRule,
+                        },
                         i + 1,
                         userLiftsMap.get(lift.base_lift_id)
                       ),
-                      progressionRule: lift.progressionRule || "none",
+                      progressionRule: newProgressionRule,
                     };
                   })
                 : workout.lifts.map((lift) => {
@@ -244,6 +277,8 @@ export const usePlanActions = ({
     setTotalDays,
     weeksLength,
     userLiftsData,
+    baseLifts,
+    experience,
     setWorkouts,
     setShowDuplicateForm,
     plan.dayGroups,
@@ -282,6 +317,7 @@ export const usePlanActions = ({
         const userLiftsMap = new Map(
           userLiftsData.map((data) => [data.base_lift_id, data])
         );
+        const baseLiftsMap = new Map(baseLifts.map((lift) => [lift.id, lift]));
 
         const maxTargetDayId = startDayId + clipboard.length - 1;
         if (maxTargetDayId >= newTotalDays) {
@@ -295,13 +331,23 @@ export const usePlanActions = ({
             const { id: _, ...workoutWithoutId } = workout;
             const newLifts = workout.lifts.map((lift) => {
               const { id: _, ...liftWithoutId } = lift;
+              // Recompute progression rule based on current experience
+              const baseLift = baseLiftsMap.get(lift.base_lift_id);
+              const liftType =
+                baseLift?.lift_type === "Main" ? "primary" : "supplementary";
+              const newProgressionRule = experience
+                ? progressionRules.computeProgressionRule(
+                    liftType,
+                    experience.toLowerCase()
+                  )
+                : lift.progressionRule;
               return {
                 ...progressionRules.applyProgressionRule(
-                  liftWithoutId,
+                  { ...liftWithoutId, progressionRule: newProgressionRule },
                   index,
                   userLiftsMap.get(lift.base_lift_id)
                 ),
-                progressionRule: lift.progressionRule || "none",
+                progressionRule: newProgressionRule,
               };
             });
 
@@ -326,6 +372,8 @@ export const usePlanActions = ({
       clipboard,
       totalDays,
       userLiftsData,
+      baseLifts,
+      experience,
       setWorkouts,
       setTotalDays,
       setClipboard,
@@ -344,8 +392,6 @@ export const usePlanActions = ({
 
     const weeks = chunk(dayMap, 7);
 
-    let current_workout_id = null;
-
     const weeksData = weeks.map((weekDays, weekIndex) => ({
       week_number: weekIndex + 1,
       id: plan.weeks[weekIndex]?.id,
@@ -353,11 +399,6 @@ export const usePlanActions = ({
         const sortedWorkouts = dayWorkouts.sort(
           (a, b) => (a.order || 0) - (b.order || 0)
         );
-
-        // Set the first workout ID if we haven't already
-        if (!current_workout_id && sortedWorkouts.length > 0) {
-          current_workout_id = sortedWorkouts[0].id;
-        }
 
         // Get the existing day ID from the plan if it exists
         const existingDay = plan.weeks[weekIndex]?.days[dayIndex];
@@ -387,14 +428,12 @@ export const usePlanActions = ({
     const rebuiltPlan = {
       ...plan,
       weeks: weeksData,
-      current_workout_id,
+      // Don't send current_workout_id - let backend set it correctly
     };
-    console.log("rebuiltPlan", rebuiltPlan);
-    setPlan(rebuiltPlan);
     await savePlan(rebuiltPlan);
     setMessage("Saved!");
     setTimeout(() => setMessage(""), 2000);
-  }, [plan, totalDays, workoutsRef, setPlan, setMessage]);
+  }, [plan, totalDays, workoutsRef, setMessage]);
 
   const handleGroupConfirm = useCallback(() => {
     const newGroup = {

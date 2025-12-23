@@ -19,7 +19,7 @@ import ErrorPage from "./components/common/ErrorPage";
 import { getPlans, getPlanById } from "./services/plans";
 import { getAllBaseLifts } from "./services/lifts";
 import { getUserLiftsData, getCurrentUser } from "./services/user";
-import { getWorkoutById } from "./services/workouts";
+import { getWorkoutById, updateWorkout } from "./services/workouts";
 import { ThemeProvider } from "./context/ThemeContext";
 import { UserProvider } from "./context/UserContext";
 
@@ -96,6 +96,25 @@ const activeWorkoutLoader = async ({ params }) => {
   }
 };
 
+const activeWorkoutAction = async ({ request, params }) => {
+  try {
+    const formData = await request.formData();
+    const lifts = JSON.parse(formData.get("lifts"));
+
+    await updateWorkout(params.id, lifts);
+
+    return { success: true };
+  } catch (err) {
+    if (err.response?.status === 401) {
+      localStorage.removeItem("token");
+      return redirect("/login");
+    }
+    throw new Response("Failed to complete workout", {
+      status: err.response?.status || 500,
+    });
+  }
+};
+
 const liftsLoader = async () => {
   try {
     const lifts = await getAllBaseLifts();
@@ -166,6 +185,7 @@ const router = createBrowserRouter([
         path: "workouts/:id",
         element: <ActiveWorkout />,
         loader: activeWorkoutLoader,
+        action: activeWorkoutAction,
         errorElement: <ErrorPage />,
       },
       {

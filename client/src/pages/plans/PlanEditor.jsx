@@ -68,6 +68,8 @@ const PlanEditor = () => {
     setEditingDay: uiState.setEditingDay,
     stripIds,
     setIsModalOpen: uiState.setIsModalOpen,
+    experience: currentUser?.experience,
+    baseLifts,
   });
 
   const workoutsByDay = useMemo(

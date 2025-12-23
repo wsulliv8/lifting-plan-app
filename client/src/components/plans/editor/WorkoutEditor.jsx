@@ -30,6 +30,10 @@ import Button from "../../common/Button";
 import LiftSearch from "../../lifts/LiftSearch";
 import LiftSearchModal from "../../lifts/LiftSearchModal";
 import progressionRules from "../../../utils/progressionRules";
+import {
+  getMaxWeightForRepRange,
+  getClosestRepRange,
+} from "../../../utils/liftHelpers";
 import { useTheme } from "../../../context/useTheme";
 
 // Simple arrayMove function for reordering
@@ -179,17 +183,17 @@ const WorkoutEditor = ({
       let rpe = ["8", "8", "8"];
       let rest = ["120", "120", "120"];
 
-      if (userLift) {
-        const index =
-          userLift.rep_ranges.indexOf(8) !== -1
-            ? userLift.rep_ranges.indexOf(8)
-            : userLift.rep_ranges.reduce((closestIndex, curr, i, arr) => {
-                const currDiff = Math.abs(curr - 8);
-                const closestDiff = Math.abs(arr[closestIndex] - 8);
-                return currDiff < closestDiff ? i : closestIndex;
-              }, 0);
-        reps = Array(3).fill(userLift.rep_ranges[index]);
-        weight = Array(3).fill(userLift.max_weights[index]);
+      // Auto-populate weight based on user's rep range data
+      if (userLift && userLift.rep_range_progress?.rep_ranges) {
+        const closestRepRange = getClosestRepRange(userLift, 8);
+        if (closestRepRange) {
+          const repRangeData =
+            userLift.rep_range_progress.rep_ranges[closestRepRange];
+          if (repRangeData?.current?.weight) {
+            reps = Array(3).fill(closestRepRange);
+            weight = Array(3).fill(repRangeData.current.weight);
+          }
+        }
       }
 
       const newLift = {
@@ -229,43 +233,34 @@ const WorkoutEditor = ({
     if (field === "reps") {
       const baseLiftId = lift.base_lift_id;
       const userLift = userLiftsMap.get(baseLiftId);
-      lift.reps[setIndex] = parseInt(value) || 0;
+      const newReps = parseInt(value) || 0;
+      lift.reps[setIndex] = newReps;
 
       // Always cascade rep changes first
       for (let i = setIndex + 1; i < lift.reps.length; i++) {
         if (lift.reps[i] === oldValue) {
-          lift.reps[i] = parseInt(value) || 0;
+          lift.reps[i] = newReps;
         }
       }
 
-      // Then handle weight calculations if userLift data exists
-      if (userLift && value) {
-        let closestIndex = -1;
-        let smallestDiff = Infinity;
+      // Auto-populate weight based on user's max for this rep range
+      if (userLift && newReps > 0) {
+        const maxWeight = getMaxWeightForRepRange(userLift, newReps);
 
-        userLift.rep_ranges.forEach((rep, idx) => {
-          const diff = Math.abs(rep - value);
-          if (diff < smallestDiff) {
-            smallestDiff = diff;
-            closestIndex = idx;
-          }
-        });
-
-        if (smallestDiff <= 1) {
-          const newWeight = userLift.max_weights[closestIndex];
-          lift.weight[setIndex] = newWeight;
+        if (maxWeight !== null) {
+          lift.weight[setIndex] = maxWeight;
 
           // Cascade weight changes to sets that were updated with the same rep value
           for (let i = setIndex + 1; i < lift.weight.length; i++) {
-            if (lift.reps[i] === parseInt(value)) {
-              lift.weight[i] = newWeight;
+            if (lift.reps[i] === newReps) {
+              lift.weight[i] = maxWeight;
             }
           }
         } else {
+          // No data for this rep range, set to 0
           lift.weight[setIndex] = 0;
-          // Cascade zero weight to sets with the same rep value
           for (let i = setIndex + 1; i < lift.weight.length; i++) {
-            if (lift.reps[i] === parseInt(value)) {
+            if (lift.reps[i] === newReps) {
               lift.weight[i] = 0;
             }
           }
@@ -703,7 +698,6 @@ const SortableLift = ({
                   }
                   className="input-field h-8 w-full p-1 text-center"
                 >
-                  <option value="">-</option>
                   {[...Array(10)].map((_, i) => (
                     <option key={i + 1} value={i + 1}>
                       {i + 1}

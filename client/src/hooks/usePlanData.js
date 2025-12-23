@@ -26,11 +26,11 @@ export const usePlanData = ({
   const [workouts, setWorkouts] = useState(() => {
     const initialWorkouts = new Map();
     initialPlan.weeks.forEach((week, weekIndex) => {
-      week.days.forEach((day, dayIndex) => {
+      week.days.forEach((day) => {
         day.workouts.forEach((workout) => {
           initialWorkouts.set(workout.id, {
             ...workout,
-            dayId: weekIndex * 7 + dayIndex,
+            dayId: weekIndex * 7 + day.day_of_week, // Use actual day_of_week, not array index
             lifts: workout.lifts.map((lift) => ({
               ...lift,
               rpe: lift.rpe || [],

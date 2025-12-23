@@ -28,7 +28,11 @@ const progressionRules = {
   },
 
   applyProgressionRule(lift, sessionIndex, userLiftData) {
-    if (!lift.progressionRule) console.log(lift);
+    // Return lift unchanged if no progression rule
+    if (!lift.progressionRule) {
+      return lift;
+    }
+
     const { progressionIncrement, progressionFrequency } = lift.progressionRule;
     // Calculate increments based on session and frequency
     const incrementsApplied = Math.floor(sessionIndex / progressionFrequency);
@@ -36,12 +40,17 @@ const progressionRules = {
       (w) => w + incrementsApplied * progressionIncrement
     );
 
-    // Validate against max weights (cap at 110% of max)
-    if (userLiftData) {
-      const maxWeight = Math.max(
-        ...userLiftData.max_weights.filter((w) => w > 0)
+    // Validate against max weights from rep_range_progress (cap at 110% of max)
+    if (userLiftData?.rep_range_progress?.rep_ranges) {
+      const repRanges = Object.values(
+        userLiftData.rep_range_progress.rep_ranges
       );
-      if (maxWeight > 0) {
+      const maxWeights = repRanges
+        .map((range) => range.current?.weight)
+        .filter((w) => w && w > 0);
+
+      if (maxWeights.length > 0) {
+        const maxWeight = Math.max(...maxWeights);
         return {
           ...lift,
           weight: newWeight.map((w) =>

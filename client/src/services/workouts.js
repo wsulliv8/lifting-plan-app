@@ -2,8 +2,6 @@ import api from "../config/api.js";
 
 const getWorkoutById = async (id) => {
   try {
-    console.log("id of workout", id);
-
     const response = await api.get(`/workouts/${id}`);
 
     const data = response.data;
@@ -30,7 +28,7 @@ const getWorkoutById = async (id) => {
         weight_achieved: lift.weight_achieved,
         rpe: lift.rpe,
         rpe_achieved: lift.rpe_achieved,
-        progressionRule: lift.progressionRule,
+        progressionRule: lift.progression_rule,
         rest_time: lift.rest_time,
         volume: lift.volume,
         completed: lift.completed,
@@ -48,46 +46,19 @@ const getWorkoutById = async (id) => {
 };
 
 const updateWorkout = async (workoutId, lifts) => {
-  try {
-    console.log(
-      "Sending lifts to server:",
-      lifts.map((l) => ({
-        name: l.name,
-        completed: l.completed,
-      }))
-    );
+  const response = await api.post(`/workouts/${workoutId}/complete`, {
+    lifts: lifts.map((lift) => {
+      // Don't send progression_rule - backend gets it from database
+      const {
+        progressionRule: _progressionRule,
+        progression_rule: _progression_rule,
+        ...liftData
+      } = lift;
+      return liftData;
+    }),
+  });
 
-    const response = await api.post(`/workouts/${workoutId}/complete`, {
-      lifts: lifts.map((lift) => ({
-        id: lift.id,
-        base_lift_id: lift.base_lift_id,
-        name: lift.name,
-        sets: lift.sets,
-        reps: lift.reps,
-        reps_achieved: lift.reps_achieved,
-        weight: lift.weight,
-        weight_achieved: lift.weight_achieved,
-        rpe: lift.rpe || [],
-        rpe_achieved: lift.rpe_achieved,
-        rest_time: lift.rest_time,
-        volume: lift.volume,
-        completed: lift.completed,
-        notes: lift.notes,
-        progression_rule: lift.progressionRule
-          ? {
-              progressionIncrement: lift.progressionRule.progressionIncrement,
-              progressionFrequency: lift.progressionRule.progressionFrequency,
-              regressionOnFailure: lift.progressionRule.regressionOnFailure,
-            }
-          : null,
-      })),
-    });
-    console.log("Server response:", response.data);
-    return response.data;
-  } catch (error) {
-    console.error("Failed to update workout:", error);
-    throw error;
-  }
+  return response.data;
 };
 
 export { getWorkoutById, updateWorkout };

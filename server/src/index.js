@@ -1,6 +1,7 @@
 const express = require("express");
 const https = require("https");
 const fs = require("fs");
+const http = require("http");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const authRoutes = require("./routes/authRoutes");
@@ -16,6 +17,7 @@ const {
   loginRateLimit,
   sanitizeInput,
 } = require("./middleware/securityMiddleware");
+const { setupWorkoutRealtimeGateway } = require("./realtime/workoutRealtimeGateway");
 
 dotenv.config();
 
@@ -81,8 +83,12 @@ const PORT = process.env.PORT || 3001;
 
 // if (process.env.NODE_ENV === "production") {
 // Production: Use HTTP (Render handles HTTPS)
-app.listen(PORT, () => {
+const server = http.createServer(app);
+setupWorkoutRealtimeGateway(server);
+
+server.listen(PORT, () => {
   console.log(`HTTP server running on port ${PORT}`);
+  console.log(`Workout realtime gateway running at /realtime/workouts`);
 });
 /* } else {
   // Development: Use HTTPS with SSL certificates

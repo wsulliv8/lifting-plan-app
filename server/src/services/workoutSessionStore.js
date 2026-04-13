@@ -1,37 +1,37 @@
 class WorkoutSessionStore {
   constructor() {
-    this.sessionsByWorkoutId = new Map();
+    this.sessionsById = new Map();
   }
 
-  getOrCreate(workoutId) {
-    let session = this.sessionsByWorkoutId.get(workoutId);
+  getOrCreate(sessionId) {
+    let session = this.sessionsById.get(sessionId);
     if (!session) {
       session = {
-        sessionId: `workout-${workoutId}`,
-        workoutId,
+        sessionId,
         participants: new Map(),
         progressByUser: new Map(),
         createdAt: new Date().toISOString(),
       };
-      this.sessionsByWorkoutId.set(workoutId, session);
+      this.sessionsById.set(sessionId, session);
     }
     return session;
   }
 
-  join(workoutId, user) {
-    const session = this.getOrCreate(workoutId);
+  join(sessionId, user) {
+    const session = this.getOrCreate(sessionId);
     const now = new Date().toISOString();
     session.participants.set(user.userId, {
       userId: user.userId,
       displayName: user.displayName || `User ${user.userId}`,
+      workoutId: user.workoutId,
       online: true,
       lastSeenAt: now,
     });
     return this.toSnapshot(session);
   }
 
-  leave(workoutId, userId) {
-    const session = this.sessionsByWorkoutId.get(workoutId);
+  leave(sessionId, userId) {
+    const session = this.sessionsById.get(sessionId);
     if (!session) return null;
 
     const participant = session.participants.get(userId);
@@ -43,8 +43,8 @@ class WorkoutSessionStore {
     return this.toSnapshot(session);
   }
 
-  heartbeat(workoutId, userId) {
-    const session = this.sessionsByWorkoutId.get(workoutId);
+  heartbeat(sessionId, userId) {
+    const session = this.sessionsById.get(sessionId);
     if (!session) return null;
 
     const participant = session.participants.get(userId);
@@ -56,22 +56,23 @@ class WorkoutSessionStore {
     return this.toSnapshot(session);
   }
 
-  updateSelfProgress(workoutId, userId, progress) {
-    const session = this.getOrCreate(workoutId);
-    if (!session.participants.has(userId)) {
+  updateSelfProgress(sessionId, userId, progress) {
+    const session = this.getOrCreate(sessionId);
+    const participant = session.participants.get(userId);
+    if (!participant) {
       throw new Error("Must join session before publishing progress");
     }
     session.progressByUser.set(userId, progress);
     return {
       sessionId: session.sessionId,
-      workoutId: session.workoutId,
+      workoutId: participant.workoutId,
       participantUserId: userId,
       progress,
     };
   }
 
-  getSnapshot(workoutId) {
-    const session = this.sessionsByWorkoutId.get(workoutId);
+  getSnapshot(sessionId) {
+    const session = this.sessionsById.get(sessionId);
     if (!session) return null;
     return this.toSnapshot(session);
   }
@@ -79,7 +80,6 @@ class WorkoutSessionStore {
   toSnapshot(session) {
     return {
       sessionId: session.sessionId,
-      workoutId: session.workoutId,
       participants: Array.from(session.participants.values()),
       progressByUser: Object.fromEntries(session.progressByUser),
       createdAt: session.createdAt,

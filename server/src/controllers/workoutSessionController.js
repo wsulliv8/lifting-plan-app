@@ -38,17 +38,24 @@ function parseWorkoutId(rawId) {
   return workoutId;
 }
 
+function normalizeSessionId(rawValue) {
+  const sessionId = (rawValue || "").trim();
+  return sessionId || "global";
+}
+
 const workoutSessionController = {
   async joinSession(req, res, next) {
     try {
       const workoutId = parseWorkoutId(req.params.id);
       const userId = req.user.userId;
       await getAccessibleWorkout(workoutId, userId);
+      const sessionId = normalizeSessionId(req.body?.sessionId);
 
       const displayName = await getDisplayName(userId);
-      const snapshot = workoutSessionStore.join(workoutId, {
+      const snapshot = workoutSessionStore.join(sessionId, {
         userId,
         displayName,
+        workoutId,
       });
 
       res.json({
@@ -66,14 +73,14 @@ const workoutSessionController = {
       const workoutId = parseWorkoutId(req.params.id);
       const userId = req.user.userId;
       await getAccessibleWorkout(workoutId, userId);
+      const sessionId = normalizeSessionId(req.body?.sessionId);
 
-      const snapshot = workoutSessionStore.leave(workoutId, userId);
+      const snapshot = workoutSessionStore.leave(sessionId, userId);
       res.json({
         eventVersion: "v1",
         event: "participant_presence",
         ...(snapshot || {
-          sessionId: `workout-${workoutId}`,
-          workoutId,
+          sessionId,
           participants: [],
           progressByUser: {},
         }),
@@ -88,14 +95,14 @@ const workoutSessionController = {
       const workoutId = parseWorkoutId(req.params.id);
       const userId = req.user.userId;
       await getAccessibleWorkout(workoutId, userId);
+      const sessionId = normalizeSessionId(req.body?.sessionId);
 
-      const snapshot = workoutSessionStore.heartbeat(workoutId, userId);
+      const snapshot = workoutSessionStore.heartbeat(sessionId, userId);
       res.json({
         eventVersion: "v1",
         event: "participant_presence",
         ...(snapshot || {
-          sessionId: `workout-${workoutId}`,
-          workoutId,
+          sessionId,
           participants: [],
           progressByUser: {},
         }),
@@ -110,11 +117,11 @@ const workoutSessionController = {
       const workoutId = parseWorkoutId(req.params.id);
       const userId = req.user.userId;
       await getAccessibleWorkout(workoutId, userId);
+      const sessionId = normalizeSessionId(req.query.sessionId);
 
       const snapshot =
-        workoutSessionStore.getSnapshot(workoutId) || {
-          sessionId: `workout-${workoutId}`,
-          workoutId,
+        workoutSessionStore.getSnapshot(sessionId) || {
+          sessionId,
           participants: [],
           progressByUser: {},
         };
@@ -134,6 +141,7 @@ const workoutSessionController = {
       const workoutId = parseWorkoutId(req.params.id);
       const userId = req.user.userId;
       await getAccessibleWorkout(workoutId, userId);
+      const sessionId = normalizeSessionId(req.body?.sessionId);
 
       const { clientEventId, progress, participantUserId } = req.body || {};
       if (!progress || typeof progress !== "object") {
@@ -166,7 +174,7 @@ const workoutSessionController = {
       };
 
       const broadcast = workoutSessionStore.updateSelfProgress(
-        workoutId,
+        sessionId,
         userId,
         payload
       );

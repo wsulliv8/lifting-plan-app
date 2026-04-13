@@ -101,7 +101,8 @@ const authController = {
       }
 
       // Generate token
-      const token = signToken({ userId: user.id, role: user.role });
+      const role = user.role || "user";
+      const token = signToken({ userId: user.id, role });
 
       // Return secure response
       res.json({
@@ -109,7 +110,7 @@ const authController = {
         userId: user.id,
         email: user.email,
         username: user.username,
-        role: user.role,
+        role,
       });
     } catch (error) {
       console.error("Login error:", error);

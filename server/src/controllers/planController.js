@@ -287,7 +287,7 @@ const planController = {
           });
 
           const protectedSet = new Set(
-            completedDays.map((d) => `${d.week_number}-${d.day_of_week}`)
+            completedDays.map((d) => `${d.week_number}-${d.day_of_week}`),
           );
 
           // 3. Delete ONLY unprotected days (preserves completed progress)
@@ -309,7 +309,7 @@ const planController = {
 
               // Filter out protected days
               const safeDays = week.days.filter(
-                (day) => !protectedSet.has(`${weekNum}-${day.day_of_week}`)
+                (day) => !protectedSet.has(`${weekNum}-${day.day_of_week}`),
               );
 
               if (safeDays.length === 0) return Promise.resolve();
@@ -378,7 +378,7 @@ const planController = {
                     });
                   }
                 });
-            })
+            }),
           );
 
           // 6. Delete orphaned incomplete workouts (no WorkoutDay links)
@@ -425,7 +425,7 @@ const planController = {
         },
         {
           timeout: 60000, // 30 seconds for large plans with many workouts
-        }
+        },
       );
 
       // Final fetch for the frontend
@@ -522,6 +522,10 @@ const planController = {
                               created_at: _wcreated,
                               plan_id: _wplanId,
                               user_id: _wuserId,
+                              completed_at: _wcompletedAt,
+                              success: _wsuccess,
+                              total_volume: _wtotalVolume,
+                              iteration: _witeration,
                               ...workoutData
                             } = workout;
 
@@ -531,6 +535,10 @@ const planController = {
                                 create: {
                                   ...workoutData,
                                   user_id: userId, // Set the user_id for the workout
+                                  completed_at: null,
+                                  success: null,
+                                  total_volume: null,
+                                  iteration: null,
                                   lifts: {
                                     create: workout.lifts.map(
                                       ({
@@ -538,23 +546,33 @@ const planController = {
                                         workout_id: _wid,
                                         created_at: _lcreated,
                                         completed,
+                                        reps_achieved,
+                                        weight_achieved,
+                                        rpe_achieved,
+                                        notes: _notes,
+                                        volume: _volume,
                                         ...lift
                                       }) => ({
                                         ...lift,
                                         completed: false,
-                                      })
+                                        reps_achieved: [],
+                                        weight_achieved: [],
+                                        rpe_achieved: [],
+                                        notes: null,
+                                        volume: null,
+                                      }),
                                     ),
                                   },
                                 },
                               },
                             };
-                          }
+                          },
                         ),
                       },
-                    })
+                    }),
                   ),
                 },
-              })
+              }),
             ),
           },
         },
@@ -588,9 +606,9 @@ const planController = {
                 where: { id: workoutDay.workout.id },
                 data: { plan_id: newPlan.id },
               });
-            })
-          )
-        )
+            }),
+          ),
+        ),
       );
 
       // Find the first workout for this plan and set it as current_workout_id

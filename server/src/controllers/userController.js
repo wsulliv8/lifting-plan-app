@@ -39,7 +39,6 @@ const userController = {
           username: true,
           email: true,
           experience: true,
-          role: true,
         },
       });
 
@@ -47,7 +46,10 @@ const userController = {
         return res.status(404).json({ error: "User not found" });
       }
 
-      res.status(200).json(user);
+      res.status(200).json({
+        ...user,
+        role: req.user?.role || "user",
+      });
     } catch (error) {
       console.error("Error fetching user info:", error);
       res.status(500).json({ error: "Failed to fetch user info" });
@@ -148,12 +150,14 @@ const userController = {
           username: true,
           email: true,
           experience: true,
-          role: true,
         },
       });
 
       console.log("User updated successfully:", updatedUser);
-      res.status(200).json(updatedUser);
+      res.status(200).json({
+        ...updatedUser,
+        role: req.user?.role || "user",
+      });
     } catch (error) {
       console.error("Error updating user:", error);
       if (error.code === "P2002") {

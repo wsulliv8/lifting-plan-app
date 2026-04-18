@@ -43,6 +43,8 @@ function createClientState(decodedToken) {
     displayName: null,
     joinedSessionId: null,
     joinedWorkoutId: null,
+    pendingSessionId: null,
+    pendingWorkoutId: null,
   };
 }
 
@@ -53,11 +55,19 @@ function setupWorkoutRealtimeGateway(server) {
   });
 
   const socketsBySessionId = new Map();
+  const socketsByUserId = new Map();
+  const clientStateBySocket = new Map();
 
   function registerSocketForSession(sessionId, socket) {
     const sockets = socketsBySessionId.get(sessionId) || new Set();
     sockets.add(socket);
     socketsBySessionId.set(sessionId, sockets);
+  }
+
+  function registerSocketForUser(userId, socket) {
+    const sockets = socketsByUserId.get(userId) || new Set();
+    sockets.add(socket);
+    socketsByUserId.set(userId, sockets);
   }
 
   function unregisterSocketForSession(sessionId, socket) {
@@ -69,10 +79,52 @@ function setupWorkoutRealtimeGateway(server) {
     }
   }
 
+  function unregisterSocketForUser(userId, socket) {
+    const sockets = socketsByUserId.get(userId);
+    if (!sockets) return;
+    sockets.delete(socket);
+    if (sockets.size === 0) {
+      socketsByUserId.delete(userId);
+    }
+  }
+
   function broadcast(sessionId, payload) {
     const sockets = socketsBySessionId.get(sessionId);
     if (!sockets) return;
     sockets.forEach((socket) => sendJson(socket, payload));
+  }
+
+  function sendSnapshot(socket, clientState, snapshot) {
+    sendJson(socket, {
+      eventVersion: "v1",
+      event: "session_snapshot",
+      ...snapshot,
+      isHost: snapshot.hostUserId === clientState.userId,
+    });
+  }
+
+  function clearPendingState(clientState) {
+    clientState.pendingSessionId = null;
+    clientState.pendingWorkoutId = null;
+  }
+
+  async function finalizeParticipantJoin(socket, clientState, sessionId, workoutId) {
+    const snapshot = workoutSessionStore.joinApprovedParticipant(sessionId, {
+      userId: clientState.userId,
+      displayName: clientState.displayName,
+      workoutId,
+    });
+    clientState.joinedSessionId = sessionId;
+    clientState.joinedWorkoutId = workoutId;
+    clearPendingState(clientState);
+    registerSocketForSession(sessionId, socket);
+    sendSnapshot(socket, clientState, snapshot);
+    broadcast(sessionId, {
+      eventVersion: "v1",
+      event: "participant_presence",
+      sessionId: snapshot.sessionId,
+      participants: snapshot.participants,
+    });
   }
 
   wss.on("connection", async (socket, request) => {
@@ -93,6 +145,8 @@ function setupWorkoutRealtimeGateway(server) {
       const decoded = verifyToken(token);
       clientState = createClientState(decoded);
       clientState.displayName = await getDisplayName(clientState.userId);
+      clientStateBySocket.set(socket, clientState);
+      registerSocketForUser(clientState.userId, socket);
     } catch (error) {
       sendJson(socket, {
         eventVersion: "v1",
@@ -107,8 +161,10 @@ function setupWorkoutRealtimeGateway(server) {
       try {
         const message = JSON.parse(rawMessage.toString());
         const event = message?.event;
-        const rawSessionId = (message?.sessionId || "").trim();
-        const sessionId = rawSessionId || clientState.joinedSessionId || "global";
+        const rawSessionId = workoutSessionStore.normalizeSessionId(
+          message?.sessionId || clientState.joinedSessionId || clientState.pendingSessionId
+        );
+        const sessionId = rawSessionId;
         const workoutId = Number(message?.workoutId);
 
         if (event === "join" && (!Number.isInteger(workoutId) || workoutId <= 0)) {
@@ -121,6 +177,16 @@ function setupWorkoutRealtimeGateway(server) {
         }
 
         if (event === "join") {
+          const joinAsHost = message?.mode === "host";
+          if (!workoutSessionStore.isValidSessionCode(sessionId)) {
+            sendJson(socket, {
+              eventVersion: "v1",
+              event: "error",
+              error: "Session code must be 8 characters (A-Z, 2-9).",
+            });
+            return;
+          }
+
           const hasAccess = await hasWorkoutAccess(workoutId, clientState.userId);
           if (!hasAccess) {
             sendJson(socket, {
@@ -131,24 +197,65 @@ function setupWorkoutRealtimeGateway(server) {
             return;
           }
 
-          clientState.joinedSessionId = sessionId;
-          clientState.joinedWorkoutId = workoutId;
-          registerSocketForSession(sessionId, socket);
-          const snapshot = workoutSessionStore.join(sessionId, {
+          if (joinAsHost) {
+            const snapshot = workoutSessionStore.createHostSession(sessionId, {
+              userId: clientState.userId,
+              displayName: clientState.displayName,
+              workoutId,
+            });
+            clientState.joinedSessionId = sessionId;
+            clientState.joinedWorkoutId = workoutId;
+            clearPendingState(clientState);
+            registerSocketForSession(sessionId, socket);
+            sendSnapshot(socket, clientState, snapshot);
+            broadcast(sessionId, {
+              eventVersion: "v1",
+              event: "participant_presence",
+              sessionId: snapshot.sessionId,
+              participants: snapshot.participants,
+            });
+            return;
+          }
+
+          const joinRequest = workoutSessionStore.requestJoinApproval(sessionId, {
             userId: clientState.userId,
             displayName: clientState.displayName,
             workoutId,
           });
+          if (joinRequest.status === "approved") {
+            await finalizeParticipantJoin(socket, clientState, sessionId, workoutId);
+            return;
+          }
+          if (joinRequest.status === "pending") {
+            clientState.pendingSessionId = sessionId;
+            clientState.pendingWorkoutId = workoutId;
+            sendJson(socket, {
+              eventVersion: "v1",
+              event: "join_request_status",
+              sessionId,
+              status: "pending",
+              message: joinRequest.message,
+            });
+            const hostSnapshot = workoutSessionStore.getSnapshot(sessionId);
+            const hostSockets =
+              socketsByUserId.get(hostSnapshot?.hostUserId || -1) || new Set();
+            hostSockets.forEach((hostSocket) =>
+              sendJson(hostSocket, {
+                eventVersion: "v1",
+                event: "join_request_received",
+                sessionId,
+                request: joinRequest.request,
+              })
+            );
+            return;
+          }
+
           sendJson(socket, {
             eventVersion: "v1",
-            event: "session_snapshot",
-            ...snapshot,
-          });
-          broadcast(sessionId, {
-            eventVersion: "v1",
-            event: "participant_presence",
-            sessionId: snapshot.sessionId,
-            participants: snapshot.participants,
+            event: "join_request_status",
+            sessionId,
+            status: joinRequest.status,
+            message: joinRequest.message,
           });
           return;
         }
@@ -159,6 +266,9 @@ function setupWorkoutRealtimeGateway(server) {
             clientState.joinedSessionId = null;
             clientState.joinedWorkoutId = null;
           }
+          if (clientState.pendingSessionId === sessionId) {
+            clearPendingState(clientState);
+          }
           const snapshot = workoutSessionStore.leave(sessionId, clientState.userId);
           if (snapshot) {
             broadcast(sessionId, {
@@ -168,6 +278,112 @@ function setupWorkoutRealtimeGateway(server) {
               participants: snapshot.participants,
             });
           }
+          return;
+        }
+
+        if (event === "approve_join_request") {
+          const participantUserId = Number(message?.participantUserId);
+          const approved = message?.approved !== false;
+          if (!Number.isInteger(participantUserId) || participantUserId <= 0) {
+            sendJson(socket, {
+              eventVersion: "v1",
+              event: "error",
+              error: "Invalid participantUserId",
+            });
+            return;
+          }
+
+          const approval = workoutSessionStore.resolveJoinApproval(
+            sessionId,
+            clientState.userId,
+            participantUserId,
+            approved
+          );
+          if (approval.status === "approved") {
+            const participantSockets = socketsByUserId.get(participantUserId) || new Set();
+            let snapshot = null;
+            participantSockets.forEach((participantSocket) => {
+              const participantState = clientStateBySocket.get(participantSocket);
+              if (
+                !participantState ||
+                participantState.pendingSessionId !== sessionId
+              ) {
+                return;
+              }
+              const participantWorkoutId = participantState.pendingWorkoutId;
+              if (!participantWorkoutId) return;
+              snapshot = workoutSessionStore.joinApprovedParticipant(sessionId, {
+                userId: participantState.userId,
+                displayName: participantState.displayName,
+                workoutId: participantWorkoutId,
+              });
+              participantState.joinedSessionId = sessionId;
+              participantState.joinedWorkoutId = participantWorkoutId;
+              clearPendingState(participantState);
+              registerSocketForSession(sessionId, participantSocket);
+              sendJson(participantSocket, {
+                eventVersion: "v1",
+                event: "join_request_status",
+                sessionId,
+                status: "approved",
+                message: approval.message,
+              });
+              sendSnapshot(participantSocket, participantState, snapshot);
+            });
+
+            if (snapshot) {
+              broadcast(sessionId, {
+                eventVersion: "v1",
+                event: "participant_presence",
+                sessionId: snapshot.sessionId,
+                participants: snapshot.participants,
+              });
+            }
+
+            sendJson(socket, {
+              eventVersion: "v1",
+              event: "join_request_status",
+              sessionId,
+              status: "approved",
+              message: approval.message,
+            });
+            return;
+          }
+
+          if (approval.status === "rejected") {
+            const participantSockets = socketsByUserId.get(participantUserId) || new Set();
+            participantSockets.forEach((participantSocket) => {
+              const participantState = clientStateBySocket.get(participantSocket);
+              if (
+                !participantState ||
+                participantState.pendingSessionId !== sessionId
+              ) {
+                return;
+              }
+              clearPendingState(participantState);
+              sendJson(participantSocket, {
+                eventVersion: "v1",
+                event: "join_request_status",
+                sessionId,
+                status: "rejected",
+                message: approval.message,
+              });
+            });
+            sendJson(socket, {
+              eventVersion: "v1",
+              event: "join_request_status",
+              sessionId,
+              status: "rejected",
+              message: approval.message,
+            });
+            return;
+          }
+
+          sendJson(socket, {
+            eventVersion: "v1",
+            event: "error",
+            error: approval.message || "Unable to process join approval.",
+          });
           return;
         }
 
@@ -261,6 +477,8 @@ function setupWorkoutRealtimeGateway(server) {
     });
 
     socket.on("close", () => {
+      unregisterSocketForUser(clientState?.userId, socket);
+      clientStateBySocket.delete(socket);
       if (clientState?.joinedSessionId) {
         const sessionId = clientState.joinedSessionId;
         unregisterSocketForSession(sessionId, socket);
@@ -273,6 +491,9 @@ function setupWorkoutRealtimeGateway(server) {
             participants: snapshot.participants,
           });
         }
+      }
+      if (clientState?.pendingSessionId) {
+        clearPendingState(clientState);
       }
     });
   });

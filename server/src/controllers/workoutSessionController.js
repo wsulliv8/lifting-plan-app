@@ -39,8 +39,13 @@ function parseWorkoutId(rawId) {
 }
 
 function normalizeSessionId(rawValue) {
-  const sessionId = (rawValue || "").trim();
-  return sessionId || "global";
+  const sessionId = workoutSessionStore.normalizeSessionId(rawValue);
+  if (!workoutSessionStore.isValidSessionCode(sessionId)) {
+    throw new Error("Session code must be 8 characters (A-Z, 2-9).", {
+      cause: { status: 400 },
+    });
+  }
+  return sessionId;
 }
 
 const workoutSessionController = {
@@ -52,7 +57,7 @@ const workoutSessionController = {
       const sessionId = normalizeSessionId(req.body?.sessionId);
 
       const displayName = await getDisplayName(userId);
-      const snapshot = workoutSessionStore.join(sessionId, {
+      const snapshot = workoutSessionStore.createHostSession(sessionId, {
         userId,
         displayName,
         workoutId,

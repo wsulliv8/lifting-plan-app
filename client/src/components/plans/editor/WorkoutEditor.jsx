@@ -566,50 +566,33 @@ const SortableLift = ({
           !isDesktop ? "justify-between mx-2" : "justify-between"
         }`}
       >
-        {!isDesktop ? (
-          <>
-            <div {...attributes} {...listeners} className="touch-none">
-              <Bars3Icon className="w-6 h-6 text-[var(--text-secondary)] cursor-grab active:cursor-grabbing" />
-            </div>
-            <h2 className="p-2 rounded font-semibold text-center capitalize text-[var(--text-primary)]">
-              {lift.name
-                .split(" ")
-                .map(
-                  (word) =>
-                    word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-                )
-                .join(" ")}
-            </h2>
-          </>
-        ) : (
-          <h2
-            className="w-full p-2 rounded cursor-grab font-semibold text-center capitalize text-[var(--text-primary)]"
+        <h2 className="w-full p-2 rounded font-semibold text-center capitalize text-[var(--text-primary)]">
+          {lift.name
+            .split(" ")
+            .map(
+              (word) =>
+                word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+            )
+            .join(" ")}
+        </h2>
+        <div className="flex items-center gap-2 ml-2">
+          <div
             {...attributes}
             {...listeners}
+            className="touch-none"
+            title="Edit lift order"
           >
-            {lift.name
-              .split(" ")
-              .map(
-                (word) =>
-                  word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-              )
-              .join(" ")}
-          </h2>
-        )}
-        <TrashIcon
-          onClick={() => removeLift(workoutIndex, liftIndex)}
-          className="w-4 h-4 text-[var(--danger)] hover:text-[var(--danger-dark)] cursor-pointer"
-        />
+            <Bars3Icon className="w-5 h-5 text-[var(--text-secondary)] cursor-grab active:cursor-grabbing" />
+          </div>
+          <TrashIcon
+            onClick={() => removeLift(workoutIndex, liftIndex)}
+            className="w-5 h-5 text-[var(--danger)] hover:text-[var(--danger-dark)] cursor-pointer"
+            title="Delete lift"
+          />
+        </div>
       </div>
 
       <div className="flex justify-center flex-1 w-full">
-        {isDesktop && (
-          <div className="flex items-center mr-8 ">
-            <div {...attributes} {...listeners} className="touch-none">
-              <Bars3Icon className="w-6 h-6 text-[var(--text-secondary)] cursor-grab active:cursor-grabbing" />
-            </div>
-          </div>
-        )}
         <div
           className={`grid flex-0 ${
             isMobile

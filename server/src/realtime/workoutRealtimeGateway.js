@@ -531,6 +531,7 @@ function setupWorkoutRealtimeGateway(server) {
               typeof progress.repsAchieved === "string"
                 ? progress.repsAchieved
                 : null,
+            notes: typeof progress.notes === "string" ? progress.notes : null,
             updatedAt: progress.updatedAt || new Date().toISOString(),
           };
 

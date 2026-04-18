@@ -5,6 +5,10 @@ const workoutSessionStore = require("../services/workoutSessionStore");
 
 const VALID_SET_STATUS = new Set(["pending", "in_progress", "done"]);
 
+function rtLog(message, context = {}) {
+  console.log(`[realtime] ${message}`, context);
+}
+
 function sendJson(socket, payload) {
   if (socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify(payload));
@@ -130,6 +134,11 @@ function setupWorkoutRealtimeGateway(server) {
   wss.on("connection", async (socket, request) => {
     const url = new URL(request.url, "http://localhost");
     const token = parseToken(request, url);
+    rtLog("connection attempt", {
+      path: url.pathname,
+      hasToken: Boolean(token),
+      queryKeys: Array.from(url.searchParams.keys()),
+    });
     if (!token) {
       sendJson(socket, {
         eventVersion: "v1",
@@ -144,10 +153,34 @@ function setupWorkoutRealtimeGateway(server) {
     try {
       const decoded = verifyToken(token);
       clientState = createClientState(decoded);
-      clientState.displayName = await getDisplayName(clientState.userId);
+      clientState.displayName = `User ${clientState.userId}`;
       clientStateBySocket.set(socket, clientState);
       registerSocketForUser(clientState.userId, socket);
+      rtLog("connection authenticated", {
+        userId: clientState.userId,
+        role: clientState.role,
+        displayName: clientState.displayName,
+      });
+
+      // Resolve display name in background so early client messages
+      // (like immediate join on onOpen) are not dropped.
+      getDisplayName(clientState.userId)
+        .then((resolvedDisplayName) => {
+          if (!clientStateBySocket.has(socket)) return;
+          clientState.displayName = resolvedDisplayName;
+          rtLog("display name resolved", {
+            userId: clientState.userId,
+            displayName: resolvedDisplayName,
+          });
+        })
+        .catch((error) => {
+          rtLog("display name lookup failed", {
+            userId: clientState.userId,
+            error: error.message,
+          });
+        });
     } catch (error) {
+      rtLog("connection rejected: invalid token", { error: error.message });
       sendJson(socket, {
         eventVersion: "v1",
         event: "error",
@@ -166,8 +199,19 @@ function setupWorkoutRealtimeGateway(server) {
         );
         const sessionId = rawSessionId;
         const workoutId = Number(message?.workoutId);
+        rtLog("message received", {
+          userId: clientState.userId,
+          event,
+          sessionId,
+          workoutId: Number.isFinite(workoutId) ? workoutId : null,
+        });
 
         if (event === "join" && (!Number.isInteger(workoutId) || workoutId <= 0)) {
+          rtLog("join rejected: invalid workoutId", {
+            userId: clientState.userId,
+            sessionId,
+            workoutId,
+          });
           sendJson(socket, {
             eventVersion: "v1",
             event: "error",
@@ -179,6 +223,10 @@ function setupWorkoutRealtimeGateway(server) {
         if (event === "join") {
           const joinAsHost = message?.mode === "host";
           if (!workoutSessionStore.isValidSessionCode(sessionId)) {
+            rtLog("join rejected: invalid session code", {
+              userId: clientState.userId,
+              sessionId,
+            });
             sendJson(socket, {
               eventVersion: "v1",
               event: "error",
@@ -189,6 +237,11 @@ function setupWorkoutRealtimeGateway(server) {
 
           const hasAccess = await hasWorkoutAccess(workoutId, clientState.userId);
           if (!hasAccess) {
+            rtLog("join rejected: unauthorized workout access", {
+              userId: clientState.userId,
+              sessionId,
+              workoutId,
+            });
             sendJson(socket, {
               eventVersion: "v1",
               event: "error",
@@ -207,6 +260,12 @@ function setupWorkoutRealtimeGateway(server) {
             clientState.joinedWorkoutId = workoutId;
             clearPendingState(clientState);
             registerSocketForSession(sessionId, socket);
+            rtLog("host joined session", {
+              userId: clientState.userId,
+              sessionId,
+              workoutId,
+              participantCount: snapshot.participants.length,
+            });
             sendSnapshot(socket, clientState, snapshot);
             broadcast(sessionId, {
               eventVersion: "v1",
@@ -222,8 +281,20 @@ function setupWorkoutRealtimeGateway(server) {
             displayName: clientState.displayName,
             workoutId,
           });
+          rtLog("participant join request resolved", {
+            userId: clientState.userId,
+            sessionId,
+            workoutId,
+            status: joinRequest.status,
+            message: joinRequest.message,
+          });
           if (joinRequest.status === "approved") {
             await finalizeParticipantJoin(socket, clientState, sessionId, workoutId);
+            rtLog("participant auto-approved and joined", {
+              userId: clientState.userId,
+              sessionId,
+              workoutId,
+            });
             return;
           }
           if (joinRequest.status === "pending") {
@@ -239,6 +310,11 @@ function setupWorkoutRealtimeGateway(server) {
             const hostSnapshot = workoutSessionStore.getSnapshot(sessionId);
             const hostSockets =
               socketsByUserId.get(hostSnapshot?.hostUserId || -1) || new Set();
+            rtLog("join request forwarded to host sockets", {
+              sessionId,
+              hostUserId: hostSnapshot?.hostUserId,
+              hostSocketCount: hostSockets.size,
+            });
             hostSockets.forEach((hostSocket) =>
               sendJson(hostSocket, {
                 eventVersion: "v1",
@@ -301,6 +377,12 @@ function setupWorkoutRealtimeGateway(server) {
           );
           if (approval.status === "approved") {
             const participantSockets = socketsByUserId.get(participantUserId) || new Set();
+            rtLog("join approval accepted", {
+              sessionId,
+              hostUserId: clientState.userId,
+              participantUserId,
+              participantSocketCount: participantSockets.size,
+            });
             let snapshot = null;
             participantSockets.forEach((participantSocket) => {
               const participantState = clientStateBySocket.get(participantSocket);
@@ -352,6 +434,12 @@ function setupWorkoutRealtimeGateway(server) {
 
           if (approval.status === "rejected") {
             const participantSockets = socketsByUserId.get(participantUserId) || new Set();
+            rtLog("join approval rejected", {
+              sessionId,
+              hostUserId: clientState.userId,
+              participantUserId,
+              participantSocketCount: participantSockets.size,
+            });
             participantSockets.forEach((participantSocket) => {
               const participantState = clientStateBySocket.get(participantSocket);
               if (
@@ -435,6 +523,14 @@ function setupWorkoutRealtimeGateway(server) {
             exerciseIndex: progress.exerciseIndex,
             setIndex: progress.setIndex,
             setStatus: progress.setStatus,
+            weightAchieved:
+              typeof progress.weightAchieved === "string"
+                ? progress.weightAchieved
+                : null,
+            repsAchieved:
+              typeof progress.repsAchieved === "string"
+                ? progress.repsAchieved
+                : null,
             updatedAt: progress.updatedAt || new Date().toISOString(),
           };
 
@@ -468,6 +564,10 @@ function setupWorkoutRealtimeGateway(server) {
           error: `Unsupported event: ${event}`,
         });
       } catch (error) {
+        rtLog("message handler error", {
+          userId: clientState?.userId,
+          error: error.message,
+        });
         sendJson(socket, {
           eventVersion: "v1",
           event: "error",
@@ -477,6 +577,11 @@ function setupWorkoutRealtimeGateway(server) {
     });
 
     socket.on("close", () => {
+      rtLog("socket closed", {
+        userId: clientState?.userId,
+        joinedSessionId: clientState?.joinedSessionId,
+        pendingSessionId: clientState?.pendingSessionId,
+      });
       unregisterSocketForUser(clientState?.userId, socket);
       clientStateBySocket.delete(socket);
       if (clientState?.joinedSessionId) {

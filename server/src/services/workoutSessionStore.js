@@ -192,9 +192,15 @@ class WorkoutSessionStore {
 
     const participant = session.participants.get(userId);
     if (participant) {
-      participant.online = false;
-      participant.lastSeenAt = new Date().toISOString();
-      session.participants.set(userId, participant);
+      if (userId !== session.hostUserId) {
+        session.participants.delete(userId);
+        session.progressByUser.delete(userId);
+        session.pendingJoinRequests.delete(userId);
+      } else {
+        participant.online = false;
+        participant.lastSeenAt = new Date().toISOString();
+        session.participants.set(userId, participant);
+      }
     }
     return this.toSnapshot(session, { includePendingRequests: true });
   }

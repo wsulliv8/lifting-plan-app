@@ -1,5 +1,6 @@
 const prisma = require("../../prisma/client");
 const progressionAlgorithm = require("../utils/progressionAlgorithm");
+const workoutSessionStore = require("../services/workoutSessionStore");
 
 // Helper function to normalize rep range
 const normalizeRepRange = (actualReps) => {
@@ -115,6 +116,22 @@ const updateMonthlyVolume = (rep_range_progress, lift) => {
   return rep_range_progress;
 };
 
+const canAccessWorkoutViaSharedSession = (userId, workoutId, rawSessionId) => {
+  if (!rawSessionId) return false;
+  const sessionId = workoutSessionStore.normalizeSessionId(rawSessionId);
+  const snapshot = workoutSessionStore.getSnapshot(sessionId);
+  if (!snapshot) return false;
+
+  const requesterInSession = snapshot.participants.some(
+    (participant) => participant.userId === userId
+  );
+  if (!requesterInSession) return false;
+
+  return snapshot.participants.some(
+    (participant) => participant.workoutId === workoutId
+  );
+};
+
 const workoutController = {
   async getWorkouts(req, res, next) {
     try {
@@ -141,6 +158,7 @@ const workoutController = {
     try {
       const { id } = req.params;
       const userId = req.user.userId;
+      const { sessionId } = req.query;
 
       const workout = await prisma.workouts.findUnique({
         where: {
@@ -162,9 +180,16 @@ const workoutController = {
       }
 
       if (workout.user_id !== null && workout.user_id !== userId) {
-        return res
-          .status(403)
-          .json({ error: "Unauthorized access to this workout" });
+        const allowedViaSession = canAccessWorkoutViaSharedSession(
+          userId,
+          workout.id,
+          sessionId
+        );
+        if (!allowedViaSession) {
+          return res
+            .status(403)
+            .json({ error: "Unauthorized access to this workout" });
+        }
       }
 
       return res.json(workout);
